@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { checkHealth, type HealthResponse } from "@/api/api-file";
 import { wsClient } from "@/api/wsClient";
 
