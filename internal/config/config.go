@@ -16,6 +16,7 @@ type ServerConfig struct {
 	ListenAddr     string
 	Hostname       string
 	AllowedOrigins []string
+	VideoMode      string
 }
 
 type AuthConfig struct {
@@ -67,6 +68,7 @@ func Load() *CloudConfig {
 			ListenAddr:     getEnv("LISTEN_ADDR", ":8080"),  // default internal port
 			Hostname:       getEnv("VIDEO_HOSTNAME", ""),    // optional override for public URL
 			AllowedOrigins: origins,
+			VideoMode:      getEnv("VIDEO_MODE", "normal"),
 		},
 		Auth: AuthConfig{
 			JwtSecret:          getEnv("APP_JWTSECRET", ""),

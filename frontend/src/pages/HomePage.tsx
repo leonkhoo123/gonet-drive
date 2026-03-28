@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import DefaultLayout from "@/layouts/DefaultLayout";
 import VersionTag from "@/components/custom/versionTag";
 import VideoPlayerModalGeneric from "@/components/custom/videoPlayerModalGeneric";
+import VideoPlayerModalV2 from "@/components/custom/videoPlayerModalV2";
 import PhotoViewerModal from "@/components/custom/photoViewerModal";
 import TextViewerModal from "@/components/custom/textViewerModal";
 import PdfViewerModal from "@/components/custom/pdfViewerModal";
@@ -296,11 +297,19 @@ export default function HomePage() {
       </div>
 
       {selectedVideo && (
-        <VideoPlayerModalGeneric
-          file={selectedVideo}
-          isOpen={!!selectedVideo}
-          onClose={handlePlayerClose}
-        />
+        healthData?.video_mode === "custom" ? (
+          <VideoPlayerModalV2
+            file={selectedVideo}
+            isOpen={!!selectedVideo}
+            onClose={handlePlayerClose}
+          />
+        ) : (
+          <VideoPlayerModalGeneric
+            file={selectedVideo}
+            isOpen={!!selectedVideo}
+            onClose={handlePlayerClose}
+          />
+        )
       )}
       
       {selectedPhoto && (

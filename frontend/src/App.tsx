@@ -15,6 +15,7 @@ import { useEffect } from 'react';
 import { wsClient } from './api/wsClient';
 import { OperationProgressProvider } from './context/OperationProgressContext';
 import { PreferencesProvider } from './context/PreferencesContext';
+import { AppHealthProvider } from './context/AppHealthContext';
 import { UpdateBanner } from './components/custom/UpdateBanner';
 
 function App() {
@@ -24,30 +25,32 @@ function App() {
 
   return (
     <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
-      <PreferencesProvider>
-        <OperationProgressProvider>
-          <UpdateBanner />
-          <Routes>
-            <Route element={<IndexPage />} path="/" />
-            <Route element={<HomePage />} path="/home" />
-            <Route element={<HomePage />} path="/home/*" />
-            
-            <Route element={<ShareVerifyPage />} path="/share/:id" />
-            <Route element={<ShareHomePage />} path="/share/:id/home" />
-            <Route element={<ShareHomePage />} path="/share/:id/home/*" />
+      <AppHealthProvider>
+        <PreferencesProvider>
+          <OperationProgressProvider>
+            <UpdateBanner />
+            <Routes>
+              <Route element={<IndexPage />} path="/" />
+              <Route element={<HomePage />} path="/home" />
+              <Route element={<HomePage />} path="/home/*" />
+              
+              <Route element={<ShareVerifyPage />} path="/share/:id" />
+              <Route element={<ShareHomePage />} path="/share/:id/home" />
+              <Route element={<ShareHomePage />} path="/share/:id/home/*" />
 
-            <Route element={<LoginPage />} path="/login" />
-            <Route element={<AdminPage />} path="/admin" />
-            <Route element={<AudioBookPage />} path="/audio-book" />
-            <Route element={<ManageSharesPage />} path="/manage-shares" />
+              <Route element={<LoginPage />} path="/login" />
+              <Route element={<AdminPage />} path="/admin" />
+              <Route element={<AudioBookPage />} path="/audio-book" />
+              <Route element={<ManageSharesPage />} path="/manage-shares" />
 
 
 
-            <Route element={<NotFoundPage />} path="*" />
-          </Routes>
-          <SonnerToastCustom />
-        </OperationProgressProvider>
-      </PreferencesProvider>
+              <Route element={<NotFoundPage />} path="*" />
+            </Routes>
+            <SonnerToastCustom />
+          </OperationProgressProvider>
+        </PreferencesProvider>
+      </AppHealthProvider>
     </ThemeProvider>
   )
 }

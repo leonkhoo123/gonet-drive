@@ -12,6 +12,9 @@ RUN npm ci || npm install
 # Copy the rest of the frontend source
 COPY frontend/ ./
 
+# Set Vite profile for production build
+ENV VITE_PROFILE=prod
+
 # Build the Vite React app
 RUN npm run build
 

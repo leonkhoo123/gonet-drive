@@ -32,6 +32,7 @@ export interface FileInterface {
 export interface HealthResponse {
   service_name?: string;
   upload_chunk_size?: number;
+  video_mode?: string;
   [key: string]: any;
 }
 
