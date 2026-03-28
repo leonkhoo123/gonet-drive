@@ -30,7 +30,9 @@ export default function ShareVerifyPage() {
   const { setTheme } = useTheme();
 
   useEffect(() => {
-    setTheme("system");
+    if (!sessionStorage.getItem("share_theme_toggled")) {
+      setTheme("system");
+    }
     if (!id) {
       setErrorMsg("No share link ID provided.");
       setLoading(false);

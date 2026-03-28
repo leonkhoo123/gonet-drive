@@ -53,6 +53,7 @@ func main() {
 			"status":            "OK",
 			"service_name":      cloudConfig.TitleName,
 			"upload_chunk_size": cloudConfig.UploadChunkSize,
+			"video_mode":        config.AppConfig.Server.VideoMode,
 		})
 	})
 

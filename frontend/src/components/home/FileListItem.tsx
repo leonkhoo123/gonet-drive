@@ -99,7 +99,7 @@ export function FileListItem({
             e.preventDefault();
           }
         }}
-        className={`flex items-center pl-4 pr-1 md:px-3 py-2 md:py-3 cursor-pointer rounded-md transition-all duration-75 ease-out select-none min-h-[64px] md:min-h-[44px] [-webkit-touch-callout:none] [-webkit-tap-highlight-color:transparent] ${
+        className={`flex items-center pl-4 pr-1 md:pl-1 md:pr-3 py-2 md:py-3 cursor-pointer rounded-md transition-all duration-75 ease-out select-none min-h-[64px] md:min-h-[44px] [-webkit-touch-callout:none] [-webkit-tap-highlight-color:transparent] ${
           transitioningFolder === file.name
             ? 'bg-primary/30 scale-[0.96]'
             : isSelected
@@ -112,11 +112,11 @@ export function FileListItem({
           {file.type === "dir" ? (
             <>
               {file.name === ".cloud_delete" ? (
-                <Trash2 className="h-5 w-5 shrink-0 text-primary" />
+                <Trash2 className="h-7 w-7 md:h-5 md:w-5 shrink-0 text-primary" />
               ) : (
-                <Folder className="h-5 w-5 shrink-0 text-primary fill-primary/20" />
+                <Folder className="h-7 w-7 md:h-5 md:w-5 shrink-0 text-primary fill-primary/20" />
               )}
-              <div className="flex flex-col min-w-0 w-full text-left">
+              <div className="flex flex-col pl-1 min-w-0 w-full text-left">
                 <div className="flex items-center space-x-2 min-w-0 w-full">
                   <TruncatedText className="font-medium text-foreground" text={file.name === ".cloud_delete" ? "Recycle Bin" : file.name} />
                   {file.isShared && <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
@@ -127,7 +127,7 @@ export function FileListItem({
           ) : (
             <>
               {getFileIcon(file)}
-              <div className="flex flex-col min-w-0 w-full text-left">
+              <div className="flex flex-col pl-1 min-w-0 w-full text-left">
                 <div className="flex items-center space-x-2 min-w-0 w-full">
                   <TruncatedText className="text-foreground" text={file.name} />
                   {file.isShared && <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}

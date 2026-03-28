@@ -119,7 +119,7 @@ export default function ShareFileList({
   const fileListContainer = (
     <div 
       ref={scrollContainerRef}
-      className="flex-1 min-h-0 relative overflow-y-scroll overscroll-y-none p-2 md:p-3 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar scrollbar-thumb-black/20 dark:scrollbar-thumb-white/20 scrollbar-track-transparent"
+      className="flex-1 min-h-0 relative overflow-y-scroll overscroll-y-none p-0 md:p-3 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar scrollbar-thumb-black/20 dark:scrollbar-thumb-white/20 scrollbar-track-transparent"
     >
       {/* Loading Overlay */}
       <div 
