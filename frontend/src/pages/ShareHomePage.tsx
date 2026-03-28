@@ -33,6 +33,7 @@ import HomeRenameDialog from "@/components/home/HomeRenameDialog";
 import { useTheme } from "@/components/theme-provider";
 
 import { ShareModeToggle } from "@/components/share/ShareModeToggle";
+import { getConfig } from "@/config";
 
 export default function ShareHomePage() {
   const { id } = useParams<{ id: string }>();
@@ -235,7 +236,7 @@ export default function ShareHomePage() {
           {/* Top Title Bar */}
           <div className="h-14 border-b flex items-center justify-between px-4 bg-background shrink-0 z-10">
             <div className="flex items-center gap-2">
-              <img src="/images/logo-removebg-preview.png" alt="Logo" className="w-8 h-8 object-contain" />
+              <img src={`${getConfig().apiBaseUrl}/config/logo`} alt="Logo" className="w-8 h-8 object-contain" />
               <h1 className="text-lg font-bold text-foreground tracking-tight">{healthData?.service_name ?? "Shared Drive"}</h1>
             </div>
             <div className="flex items-center gap-2">

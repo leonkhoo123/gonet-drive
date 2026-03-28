@@ -28,6 +28,8 @@ func PublicUserRoutes(router *gin.Engine, cfg *config.CloudConfig, userService *
 		api.POST("/logout", func(c *gin.Context) {
 			userService.Logout(c, cfg)
 		})
+
+		PublicConfigRoutes(api)
 	}
 }
 
@@ -92,6 +94,7 @@ func UserRoutes(router *gin.Engine, cfg *config.CloudConfig, userService *servic
 			adminRouter.POST("/users", userService.CreateUser)
 			adminRouter.POST("/users/:id/revoke", userService.RevokeSessions)
 			adminRouter.DELETE("/users/:id", userService.DeleteUser)
+			adminRouter.PUT("/config/logo", UpdateLogo)
 		}
 	}
 }

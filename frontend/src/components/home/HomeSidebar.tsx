@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useLocation } from "react-router-dom";
 import { decodeUrlToPath } from "@/utils/utils";
+import { getConfig } from "@/config";
 
 function StorageIndicator({ 
   usage, 
@@ -152,7 +153,7 @@ export default function HomeSidebar({ isOpen, onClose, isWsConnected, isHealthCo
               className="flex items-center gap-2 cursor-pointer"
               onClick={() => { handleNavigate("/home"); }}
             >
-              <img src="/images/logo-removebg-preview.png" alt="Logo" className="w-10 h-10 object-contain" />
+              <img src={`${getConfig().apiBaseUrl}/config/logo`} alt="Logo" className="w-10 h-10 object-contain" />
               <h1 className="text-xl font-bold text-foreground tracking-tight">{titleName ?? "Cloud Drive"}</h1>
             </div>
             <div className="flex items-center gap-2">

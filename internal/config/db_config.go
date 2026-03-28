@@ -35,16 +35,6 @@ func RefreshCloudConfigCache() error {
 }
 
 func InitDB(workDir string) {
-	cloudReserveDir := filepath.Join(workDir, ".cloud_reserve")
-
-	// Check and create .cloud_reserve folder
-	if _, err := os.Stat(cloudReserveDir); os.IsNotExist(err) {
-		err = os.Mkdir(cloudReserveDir, 0755)
-		if err != nil {
-			log.Fatalf("Failed to create %s directory: %v", cloudReserveDir, err)
-		}
-	}
-
 	// Use DB_DIR environment variable for the database location, default to /app/db
 	configDir := AppConfig.Server.DbDir
 	if configDir == "" {

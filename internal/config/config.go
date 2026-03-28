@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"go-file-server/internal/assets"
 	"log"
 	"os"
 	"path/filepath"
@@ -114,7 +115,44 @@ func Load() *CloudConfig {
 		log.Fatalf("Working directory does not exist (%s)\n", c.Server.FileRoot)
 	}
 
+	initCloudReserve(c.Server.FileRoot)
+
 	return c
+}
+
+func initCloudReserve(workDir string) {
+	cloudReserveDir := filepath.Join(workDir, ".cloud_reserve")
+
+	// Check and create .cloud_reserve folder
+	if _, err := os.Stat(cloudReserveDir); os.IsNotExist(err) {
+		err = os.Mkdir(cloudReserveDir, 0755)
+		if err != nil {
+			log.Fatalf("Failed to create %s directory: %v", cloudReserveDir, err)
+		}
+	}
+
+	initLogo(cloudReserveDir)
+}
+
+func initLogo(cloudReserveDir string) {
+	iconDir := filepath.Join(cloudReserveDir, "config", "icon")
+	if _, err := os.Stat(iconDir); os.IsNotExist(err) {
+		err = os.MkdirAll(iconDir, 0755)
+		if err != nil {
+			log.Printf("Failed to create %s directory: %v", iconDir, err)
+			return
+		}
+	}
+
+	logoPath := filepath.Join(iconDir, "logo.png")
+	if _, err := os.Stat(logoPath); os.IsNotExist(err) {
+		err = os.WriteFile(logoPath, assets.DefaultLogo, 0644)
+		if err != nil {
+			log.Printf("Failed to write default logo to %s: %v", logoPath, err)
+		} else {
+			log.Printf("Initialized default logo at %s", logoPath)
+		}
+	}
 }
 
 // getEnv returns the value from env or fallback if not found

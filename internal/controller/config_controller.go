@@ -2,7 +2,10 @@ package controller
 
 import (
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 
 	"go-file-server/internal/config"
 	"go-file-server/internal/model"
@@ -10,6 +13,56 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+func PublicConfigRoutes(router *gin.RouterGroup) {
+	configGroup := router.Group("/config")
+	{
+		configGroup.GET("/logo", getLogo)
+	}
+}
+
+func getLogo(c *gin.Context) {
+	logoPath := filepath.Join(config.AppConfig.Server.FileRoot, ".cloud_reserve", "config", "icon", "logo.png")
+
+	c.Header("Cache-Control", "no-cache")
+	c.File(logoPath)
+}
+
+func UpdateLogo(c *gin.Context) {
+	file, err := c.FormFile("logo")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Logo file is required"})
+		return
+	}
+
+	// Validate file extension
+	ext := strings.ToLower(filepath.Ext(file.Filename))
+	if ext != ".png" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Only PNG files are allowed"})
+		return
+	}
+
+	// Validate file size (e.g., max 5MB)
+	if file.Size > 5*1024*1024 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "File size exceeds 5MB limit"})
+		return
+	}
+
+	iconDir := filepath.Join(config.AppConfig.Server.FileRoot, ".cloud_reserve", "config", "icon")
+	if err := os.MkdirAll(iconDir, 0755); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create directory", "details": err.Error()})
+		return
+	}
+
+	logoPath := filepath.Join(iconDir, "logo.png")
+
+	if err := c.SaveUploadedFile(file, logoPath); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save logo file", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Logo updated successfully"})
+}
 
 func ConfigRoutes(router *gin.RouterGroup, repo repository.CloudConfigRepository) {
 	configGroup := router.Group("/config")

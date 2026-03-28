@@ -46,12 +46,12 @@ export default defineConfig({
         theme_color: '#ffffff',
         icons: [
           {
-            src: '/images/logo-removebg-preview.png',
+            src: '/api/config/logo',
             sizes: '192x192',
             type: 'image/png',
           },
           {
-            src: '/images/logo-removebg-preview.png',
+            src: '/api/config/logo',
             sizes: '512x512',
             type: 'image/png',
           },
