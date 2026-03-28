@@ -18,7 +18,6 @@ import (
 
 type DatabaseConfig struct {
 	TitleName       string `json:"title_name"`
-	AllowedOrigin   string `json:"allowed_origin"`
 	UploadChunkSize int64  `json:"upload_chunk_size"`
 	StorageLimit    int64  `json:"storage_limit"`
 }
@@ -78,17 +77,19 @@ func InitDB(workDir string) {
 		log.Fatalf("Failed to run database migrations: %v", err)
 	}
 
+	// Clean up deprecated configs
+	_, _ = DB.Exec("DELETE FROM cloud_config WHERE config_name = 'allowed_origin'")
+
 	// Insert default config if table is empty
 	insertDefaultQuery := `
 	INSERT OR IGNORE INTO cloud_config (config_name, config_type, config_unit, config_value)
 	VALUES 
 	('service_name', 'string', null, ?),
-	('allowed_origin', 'string', null, ?),
 	('upload_chunk_size', 'int', 'MB', ?),
 	('storage_limit', 'int', 'MB', ?);`
 
 	for i := 0; i < 5; i++ {
-		_, err = DB.Exec(insertDefaultQuery, AppConfig.Defaults.ServiceName, AppConfig.Defaults.AllowedOrigin, AppConfig.Defaults.UploadChunkSize, AppConfig.Defaults.StorageLimit)
+		_, err = DB.Exec(insertDefaultQuery, AppConfig.Defaults.ServiceName, AppConfig.Defaults.UploadChunkSize, AppConfig.Defaults.StorageLimit)
 		if err == nil {
 			break
 		}
@@ -108,7 +109,6 @@ func InitDB(workDir string) {
 
 		AppCloudConfig = &DatabaseConfig{
 			TitleName:       AppConfig.Defaults.ServiceName,
-			AllowedOrigin:   AppConfig.Defaults.AllowedOrigin,
 			UploadChunkSize: uploadChunkSize * 1024 * 1024,
 			StorageLimit:    storageLimit * 1024 * 1024,
 		}
@@ -170,7 +170,6 @@ func GetCloudConfig() (*DatabaseConfig, error) {
 	// Default config
 	c := DatabaseConfig{
 		TitleName:       AppConfig.Defaults.ServiceName,
-		AllowedOrigin:   AppConfig.Defaults.AllowedOrigin,
 		UploadChunkSize: uploadChunkSize * 1024 * 1024, // Convert MB to bytes
 		StorageLimit:    storageLimit * 1024 * 1024,    // Convert MB to bytes
 	}
@@ -190,8 +189,6 @@ func GetCloudConfig() (*DatabaseConfig, error) {
 		switch name {
 		case "service_name":
 			c.TitleName = valStr
-		case "allowed_origin":
-			c.AllowedOrigin = valStr
 		case "upload_chunk_size", "storage_limit":
 			var size int64
 			fmt.Sscanf(valStr, "%d", &size)

@@ -44,6 +44,9 @@ docker build -t gonet-drive .
 docker run -d \
   --name gonet-drive \
   -p 8080:8080 \
+  -e APP_JWTSECRET="<your_jwt_secret_key>" \
+  -e ADMIN_USER="<admin_username>" \
+  -e ADMIN_PASS="<admin_secure_password>" \
   -v /path/to/your/files:/app/data \
   -v gonet_db:/app/db \
   gonet-drive
@@ -56,7 +59,9 @@ The server can be configured using environment variables. You can set them direc
 - `WORK_DIR`: The root directory for the files to serve and manage. *(Default: `/app/data`)*
 - `DB_DIR`: The directory where the SQLite metadata database is stored. *(Default: `/app/db`)*
 - `LISTEN_ADDR`: The host and port for the server to listen on. *(Default: `:8080`)*
-- `APP_JWTSECRET`: The secret key used to sign JWT auth tokens. 
+- `APP_JWTSECRET`: The secret key used to sign JWT auth tokens. **(Required)**
+- `ADMIN_USER`: The username for the initial superadmin account. *(Used only on first run to bootstrap the database)*
+- `ADMIN_PASS`: The password for the initial superadmin account. *(Used only on first run to bootstrap the database)*
 - `VIDEO_HOSTNAME`: Optional public URL override to serve video streams.
 - `ALLOWED_ORIGINS`: Comma-separated list of allowed CORS origins (useful for local development).
 - `DEFAULT_SERVICE_NAME`: The name of your cloud server displayed in the UI. *(Default: `My Cloud Server`)*

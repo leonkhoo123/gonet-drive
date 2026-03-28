@@ -4,7 +4,7 @@ export interface AppConfig {
 }
 
 // Default configuration with the logic currently used in the app
-const isLocal = import.meta.env.VITE_BUILD_PROFILE === "local";
+const isLocal = import.meta.env.DEV || import.meta.env.VITE_BUILD_PROFILE === "local";
 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 
 const config: AppConfig = {

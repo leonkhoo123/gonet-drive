@@ -34,7 +34,6 @@ type AuthConfig struct {
 
 type AppDefaults struct {
 	ServiceName     string
-	AllowedOrigin   string
 	UploadChunkSize string
 	StorageLimit    string
 }
@@ -54,7 +53,7 @@ func Load() *CloudConfig {
 		fmt.Println("⚠️  No .env file found, using built-in defaults")
 	}
 
-	allowedOriginsStr := getEnv("ALLOWED_ORIGINS", "http://192.168.1.9:30334,http://localhost:5173,http://localhost:4173,http://192.168.1.10:30334,http://leon-server.tail571fb3.ts.net:30334,http://leonserver.cc:30334")
+	allowedOriginsStr := getEnv("ALLOWED_ORIGINS", "*") // default to allow all origins
 	var origins []string
 	for _, o := range strings.Split(allowedOriginsStr, ",") {
 		if trimmed := strings.TrimSpace(o); trimmed != "" {
@@ -83,7 +82,6 @@ func Load() *CloudConfig {
 		},
 		Defaults: AppDefaults{
 			ServiceName:     getEnv("DEFAULT_SERVICE_NAME", "My Cloud Server"),
-			AllowedOrigin:   getEnv("DEFAULT_ALLOWED_ORIGIN", "*"),
 			UploadChunkSize: getEnv("DEFAULT_UPLOAD_CHUNK_SIZE", "5"),
 			StorageLimit:    getEnv("DEFAULT_STORAGE_LIMIT", "20480"),
 		},
