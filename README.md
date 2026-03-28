@@ -32,7 +32,7 @@ The easiest way to get started is by using Docker. The provided `Dockerfile` wil
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/gonet-drive.git
+git clone https://github.com/leonkhoo123/gonet-drive.git
 cd gonet-drive
 
 # Build the Docker image
