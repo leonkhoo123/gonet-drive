@@ -69,7 +69,7 @@ func Load() *CloudConfig {
 
 	c := &CloudConfig{
 		Server: ServerConfig{
-			AppEnv:         getEnv("APP_ENV", "prod"),
+			AppEnv:         getEnv("APP_ENV", "local"),
 			DbDir:          getEnv("DB_DIR", ""),
 			FileRoot:       getEnv("WORK_DIR", "/app/data"), // default path
 			ListenAddr:     getEnv("LISTEN_ADDR", ":8080"),  // default internal port
