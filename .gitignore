@@ -1,0 +1,52 @@
+# General
+.env
+.env.*
+!.env.example
+.DS_Store
+*.sw?
+
+# Go
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+main
+server
+bin/
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Project specific
+/db/*
+!/db/.gitkeep
+/temp_sample/*
+!/temp_sample/.gitkeep
+/ui/dist/
+
+# Logs
+logs/
+*.log
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
