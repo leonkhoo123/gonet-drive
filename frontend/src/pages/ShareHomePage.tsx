@@ -32,6 +32,8 @@ import { MobileClipboardToast } from "@/components/home/MobileClipboardToast";
 import HomeRenameDialog from "@/components/home/HomeRenameDialog";
 import { useTheme } from "@/components/theme-provider";
 
+import { ShareModeToggle } from "@/components/share/ShareModeToggle";
+
 export default function ShareHomePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -50,7 +52,10 @@ export default function ShareHomePage() {
   useEffect(() => {
     // Set global share mode for API calls
     setShareMode(true);
-    setTheme("system");
+    
+    if (!sessionStorage.getItem("share_theme_toggled")) {
+      setTheme("system");
+    }
     
     // Check if we have authority stored, if not redirect back to verify
     const auth = sessionStorage.getItem("share_authority");
@@ -233,17 +238,21 @@ export default function ShareHomePage() {
               <img src="/images/logo-removebg-preview.png" alt="Logo" className="w-8 h-8 object-contain" />
               <h1 className="text-lg font-bold text-foreground tracking-tight">{healthData?.service_name ?? "Shared Drive"}</h1>
             </div>
-            <div className="flex flex-col gap-1 items-end">
-              <div className="flex items-center gap-1.5" title={`API: ${isHealthConnected ? 'OK' : 'Error'}`}>
-                <span className="text-[10px] text-muted-foreground/80 font-mono tracking-wider leading-none">/health</span>
-                <div className={`w-1.5 h-1.5 rounded-full ${isHealthConnected ? 'bg-green-500 shadow-[0_0_4px_#22c55e]' : 'bg-red-500 shadow-[0_0_4px_#ef4444]'}`} />
-              </div>
-              {authority === 'modify' && (
-                <div className="flex items-center gap-1.5" title={`WS: ${isWsConnected ? 'Connected' : 'Disconnected'}`}>
-                  <span className="text-[10px] text-muted-foreground/80 font-mono tracking-wider leading-none">WebSocket</span>
-                  <div className={`w-1.5 h-1.5 rounded-full ${isWsConnected ? 'bg-green-500 shadow-[0_0_4px_#22c55e]' : 'bg-red-500 shadow-[0_0_4px_#ef4444]'}`} />
+            <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-1 items-end">
+                <div className="flex items-center gap-1.5" title={`API: ${isHealthConnected ? 'OK' : 'Error'}`}>
+                  <span className="text-[10px] text-muted-foreground/80 font-mono tracking-wider leading-none">/health</span>
+                  <div className={`w-1.5 h-1.5 rounded-full ${isHealthConnected ? 'bg-green-500 shadow-[0_0_4px_#22c55e]' : 'bg-red-500 shadow-[0_0_4px_#ef4444]'}`} />
                 </div>
-              )}
+                {authority === 'modify' && (
+                  <div className="flex items-center gap-1.5" title={`WS: ${isWsConnected ? 'Connected' : 'Disconnected'}`}>
+                    <span className="text-[10px] text-muted-foreground/80 font-mono tracking-wider leading-none">WebSocket</span>
+                    <div className={`w-1.5 h-1.5 rounded-full ${isWsConnected ? 'bg-green-500 shadow-[0_0_4px_#22c55e]' : 'bg-red-500 shadow-[0_0_4px_#ef4444]'}`} />
+                  </div>
+                )}
+              </div>
+              <div className="w-px h-6 bg-border mx-1 block"></div>
+              <ShareModeToggle />
             </div>
           </div>
 

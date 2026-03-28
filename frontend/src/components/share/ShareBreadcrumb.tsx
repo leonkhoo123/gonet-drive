@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate, useParams } from "react-router-dom";
-import { RefreshCcw, ArrowLeft, MoreVertical, Info, Download, Folder, File } from "lucide-react";
+import { RefreshCcw, ArrowLeft, MoreVertical, Info, Download, Folder, File, Users } from "lucide-react";
 import { encodePathToUrl } from "@/utils/utils";
 import {
   DropdownMenu,
@@ -47,6 +47,7 @@ export default function ShareBreadcrumb({
               <Folder className="h-4 w-4 text-muted-foreground" />
             )}
             {isSingleFile ? "File Sharing" : (shareRoot ? (shareRoot.split("/").filter(Boolean).pop() ?? "Share Home") : "Share Home")}
+            <Users className="h-3.5 w-3.5 text-muted-foreground ml-1.5" />
           </Button>
           <div className="hidden md:flex items-center">
             {currentPath.split("/").filter(Boolean).map((part, idx, arr) => {
@@ -93,10 +94,13 @@ export default function ShareBreadcrumb({
               </div>
             )}
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-foreground text-lg md:text-base">
+              <span className="font-semibold text-foreground text-lg md:text-base flex items-center gap-1">
                 {currentPath === "/" || currentPath === shareRoot
                   ? (isSingleFile ? "File Sharing" : (shareRoot ? (shareRoot.split("/").filter(Boolean).pop() ?? "Share Home") : "Share Home")) 
                   : currentPath.split("/").filter(Boolean).pop()}
+                {(currentPath === "/" || currentPath === shareRoot) && (
+                  <Users className="h-4 w-4 md:h-3.5 md:w-3.5 text-muted-foreground ml-1.5" />
+                )}
               </span>
             </div>
           </div>
