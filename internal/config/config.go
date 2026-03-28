@@ -12,6 +12,8 @@ import (
 )
 
 type ServerConfig struct {
+	AppEnv         string
+	DbDir          string
 	FileRoot       string
 	ListenAddr     string
 	Hostname       string
@@ -20,6 +22,9 @@ type ServerConfig struct {
 }
 
 type AuthConfig struct {
+	AppJwt             string
+	AdminUser          string
+	AdminPass          string
 	JwtSecret          string
 	TokenName          string
 	CookieAccessToken  string
@@ -64,6 +69,8 @@ func Load() *CloudConfig {
 
 	c := &CloudConfig{
 		Server: ServerConfig{
+			AppEnv:         getEnv("APP_ENV", "prod"),
+			DbDir:          getEnv("DB_DIR", ""),
 			FileRoot:       getEnv("WORK_DIR", "/app/data"), // default path
 			ListenAddr:     getEnv("LISTEN_ADDR", ":8080"),  // default internal port
 			Hostname:       getEnv("VIDEO_HOSTNAME", ""),    // optional override for public URL
@@ -71,6 +78,9 @@ func Load() *CloudConfig {
 			VideoMode:      getEnv("VIDEO_MODE", "normal"),
 		},
 		Auth: AuthConfig{
+			AppJwt:             getEnv("APP_JWT", ""),
+			AdminUser:          getEnv("ADMIN_USER", ""),
+			AdminPass:          getEnv("ADMIN_PASS", ""),
 			JwtSecret:          getEnv("APP_JWTSECRET", ""),
 			TokenName:          getEnv("TOKEN_NAME", "file_server_token"),
 			CookieAccessToken:  getEnv("COOKIE_ACCESS_TOKEN", "access_token"),

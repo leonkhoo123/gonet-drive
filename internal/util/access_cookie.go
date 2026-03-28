@@ -2,7 +2,6 @@ package util
 
 import (
 	"net/http"
-	"os"
 
 	"go-file-server/internal/config"
 
@@ -10,17 +9,21 @@ import (
 )
 
 // getSecureMode checks if we're running locally.
-func getSecureMode() bool {
-	return os.Getenv("APP_ENV") != "local"
+func getSecureMode(cfg *config.CloudConfig) bool {
+	if cfg.Server.AppEnv == "local" || cfg.Server.AppEnv == "dev" {
+		return false
+	} else {
+		return true
+	}
 }
 
 // SetAccessToken sets the access token cookie with preset expiration
 func SetAccessToken(c *gin.Context, cfg *config.CloudConfig, token string) {
-	setCookie(c, cfg.Auth.CookieAccessToken, token, int(cfg.Auth.AccessTokenMaxAge.Seconds()), http.SameSiteStrictMode)
+	setCookie(c, cfg.Auth.CookieAccessToken, token, int(cfg.Auth.AccessTokenMaxAge.Seconds()), http.SameSiteStrictMode, getSecureMode(cfg))
 }
 
 func ClearAccessToken(c *gin.Context, cfg *config.CloudConfig) {
-	clearCookie(c, cfg.Auth.CookieAccessToken, http.SameSiteStrictMode)
+	clearCookie(c, cfg.Auth.CookieAccessToken, http.SameSiteStrictMode, getSecureMode(cfg))
 }
 
 func GetAccessToken(c *gin.Context, cfg *config.CloudConfig) (string, error) {
@@ -29,11 +32,11 @@ func GetAccessToken(c *gin.Context, cfg *config.CloudConfig) (string, error) {
 
 // SetRefreshToken sets the refresh token cookie with preset expiration
 func SetRefreshToken(c *gin.Context, cfg *config.CloudConfig, token string) {
-	setCookie(c, cfg.Auth.CookieRefreshToken, token, int(cfg.Auth.RefreshTokenMaxAge.Seconds()), http.SameSiteStrictMode)
+	setCookie(c, cfg.Auth.CookieRefreshToken, token, int(cfg.Auth.RefreshTokenMaxAge.Seconds()), http.SameSiteStrictMode, getSecureMode(cfg))
 }
 
 func ClearRefreshToken(c *gin.Context, cfg *config.CloudConfig) {
-	clearCookie(c, cfg.Auth.CookieRefreshToken, http.SameSiteStrictMode)
+	clearCookie(c, cfg.Auth.CookieRefreshToken, http.SameSiteStrictMode, getSecureMode(cfg))
 }
 
 func GetRefreshToken(c *gin.Context, cfg *config.CloudConfig) (string, error) {
@@ -42,11 +45,11 @@ func GetRefreshToken(c *gin.Context, cfg *config.CloudConfig) (string, error) {
 
 // SetMfaPendingToken sets the MFA pending cookie with preset expiration
 func SetMfaPendingToken(c *gin.Context, cfg *config.CloudConfig, token string) {
-	setCookie(c, cfg.Auth.CookieMfaPending, token, int(cfg.Auth.MfaPendingMaxAge.Seconds()), http.SameSiteStrictMode)
+	setCookie(c, cfg.Auth.CookieMfaPending, token, int(cfg.Auth.MfaPendingMaxAge.Seconds()), http.SameSiteStrictMode, getSecureMode(cfg))
 }
 
 func ClearMfaPendingToken(c *gin.Context, cfg *config.CloudConfig) {
-	clearCookie(c, cfg.Auth.CookieMfaPending, http.SameSiteStrictMode)
+	clearCookie(c, cfg.Auth.CookieMfaPending, http.SameSiteStrictMode, getSecureMode(cfg))
 }
 
 func GetMfaPendingToken(c *gin.Context, cfg *config.CloudConfig) (string, error) {
@@ -58,11 +61,11 @@ func GetMfaPendingToken(c *gin.Context, cfg *config.CloudConfig) (string, error)
 // but usually it does not exceed ShareJwtMaxAge.
 func SetShareJwt(c *gin.Context, cfg *config.CloudConfig, token string, maxAge int, shareID string) {
 	// Use Lax mode for sharing so it can be sent on initial top-level navigation (like opening a share link)
-	setCookie(c, cfg.Auth.CookieShareJwt+"_"+shareID, token, maxAge, http.SameSiteLaxMode)
+	setCookie(c, cfg.Auth.CookieShareJwt+"_"+shareID, token, maxAge, http.SameSiteLaxMode, getSecureMode(cfg))
 }
 
 func ClearShareJwt(c *gin.Context, cfg *config.CloudConfig, shareID string) {
-	clearCookie(c, cfg.Auth.CookieShareJwt+"_"+shareID, http.SameSiteLaxMode)
+	clearCookie(c, cfg.Auth.CookieShareJwt+"_"+shareID, http.SameSiteLaxMode, getSecureMode(cfg))
 }
 
 func GetShareJwt(c *gin.Context, cfg *config.CloudConfig, shareID string) (string, error) {
@@ -71,7 +74,8 @@ func GetShareJwt(c *gin.Context, cfg *config.CloudConfig, shareID string) (strin
 
 // ClearLegacyToken clears the legacy token
 func ClearLegacyToken(c *gin.Context, tokenName string) {
-	clearCookie(c, tokenName, http.SameSiteStrictMode)
+	// For legacy token we default to true, or we could pass config.AppConfig.Server.AppEnv != "local"
+	clearCookie(c, tokenName, http.SameSiteStrictMode, config.AppConfig.Server.AppEnv != "local")
 }
 
 // GetLegacyToken gets the legacy token
@@ -80,14 +84,14 @@ func GetLegacyToken(c *gin.Context, tokenName string) (string, error) {
 }
 
 // setCookie is a private helper
-func setCookie(c *gin.Context, name, value string, maxAge int, sameSite http.SameSite) {
+func setCookie(c *gin.Context, name, value string, maxAge int, sameSite http.SameSite, secure bool) {
 	cookie := &http.Cookie{
 		Name:     name,
 		Value:    value,
 		MaxAge:   maxAge,
 		Path:     "/",
 		Domain:   "",
-		Secure:   getSecureMode(),
+		Secure:   secure,
 		HttpOnly: true,
 		SameSite: sameSite,
 	}
@@ -95,14 +99,14 @@ func setCookie(c *gin.Context, name, value string, maxAge int, sameSite http.Sam
 }
 
 // clearCookie is a private helper
-func clearCookie(c *gin.Context, name string, sameSite http.SameSite) {
+func clearCookie(c *gin.Context, name string, sameSite http.SameSite, secure bool) {
 	cookie := &http.Cookie{
 		Name:     name,
 		Value:    "",
 		MaxAge:   -1,
 		Path:     "/",
 		Domain:   "",
-		Secure:   getSecureMode(),
+		Secure:   secure,
 		HttpOnly: true,
 		SameSite: sameSite,
 	}

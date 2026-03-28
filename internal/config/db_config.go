@@ -46,9 +46,9 @@ func InitDB(workDir string) {
 	}
 
 	// Use DB_DIR environment variable for the database location, default to /app/db
-	configDir := os.Getenv("DB_DIR")
+	configDir := AppConfig.Server.DbDir
 	if configDir == "" {
-		if os.Getenv("APP_ENV") == "local" {
+		if AppConfig.Server.AppEnv == "dev" {
 			configDir = "./db"
 		} else {
 			configDir = "/app/db"
@@ -118,8 +118,8 @@ func InitDB(workDir string) {
 }
 
 func bootstrapAdmin() {
-	adminUser := os.Getenv("ADMIN_USER")
-	adminPass := os.Getenv("ADMIN_PASS")
+	adminUser := AppConfig.Auth.AdminUser
+	adminPass := AppConfig.Auth.AdminPass
 
 	if adminUser == "" || adminPass == "" {
 		return

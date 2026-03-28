@@ -2,7 +2,6 @@ package controller
 
 import (
 	"net/http"
-	"os"
 
 	"go-file-server/internal/config"
 	"go-file-server/internal/middleware"
@@ -35,7 +34,7 @@ func PublicUserRoutes(router *gin.Engine, cfg *config.CloudConfig, userService *
 // UserRoutes registers all user routes that require authentication
 func UserRoutes(router *gin.Engine, cfg *config.CloudConfig, userService *service.UserService, sharingService *service.SharingService, audiobookService *service.AudiobookService, configRepo repository.CloudConfigRepository) {
 	authRouter := router.Group("/api/user")
-	if os.Getenv("APP_JWT") != "OFF" {
+	if cfg.Auth.AppJwt != "OFF" {
 		authRouter.Use(middleware.JWTAuthMiddleware(cfg))
 	} // --- else local bypass jwt ---
 	{
@@ -63,7 +62,7 @@ func UserRoutes(router *gin.Engine, cfg *config.CloudConfig, userService *servic
 				mfaMandatory = user.MFAMandatory
 			}
 
-			superAdminUser := os.Getenv("ADMIN_USER")
+			superAdminUser := cfg.Auth.AdminUser
 			isSuperAdmin := username == superAdminUser
 			mfaSetupRequired := !mfaEnabled && mfaMandatory
 			c.JSON(http.StatusOK, gin.H{

@@ -3,8 +3,8 @@ package service
 import (
 	"database/sql"
 	"net/http"
-	"os"
 
+	"go-file-server/internal/config"
 	"go-file-server/internal/model"
 
 	"github.com/gin-gonic/gin"
@@ -25,7 +25,7 @@ type UserInfo struct {
 }
 
 func (s *UserService) GetUsers(c *gin.Context) {
-	superAdminUser := os.Getenv("ADMIN_USER")
+	superAdminUser := config.AppConfig.Auth.AdminUser
 
 	usersData, err := s.UserRepo.ListAll()
 	if err != nil {
@@ -81,7 +81,7 @@ func (s *UserService) CreateUser(c *gin.Context) {
 	}
 
 	currentUsername := c.GetString("username")
-	superAdminUser := os.Getenv("ADMIN_USER")
+	superAdminUser := config.AppConfig.Auth.AdminUser
 
 	if req.Role == "superadmin" && currentUsername != superAdminUser {
 		c.JSON(http.StatusForbidden, gin.H{"error": "only the main superadmin can create other superadmins"})
@@ -116,7 +116,7 @@ func (s *UserService) CreateUser(c *gin.Context) {
 func (s *UserService) RevokeSessions(c *gin.Context) {
 	id := c.Param("id")
 	currentUsername := c.GetString("username")
-	superAdminUser := os.Getenv("ADMIN_USER")
+	superAdminUser := config.AppConfig.Auth.AdminUser
 
 	targetUser, err := s.UserRepo.GetByID(id)
 	if err != nil {
@@ -158,7 +158,7 @@ func (s *UserService) RevokeSessions(c *gin.Context) {
 func (s *UserService) DeleteUser(c *gin.Context) {
 	id := c.Param("id")
 	currentUsername := c.GetString("username")
-	superAdminUser := os.Getenv("ADMIN_USER")
+	superAdminUser := config.AppConfig.Auth.AdminUser
 
 	targetUser, err := s.UserRepo.GetByID(id)
 	if err != nil {
