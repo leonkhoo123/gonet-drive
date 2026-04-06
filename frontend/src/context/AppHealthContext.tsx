@@ -23,6 +23,14 @@ export function AppHealthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    if (healthData?.service_name) {
+      document.title = healthData.service_name;
+    } else {
+      document.title = "Demo Cloud";
+    }
+  }, [healthData?.service_name]);
+
+  useEffect(() => {
     void performHealthCheck();
 
     const unsubscribeWs = wsClient.subscribeStatus((connected) => {

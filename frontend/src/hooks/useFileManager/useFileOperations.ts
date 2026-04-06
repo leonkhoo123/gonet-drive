@@ -60,6 +60,8 @@ export function useFileOperations({
 
     if (window.innerWidth >= 768) {
       toast.success(`${selectedItems.size} item(s) ready to move`);
+    } else {
+      setSelectedItems(new Set());
     }
   };
 
@@ -75,6 +77,8 @@ export function useFileOperations({
 
     if (window.innerWidth >= 768) {
       toast.success(`${selectedItems.size} item(s) added to clipboard`);
+    } else {
+      setSelectedItems(new Set());
     }
   };
 
