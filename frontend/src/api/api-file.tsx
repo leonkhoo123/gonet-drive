@@ -65,20 +65,6 @@ export const fetchDirList = async (path = "/", showHidden = false, sort?: string
   return rs.data as ItemsResponse;
 };
 
-export const deleteTempRotate = async (path = "/", opId: string = generateOpId()) => {
-  if (isShareMode) throw new Error("Operation not supported in share mode");
-  const cleanPath = path.trim() === "" ? "/" : path;
-
-  const rs = await axiosLayer.post("/user/files/delete-rotate-temp", {
-    path: cleanPath,
-    opId
-  }, {
-    headers: { "Accept": "application/json" },
-  });
-
-  return rs.data;
-}
-
 export const copyFiles = async (sources: string[], destDir: string, opId: string = generateOpId()) => {
   const endpoint = isShareMode ? "/share/file/copy" : "/user/files/copy";
   const rs = await axiosLayer.post(endpoint, {

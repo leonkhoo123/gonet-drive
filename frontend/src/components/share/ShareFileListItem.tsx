@@ -175,7 +175,7 @@ export function ShareFileListItem({
                     Delete
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem onClick={(e) => { 
+                <DropdownMenuItem disabled={isRecycleBin} onClick={(e) => { 
                   e.stopPropagation(); 
                   setOpenDropdownName(null);
                   onDownload(file.name);
@@ -262,7 +262,7 @@ export function ShareFileListItem({
           </ContextMenuItem>
         )}
         {authority === 'modify' && <ContextMenuSeparator />}
-        <ContextMenuItem onClick={(e) => { e.stopPropagation(); onDownload(); }} disabled={selectedItemsSize === 0 || hasSelectedDelete}>
+        <ContextMenuItem onClick={(e) => { e.stopPropagation(); onDownload(); }} disabled={selectedItemsSize === 0 || isRecycleBin || hasSelectedDelete}>
           <Download className="mr-2 h-4 w-4" />
           Download
         </ContextMenuItem>

@@ -32,10 +32,6 @@ func FilesRoutes(router *gin.RouterGroup, cfg *config.CloudConfig) {
 		})
 	})
 
-	api.POST("/delete-rotate-temp", func(c *gin.Context) {
-		service.DeleteTempRotate(c, cfg)
-	})
-
 	api.POST("/copy", func(c *gin.Context) {
 		var req service.CopyReq
 		if err := c.ShouldBindJSON(&req); err != nil {

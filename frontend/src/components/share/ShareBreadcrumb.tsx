@@ -122,7 +122,7 @@ export default function ShareBreadcrumb({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem onClick={() => onDownload?.()} disabled={isFolderEmpty}>
+              <DropdownMenuItem onClick={() => onDownload?.()} disabled={isFolderEmpty || currentPath.split("/").filter(Boolean).pop() === '.cloud_delete'}>
                 <Download className="mr-2 h-4 w-4" />
                 Download
               </DropdownMenuItem>

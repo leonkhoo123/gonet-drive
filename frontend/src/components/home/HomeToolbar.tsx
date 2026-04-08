@@ -1,4 +1,4 @@
-import { ArrowLeft, CheckSquare, Scissors, Copy, Clipboard, Pencil, Trash2, Plus, BrushCleaning, RefreshCcw, FolderPlus, Upload, FolderUp, Download } from "lucide-react";
+import { ArrowLeft, CheckSquare, Scissors, Copy, Clipboard, Pencil, Trash2, Plus, RefreshCcw, FolderPlus, Upload, FolderUp, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRef } from "react";
 import {
@@ -23,11 +23,11 @@ interface HomeToolbarProps {
   onRename: () => void;
   onDelete: () => void;
   onDownload: () => void;
-  onCleanUp: () => void;
   onRefresh: () => void;
   onCreateFolder: () => void;
   onUploadFiles?: (files: File[]) => void;
   isRecycleBinSelected?: boolean;
+  onEmptyRecycleBin?: () => void;
 }
 
 export default function HomeToolbar({
@@ -45,11 +45,11 @@ export default function HomeToolbar({
   onRename,
   onDelete,
   onDownload,
-  onCleanUp,
   onRefresh,
   onCreateFolder,
   onUploadFiles,
   isRecycleBinSelected = false,
+  onEmptyRecycleBin,
 }: HomeToolbarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -107,7 +107,7 @@ export default function HomeToolbar({
       <Button variant="ghost" size="sm" onClick={onDelete} disabled={selectedItemsSize === 0 || isRecycleBinSelected} className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30" title="Delete">
         <Trash2 className="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="sm" onClick={onDownload} disabled={(selectedItemsSize === 0 && isFolderEmpty) || isRecycleBinSelected} className="h-8 w-8 p-0" title="Download">
+      <Button variant="ghost" size="sm" onClick={onDownload} disabled={(selectedItemsSize === 0 && isFolderEmpty) || isRecycleBinSelected || isRecycleBin} className="h-8 w-8 p-0" title="Download">
         <Download className="h-4 w-4" />
       </Button>
 
@@ -137,9 +137,13 @@ export default function HomeToolbar({
 
       <div className="flex-1" />
 
-      <Button variant="ghost" size="sm" onClick={onCleanUp} className="h-8 w-8 p-0 text-muted-foreground" title="Clean Up">
-        <BrushCleaning className="h-4 w-4" />
-      </Button>
+      {isRecycleBin && (
+        <Button variant="ghost" size="sm" onClick={onEmptyRecycleBin} className="h-8 px-2 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30" title="Empty Recycle Bin">
+          <Trash2 className="h-4 w-4 md:mr-1" />
+          <span className="hidden md:inline">Empty Recycle Bin</span>
+        </Button>
+      )}
+
       <Button variant="ghost" size="sm" onClick={onRefresh} className="h-8 w-8 p-0 text-muted-foreground" title="Refresh">
         <RefreshCcw className="h-4 w-4" />
       </Button>

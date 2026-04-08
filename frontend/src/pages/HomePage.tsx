@@ -20,7 +20,7 @@ import HomeDeleteDialog from "@/components/home/HomeDeleteDialog";
 import HomeRenameDialog from "@/components/home/HomeRenameDialog";
 import HomeCreateFolderDialog from "@/components/home/HomeCreateFolderDialog";
 import HomeDuplicateCheckDialog from "@/components/home/HomeDuplicateCheckDialog";
-import { MusicPlayerV2 } from "@/components/custom/musicPlayerV2";
+import { MusicPreviewModal } from "@/components/custom/musicPreviewModal";
 import { useAppHealth } from "@/hooks/useAppHealth";
 import { useHomeKeyboardShortcuts } from "@/hooks/useHomeKeyboardShortcuts";
 import { MobileClipboardToast } from "@/components/home/MobileClipboardToast";
@@ -80,7 +80,6 @@ export default function HomePage() {
     handleFileContextMenu,
     handleFileDoubleClick,
     handlePlayerClose,
-    removeRotateTemp,
     handleRefresh,
     handleProperties,
     propertiesData,
@@ -232,11 +231,11 @@ export default function HomePage() {
               onRename={handleRename}
               onDelete={handleDelete}
               onDownload={handleDownload}
-              onCleanUp={removeRotateTemp}
               onRefresh={() => { void handleRefresh(); }}
               onCreateFolder={handleCreateFolder}
               onUploadFiles={(files) => { void handleUploadFiles(files, currentPath); }}
               isRecycleBinSelected={selectedItems.has('.cloud_delete')}
+              onEmptyRecycleBin={() => { handleEmptyRecycleBin((items?.items ?? []).map(i => i.name)); }}
             />
           </div>
 
@@ -388,12 +387,10 @@ export default function HomePage() {
       />
 
       {selectedMusic && (
-        <MusicPlayerV2
+        <MusicPreviewModal
           file={selectedMusic} 
-          playlist={(items?.items ?? []).filter(item => item.type !== 'dir' && (item.name.toLowerCase().endsWith('.mp3') || item.name.toLowerCase().endsWith('.wav') || item.name.toLowerCase().endsWith('.flac') || item.name.toLowerCase().endsWith('.ogg') || item.name.toLowerCase().endsWith('.m4a') || item.name.toLowerCase().endsWith('.aac')))}
-          onSelectMusic={setSelectedMusic}
+          isOpen={!!selectedMusic}
           onClose={() => { setSelectedMusic(null); }} 
-          forcePause={!!selectedVideo}
         />
       )}
 

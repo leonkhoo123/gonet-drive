@@ -32,8 +32,7 @@ export function useFileManager({ uploadChunkSize, baseRoute = "/home" }: { uploa
   const {
     selectedVideo,
     setSelectedVideo,
-    handlePlayerClose,
-    removeRotateTemp
+    handlePlayerClose
   } = useVideoOperations({ currentPath, handleRefresh, setIsLoading, setError });
 
   const [selectedPhoto, setSelectedPhoto] = useState<FileInterface | null>(null);
@@ -177,7 +176,6 @@ export function useFileManager({ uploadChunkSize, baseRoute = "/home" }: { uploa
     handleFileContextMenu,
     handleFileDoubleClick,
     handlePlayerClose,
-    removeRotateTemp,
     handleRefresh,
     handleProperties,
     propertiesData,
