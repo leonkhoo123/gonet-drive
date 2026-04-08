@@ -128,6 +128,11 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (e.touches.length === 1) {
+      // Deadzone at the bottom 100px so video scrubbing won't conflict with progress bar
+      if (e.touches[0].clientY > window.innerHeight - 100) {
+        return;
+      }
+
       touchStartX.current = e.touches[0].clientX;
       if (videoRef.current) {
         touchStartTime.current = videoRef.current.currentTime;
