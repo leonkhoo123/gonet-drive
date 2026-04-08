@@ -63,6 +63,14 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
 
   const isSideways = rotation === 90 || rotation === 270;
 
+  /* -------------------- swipe to seek -------------------- */
+  const touchStartX = useRef<number | null>(null);
+  const touchStartTime = useRef<number | null>(null);
+  const isScrubbing = useRef<boolean>(false);
+  const scrubTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasScrubbed = useRef<boolean>(false);
+  const [dragDeltaSeconds, setDragDeltaSeconds] = useState<number | null>(null);
+
   /* =====================================================
      CONTROL VISIBILITY CORE (IMPORTANT)
      ===================================================== */
@@ -106,6 +114,8 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
      ===================================================== */
 
   const handleVideoTap = () => {
+    if (hasScrubbed.current) return;
+    
     if (showControls) {
       clearHideTimer();
       setShowControls(false);
@@ -113,6 +123,66 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
       setShowControls(true);
       startHideTimer();
     }
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length === 1) {
+      touchStartX.current = e.touches[0].clientX;
+      if (videoRef.current) {
+        touchStartTime.current = videoRef.current.currentTime;
+      }
+      hasScrubbed.current = false;
+      isScrubbing.current = false;
+
+      // Small delay before dragging is sensed (200ms)
+      scrubTimeout.current = setTimeout(() => {
+        isScrubbing.current = true;
+      }, 200);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!isScrubbing.current) return;
+    
+    if (
+      touchStartX.current === null ||
+      touchStartTime.current === null ||
+      !videoRef.current
+    ) return;
+
+    hasScrubbed.current = true;
+    const deltaX = e.touches[0].clientX - touchStartX.current;
+    
+    // Sensitivity: 1 pixel = 0.04 seconds
+    const SECONDS_PER_PIXEL = 0.04;
+    let newTime = touchStartTime.current + deltaX * SECONDS_PER_PIXEL;
+
+    if (newTime < 0) newTime = 0;
+    if (duration > 0 && newTime > duration) newTime = duration;
+
+    setDragDeltaSeconds(newTime - touchStartTime.current);
+
+    videoRef.current.currentTime = newTime;
+    setCurrentTime(newTime);
+    if (duration > 0) {
+      setProgress((newTime / duration) * 100);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (scrubTimeout.current) {
+      clearTimeout(scrubTimeout.current);
+      scrubTimeout.current = null;
+    }
+    touchStartX.current = null;
+    touchStartTime.current = null;
+    isScrubbing.current = false;
+    setDragDeltaSeconds(null);
+    
+    // Keep hasScrubbed true slightly longer so the click event ignores it
+    setTimeout(() => {
+      hasScrubbed.current = false;
+    }, 100);
   };
 
   /* =====================================================
@@ -205,14 +275,6 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
     if (!v) return;
     v.playbackRate = rate;
     setPlaybackRate(rate);
-  };
-
-  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
-    const v = videoRef.current;
-    if (!v || !duration) return;
-    const r = e.currentTarget.getBoundingClientRect();
-    const pct = (e.clientX - r.left) / r.width;
-    v.currentTime = pct * duration;
   };
 
   const handleRotation = () => {
@@ -375,8 +437,12 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
     <div className="fixed inset-0 bg-black z-10 select-none">
       {/* VIDEO AREA */}
       <div
-        className="flex items-center justify-center h-full"
+        className="flex items-center justify-center h-full touch-none"
         onClick={handleVideoTap}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
       >
         <video
           ref={videoRef}
@@ -387,6 +453,13 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
           style={{ transform: `rotate(${rotation}deg)` }}
         />
       </div>
+
+      {/* DRAG DELTA POPUP */}
+      {dragDeltaSeconds !== null && (
+        <div className="absolute top-12 left-1/2 -translate-x-1/2 bg-black/60 text-white px-4 py-2 rounded-full font-bold text-lg tracking-wider pointer-events-none z-20">
+          {dragDeltaSeconds >= 0 ? "+" : "-"}{formatTime(Math.abs(dragDeltaSeconds))}
+        </div>
+      )}
 
       {/* --- Time Display --- */}
       <div className="absolute bottom-2 left-1 w-full text-left text-white text-sm select-none">
@@ -415,9 +488,41 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
       </div>
 
       {/* PROGRESS */}
-      <div className="absolute bottom-0 w-full h-2 bg-gray-700" onClick={handleSeek}>
-        <div className="absolute h-2 bg-white/20" style={{ width: `${bufferedProgress}%` }} />
-        <div className="absolute h-2 bg-primary" style={{ width: `${progress}%` }} />
+      <div
+        className={`absolute w-full transition-all duration-300 bg-gray-700/50 ${
+          showControls ? "bottom-12 h-3" : "bottom-0 h-2"
+        }`}
+      >
+        <div
+          className="absolute h-full bg-gray-500 pointer-events-none"
+          style={{ width: `${bufferedProgress}%` }}
+        />
+        <div
+          className="absolute h-full bg-white/70 pointer-events-none"
+          style={{ width: `${progress}%` }}
+        />
+        
+        {/* Invisible range input for native dragging/scrubbing */}
+        <input
+          type="range"
+          min={0}
+          max={100}
+          step="any"
+          value={progress || 0}
+          onChange={(e) => {
+            const v = videoRef.current;
+            if (!v || !duration) return;
+            
+            const newProgress = parseFloat(e.target.value);
+            const newTime = (newProgress / 100) * duration;
+            
+            v.currentTime = newTime; 
+            
+            setProgress(newProgress);
+            setCurrentTime(newTime);
+          }}
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer m-0"
+        />
       </div>
 
       {/* CONTROLS */}
