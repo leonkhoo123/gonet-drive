@@ -75,7 +75,7 @@ export function useFileInteraction({
       return;
     }
 
-    if (isTouchDevice && file.type === "dir" && selectedItems.size === 0 && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+    if (isTouchDevice && selectedItems.size === 0 && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
       // Delay for animation before actually doing the action
       setTransitioningFolder(file.name);
       
@@ -92,6 +92,11 @@ export function useFileInteraction({
       
       setTimeout(() => {
         onFileClick(file, index, safeEvent);
+        if (file.type !== "dir") {
+          setTimeout(() => {
+            setTransitioningFolder((prev) => prev === file.name ? null : prev);
+          }, 500);
+        }
       }, 75);
       return;
     }
@@ -100,10 +105,15 @@ export function useFileInteraction({
   }, [isTouchDevice, onFileClick, selectedItems.size]);
 
   const handleItemDoubleClick = useCallback((file: FileInterface) => {
-    if (!isTouchDevice && file.type === "dir") {
+    if (!isTouchDevice) {
       setTransitioningFolder(file.name);
       setTimeout(() => {
         onFileDoubleClick(file);
+        if (file.type !== "dir") {
+          setTimeout(() => {
+            setTransitioningFolder((prev) => prev === file.name ? null : prev);
+          }, 500);
+        }
       }, 75);
       return;
     }

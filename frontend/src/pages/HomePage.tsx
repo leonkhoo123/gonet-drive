@@ -1,11 +1,15 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import DefaultLayout from "@/layouts/DefaultLayout";
 import VersionTag from "@/components/custom/versionTag";
-import VideoPlayerModalGeneric from "@/components/custom/videoPlayerModalGeneric";
-import VideoPlayerModalV2 from "@/components/custom/videoPlayerModalV2";
-import PhotoViewerModal from "@/components/custom/photoViewerModal";
-import TextViewerModal from "@/components/custom/textViewerModal";
-import PdfViewerModal from "@/components/custom/pdfViewerModal";
+
+// Lazy load heavy viewer components
+const VideoPlayerModalGeneric = lazy(() => import("@/components/custom/videoPlayerModalGeneric"));
+const VideoPlayerModalV2 = lazy(() => import("@/components/custom/videoPlayerModalV2"));
+const PhotoViewerModal = lazy(() => import("@/components/custom/photoViewerModal"));
+const TextViewerModal = lazy(() => import("@/components/custom/textViewerModal"));
+const PdfViewerModal = lazy(() => import("@/components/custom/pdfViewerModal"));
+const MusicPreviewModal = lazy(() => import("@/components/custom/musicPreviewModal").then(module => ({ default: module.MusicPreviewModal })));
+
 import { useFileManager } from "@/hooks/useFileManager";
 import HomeSidebar from "@/components/home/HomeSidebar";
 import HomeBreadcrumb from "@/components/home/HomeBreadcrumb";
@@ -20,7 +24,6 @@ import HomeDeleteDialog from "@/components/home/HomeDeleteDialog";
 import HomeRenameDialog from "@/components/home/HomeRenameDialog";
 import HomeCreateFolderDialog from "@/components/home/HomeCreateFolderDialog";
 import HomeDuplicateCheckDialog from "@/components/home/HomeDuplicateCheckDialog";
-import { MusicPreviewModal } from "@/components/custom/musicPreviewModal";
 import { useAppHealth } from "@/hooks/useAppHealth";
 import { useHomeKeyboardShortcuts } from "@/hooks/useHomeKeyboardShortcuts";
 import { MobileClipboardToast } from "@/components/home/MobileClipboardToast";
@@ -296,28 +299,32 @@ export default function HomePage() {
       </div>
 
       {selectedVideo && (
-        healthData?.video_mode === "custom" ? (
-          <VideoPlayerModalV2
-            file={selectedVideo}
-            isOpen={!!selectedVideo}
-            onClose={handlePlayerClose}
-          />
-        ) : (
-          <VideoPlayerModalGeneric
-            file={selectedVideo}
-            isOpen={!!selectedVideo}
-            onClose={handlePlayerClose}
-          />
-        )
+        <Suspense fallback={null}>
+          {healthData?.video_mode === "custom" ? (
+            <VideoPlayerModalV2
+              file={selectedVideo}
+              isOpen={!!selectedVideo}
+              onClose={handlePlayerClose}
+            />
+          ) : (
+            <VideoPlayerModalGeneric
+              file={selectedVideo}
+              isOpen={!!selectedVideo}
+              onClose={handlePlayerClose}
+            />
+          )}
+        </Suspense>
       )}
       
       {selectedPhoto && (
-        <PhotoViewerModal
-          initialFile={selectedPhoto}
-          allItems={items?.items ?? []}
-          isOpen={!!selectedPhoto}
-          onClose={() => { setSelectedPhoto(null); }}
-        />
+        <Suspense fallback={null}>
+          <PhotoViewerModal
+            initialFile={selectedPhoto}
+            allItems={items?.items ?? []}
+            isOpen={!!selectedPhoto}
+            onClose={() => { setSelectedPhoto(null); }}
+          />
+        </Suspense>
       )}
       <VersionTag />
 
@@ -387,27 +394,33 @@ export default function HomePage() {
       />
 
       {selectedMusic && (
-        <MusicPreviewModal
-          file={selectedMusic} 
-          isOpen={!!selectedMusic}
-          onClose={() => { setSelectedMusic(null); }} 
-        />
+        <Suspense fallback={null}>
+          <MusicPreviewModal
+            file={selectedMusic} 
+            isOpen={!!selectedMusic}
+            onClose={() => { setSelectedMusic(null); }} 
+          />
+        </Suspense>
       )}
 
       {selectedDocument && (
-        <TextViewerModal
-          file={selectedDocument}
-          isOpen={!!selectedDocument}
-          onClose={() => { setSelectedDocument(null); }}
-        />
+        <Suspense fallback={null}>
+          <TextViewerModal
+            file={selectedDocument}
+            isOpen={!!selectedDocument}
+            onClose={() => { setSelectedDocument(null); }}
+          />
+        </Suspense>
       )}
 
       {selectedPdf && (
-        <PdfViewerModal
-          file={selectedPdf}
-          isOpen={!!selectedPdf}
-          onClose={() => { setSelectedPdf(null); }}
-        />
+        <Suspense fallback={null}>
+          <PdfViewerModal
+            file={selectedPdf}
+            isOpen={!!selectedPdf}
+            onClose={() => { setSelectedPdf(null); }}
+          />
+        </Suspense>
       )}
     </DefaultLayout>
   );

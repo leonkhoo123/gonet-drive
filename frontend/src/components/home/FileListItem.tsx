@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Trash2, Folder, Pencil, Trash2 as TrashIcon, Download, Info, Share2, MoreVertical, Scissors, Copy, Clipboard, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatBytes, formatLastModified } from "@/utils/utils";
@@ -51,7 +52,7 @@ interface FileListItemProps {
   hasSelectedDelete: boolean; // if selectedItems.has('.cloud_delete')
 }
 
-export function FileListItem({
+export const FileListItem = memo(function FileListItem({
   file,
   index,
   isSelected,
@@ -258,21 +259,21 @@ export function FileListItem({
         </ContextMenuItem>
         <ContextMenuSeparator />
         {selectedItemsSize <= 1 && (
-          <ContextMenuItem onClick={(e) => { e.stopPropagation(); onRename(); }} disabled={selectedItemsSize !== 1 || isRecycleBin || hasSelectedDelete}>
+          <ContextMenuItem onClick={(e) => { e.stopPropagation(); onRename(file.name); }} disabled={selectedItemsSize !== 1 || isRecycleBin || hasSelectedDelete}>
             <Pencil className="mr-2 h-4 w-4" />
             Rename
           </ContextMenuItem>
         )}
-        <ContextMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} disabled={selectedItemsSize === 0 || hasSelectedDelete} className="text-red-600 focus:bg-red-50 focus:text-red-600 dark:focus:bg-red-950/30">
+        <ContextMenuItem onClick={(e) => { e.stopPropagation(); onDelete(file.name); }} disabled={selectedItemsSize === 0 || hasSelectedDelete} className="text-red-600 focus:bg-red-50 focus:text-red-600 dark:focus:bg-red-950/30">
           <TrashIcon className="mr-2 h-4 w-4" />
           Delete
         </ContextMenuItem>
         <ContextMenuSeparator />
-        <ContextMenuItem onClick={(e) => { e.stopPropagation(); onDownload(); }} disabled={isRecycleBin || selectedItemsSize === 0 || hasSelectedDelete}>
+        <ContextMenuItem onClick={(e) => { e.stopPropagation(); onDownload(file.name); }} disabled={isRecycleBin || selectedItemsSize === 0 || hasSelectedDelete}>
           <Download className="mr-2 h-4 w-4" />
           Download
         </ContextMenuItem>
-        <ContextMenuItem onClick={(e) => { e.stopPropagation(); onProperties(); }} disabled={selectedItemsSize === 0}>
+        <ContextMenuItem onClick={(e) => { e.stopPropagation(); onProperties(file.name); }} disabled={selectedItemsSize === 0}>
           <Info className="mr-2 h-4 w-4" />
           Info
         </ContextMenuItem>
@@ -285,4 +286,23 @@ export function FileListItem({
       </ContextMenuContent>
     </ContextMenu>
   );
-}
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.file.name === nextProps.file.name &&
+    prevProps.file.modified === nextProps.file.modified &&
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.isHidden === nextProps.isHidden &&
+    prevProps.isCut === nextProps.isCut &&
+    prevProps.isRecycleBin === nextProps.isRecycleBin &&
+    prevProps.isTouchDevice === nextProps.isTouchDevice &&
+    prevProps.transitioningFolder === nextProps.transitioningFolder &&
+    prevProps.openDropdownName === nextProps.openDropdownName &&
+    prevProps.clipboardItemsCount === nextProps.clipboardItemsCount &&
+    prevProps.clipboardOperation === nextProps.clipboardOperation &&
+    prevProps.clipboardSourceDir === nextProps.clipboardSourceDir &&
+    prevProps.currentPath === nextProps.currentPath &&
+    prevProps.selectedItemsSize === nextProps.selectedItemsSize &&
+    prevProps.hasSelectedDelete === nextProps.hasSelectedDelete &&
+    prevProps.index === nextProps.index
+  );
+});

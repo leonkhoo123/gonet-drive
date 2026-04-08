@@ -13,6 +13,7 @@ import { useState, useEffect, useRef } from "react";
 import { useFileDragAndDrop } from "@/hooks/useFileManager/useFileDragAndDrop";
 import { useFileInteraction } from "@/hooks/useFileManager/useFileInteraction";
 import { FileListItem } from "./FileListItem";
+import { useVirtualizer } from "@tanstack/react-virtual";
 
 interface HomeFileListProps {
   isLoading: boolean;
@@ -118,6 +119,13 @@ export default function HomeFileList({
     }
   }, [currentPath]);
 
+  const rowVirtualizer = useVirtualizer({
+    count: displayItems?.items?.length ?? 0,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => isTouchDevice ? 68 : 48,
+    overscan: 5,
+  });
+
   const fileListContainer = (
     <div 
       ref={scrollContainerRef}
@@ -152,49 +160,73 @@ export default function HomeFileList({
             <p>This folder is empty.</p>
           </div>
         ) : (
-            <div className={`space-y-1 transition-opacity duration-300 ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}>
-              {displayItems.items.map((file, index) => {
-                const isSelected = selectedItems.has(file.name);
-                const isHidden = file.name.startsWith('.');
-                const filePath = currentPath === "/" ? `/${file.name}` : `${currentPath}/${file.name}`;
-                const isCut = clipboardOperation === 'cut' && clipboardItems.includes(filePath);
+            <div className={`transition-opacity duration-300 ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}>
+              <div
+                style={{
+                  height: `${rowVirtualizer.getTotalSize()}px`,
+                  width: '100%',
+                  position: 'relative',
+                }}
+              >
+                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const index = virtualRow.index;
+                  const file = displayItems.items[index];
+                  const isSelected = selectedItems.has(file.name);
+                  const isHidden = file.name.startsWith('.');
+                  const filePath = currentPath === "/" ? `/${file.name}` : `${currentPath}/${file.name}`;
+                  const isCut = clipboardOperation === 'cut' && clipboardItems.includes(filePath);
 
-                return (
-                  <FileListItem
-                    key={file.name}
-                    file={file}
-                    index={index}
-                    isSelected={isSelected}
-                    isHidden={isHidden}
-                    isCut={isCut}
-                    isRecycleBin={isRecycleBin}
-                    isTouchDevice={isTouchDevice}
-                    transitioningFolder={transitioningFolder}
-                    openDropdownName={openDropdownName}
-                    setOpenDropdownName={setOpenDropdownName}
-                    handleItemClick={handleItemClick}
-                    handleItemDoubleClick={handleItemDoubleClick}
-                    handleTouchStart={handleTouchStart}
-                    handleTouchEnd={handleTouchEnd}
-                    handleTouchMove={handleTouchMove}
-                    onRename={() => { onRename(file.name); }}
-                    onDelete={() => { onDelete(file.name); }}
-                    onDownload={() => { onDownload(file.name); }}
-                    onProperties={() => { onProperties(file.name); }}
-                    onShare={() => { onShare?.(file.name); }}
-                    onCut={onCut}
-                    onCopy={onCopy}
-                    onPaste={onPaste}
-                    onFileContextMenu={onFileContextMenu}
-                    clipboardItemsCount={clipboardItemsCount}
-                    clipboardOperation={clipboardOperation}
-                    clipboardSourceDir={clipboardSourceDir}
-                    currentPath={currentPath}
-                    selectedItemsSize={selectedItems.size}
-                    hasSelectedDelete={selectedItems.has('.cloud_delete')}
-                  />
-                );
-              })}
+                  return (
+                    <div
+                      key={virtualRow.key}
+                      data-index={index}
+                      ref={rowVirtualizer.measureElement}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        transform: `translateY(${virtualRow.start}px)`,
+                      }}
+                      className="pb-1"
+                    >
+                      <FileListItem
+                        key={file.name}
+                        file={file}
+                        index={index}
+                        isSelected={isSelected}
+                        isHidden={isHidden}
+                        isCut={isCut}
+                        isRecycleBin={isRecycleBin}
+                        isTouchDevice={isTouchDevice}
+                        transitioningFolder={transitioningFolder}
+                        openDropdownName={openDropdownName}
+                        setOpenDropdownName={setOpenDropdownName}
+                        handleItemClick={handleItemClick}
+                        handleItemDoubleClick={handleItemDoubleClick}
+                        handleTouchStart={handleTouchStart}
+                        handleTouchEnd={handleTouchEnd}
+                        handleTouchMove={handleTouchMove}
+                        onRename={onRename}
+                        onDelete={onDelete}
+                        onDownload={onDownload}
+                        onProperties={onProperties}
+                        onShare={onShare}
+                        onCut={onCut}
+                        onCopy={onCopy}
+                        onPaste={onPaste}
+                        onFileContextMenu={onFileContextMenu}
+                        clipboardItemsCount={clipboardItemsCount}
+                        clipboardOperation={clipboardOperation}
+                        clipboardSourceDir={clipboardSourceDir}
+                        currentPath={currentPath}
+                        selectedItemsSize={selectedItems.size}
+                        hasSelectedDelete={selectedItems.has('.cloud_delete')}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             
             {/* Counts acting as spacer */}
             <div className="flex items-center justify-center text-sm text-muted-foreground min-h-[64px] md:min-h-[44px] border-t mt-2 border-border/50 [-webkit-touch-callout:none] [-webkit-tap-highlight-color:transparent]">

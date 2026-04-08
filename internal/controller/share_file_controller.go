@@ -57,6 +57,14 @@ func ensureWithinAuthorizedPath(authorizedPath string, requestedSubPath string) 
 		targetPath = filepath.Clean(filepath.Join(authorizedPath, requestedSubPath))
 	}
 
+	if authorizedPath == "." {
+		// If authorizedPath is root (.), any path that doesn't go up (..) is valid
+		if strings.HasPrefix(targetPath, "..") {
+			return "", false
+		}
+		return targetPath, true
+	}
+
 	// Ensure targetPath still starts with the authorizedPath with a trailing slash to prevent partial matches
 	prefix := authorizedPath
 	if !strings.HasSuffix(prefix, "/") {
