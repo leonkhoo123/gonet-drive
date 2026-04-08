@@ -69,6 +69,7 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
   const isScrubbing = useRef<boolean>(false);
   const scrubTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasScrubbed = useRef<boolean>(false);
+  const wasPlayingBeforeScrub = useRef<boolean>(false);
   const [dragDeltaSeconds, setDragDeltaSeconds] = useState<number | null>(null);
 
   /* =====================================================
@@ -137,6 +138,10 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
       // Small delay before dragging is sensed (200ms)
       scrubTimeout.current = setTimeout(() => {
         isScrubbing.current = true;
+        if (videoRef.current) {
+          wasPlayingBeforeScrub.current = !videoRef.current.paused;
+          videoRef.current.pause();
+        }
       }, 200);
     }
   };
@@ -174,6 +179,11 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
       clearTimeout(scrubTimeout.current);
       scrubTimeout.current = null;
     }
+
+    if (isScrubbing.current && videoRef.current && wasPlayingBeforeScrub.current) {
+      videoRef.current.play().catch(() => { setIsPlaying(false); });
+    }
+
     touchStartX.current = null;
     touchStartTime.current = null;
     isScrubbing.current = false;
