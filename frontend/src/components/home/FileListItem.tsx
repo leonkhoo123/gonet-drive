@@ -101,7 +101,7 @@ export function FileListItem({
         }}
         className={`flex items-center pl-4 pr-1 md:pl-1 md:pr-3 py-2 md:py-3 cursor-pointer rounded-md transition-all duration-75 ease-out select-none min-h-[64px] md:min-h-[44px] [-webkit-touch-callout:none] [-webkit-tap-highlight-color:transparent] ${
           transitioningFolder === file.name
-            ? 'bg-primary/30 scale-[0.96]'
+            ? 'bg-primary/30'
             : isSelected
               ? 'bg-primary/10 @media(hover:hover):hover:bg-primary/20'
               : 'bg-transparent @media(hover:hover):hover:bg-muted/50'
@@ -177,7 +177,7 @@ export function FileListItem({
                   <TrashIcon className="mr-2 h-4 w-4" />
                   Delete
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => { 
+                <DropdownMenuItem disabled={isRecycleBin} onClick={(e) => { 
                   e.stopPropagation(); 
                   setOpenDropdownName(null);
                   onDownload(file.name);
@@ -193,14 +193,16 @@ export function FileListItem({
                   <Info className="mr-2 h-4 w-4" />
                   Info
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => {
-                  e.stopPropagation();
-                  setOpenDropdownName(null);
-                  onShare?.(file.name, false);
-                }}>
-                  <Share2 className="mr-2 h-4 w-4" />
-                  Share
-                </DropdownMenuItem>
+                {!isRecycleBin && (
+                  <DropdownMenuItem onClick={(e) => {
+                    e.stopPropagation();
+                    setOpenDropdownName(null);
+                    onShare?.(file.name, false);
+                  }}>
+                    <Share2 className="mr-2 h-4 w-4" />
+                    Share
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -266,7 +268,7 @@ export function FileListItem({
           Delete
         </ContextMenuItem>
         <ContextMenuSeparator />
-        <ContextMenuItem onClick={(e) => { e.stopPropagation(); onDownload(); }} disabled={selectedItemsSize === 0 || hasSelectedDelete}>
+        <ContextMenuItem onClick={(e) => { e.stopPropagation(); onDownload(); }} disabled={isRecycleBin || selectedItemsSize === 0 || hasSelectedDelete}>
           <Download className="mr-2 h-4 w-4" />
           Download
         </ContextMenuItem>
@@ -274,8 +276,8 @@ export function FileListItem({
           <Info className="mr-2 h-4 w-4" />
           Info
         </ContextMenuItem>
-        {selectedItemsSize <= 1 && (
-          <ContextMenuItem onClick={(e) => { e.stopPropagation(); onShare?.(file.name); }} disabled={selectedItemsSize === 0 || isRecycleBin || hasSelectedDelete}>
+        {!isRecycleBin && selectedItemsSize <= 1 && (
+          <ContextMenuItem onClick={(e) => { e.stopPropagation(); onShare?.(file.name); }} disabled={selectedItemsSize === 0 || hasSelectedDelete}>
             <Share2 className="mr-2 h-4 w-4" />
             Share
           </ContextMenuItem>

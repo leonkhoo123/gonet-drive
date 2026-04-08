@@ -538,6 +538,7 @@ const AdminPage = () => {
                         <TableHead className="font-semibold">Username</TableHead>
                         <TableHead className="font-semibold">Role</TableHead>
                         <TableHead className="font-semibold">Security</TableHead>
+                        <TableHead className="font-semibold text-right">Quota</TableHead>
                         <TableHead className="font-semibold text-center">Status</TableHead>
                         <TableHead className="font-semibold text-right">Actions</TableHead>
                       </TableRow>

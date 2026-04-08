@@ -60,6 +60,8 @@ export function useFileOperations({
 
     if (window.innerWidth >= 768) {
       toast.success(`${selectedItems.size} item(s) ready to move`);
+    } else {
+      setSelectedItems(new Set());
     }
   };
 
@@ -75,6 +77,8 @@ export function useFileOperations({
 
     if (window.innerWidth >= 768) {
       toast.success(`${selectedItems.size} item(s) added to clipboard`);
+    } else {
+      setSelectedItems(new Set());
     }
   };
 
@@ -242,6 +246,11 @@ export function useFileOperations({
   };
 
   const handleDownload = (fileName?: string | React.MouseEvent | Event) => {
+    if (currentPath === '/.cloud_delete' || currentPath.startsWith('/.cloud_delete/')) {
+      toast.error("Download is not allowed in recycle bin");
+      return;
+    }
+
     const targetFileName = typeof fileName === 'string' ? fileName : undefined;
     if (!targetFileName && selectedItems.size === 0) {
       setIsDownloadDirDialogOpen(true);
@@ -268,6 +277,11 @@ export function useFileOperations({
   };
 
   const handleShare = (fileName?: string | React.MouseEvent | Event, isCurrentDir = false) => {
+    if (currentPath === '/.cloud_delete' || currentPath.startsWith('/.cloud_delete/')) {
+      toast.error("Sharing is not allowed in recycle bin");
+      return;
+    }
+
     const targetFileName = typeof fileName === 'string' ? fileName : undefined;
     if (!isCurrentDir && !targetFileName && selectedItems.size === 0) return;
 

@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { setShareMode } from "@/api/api-file";
-import { MusicPlayerV2 } from "@/components/custom/musicPlayerV2";
+import { MusicPreviewModal } from "@/components/custom/musicPreviewModal";
 import { useAppHealth } from "@/hooks/useAppHealth";
 import { OperationQueueProgress } from "@/components/custom/operationQueueProgress";
 import { MobileClipboardToast } from "@/components/home/MobileClipboardToast";
@@ -476,12 +476,10 @@ export default function ShareHomePage() {
       />
 
       {selectedMusic && (
-        <MusicPlayerV2
+        <MusicPreviewModal
           file={selectedMusic} 
-          playlist={(items?.items ?? []).filter(item => item.type !== 'dir' && (item.name.toLowerCase().endsWith('.mp3') || item.name.toLowerCase().endsWith('.wav') || item.name.toLowerCase().endsWith('.flac') || item.name.toLowerCase().endsWith('.ogg') || item.name.toLowerCase().endsWith('.m4a') || item.name.toLowerCase().endsWith('.aac')))}
-          onSelectMusic={setSelectedMusic}
+          isOpen={!!selectedMusic}
           onClose={() => { setSelectedMusic(null); }} 
-          forcePause={!!selectedVideo}
         />
       )}
 

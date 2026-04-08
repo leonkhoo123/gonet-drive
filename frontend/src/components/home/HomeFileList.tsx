@@ -71,7 +71,7 @@ export default function HomeFileList({
   sortOrder,
   onSortChange,
 }: HomeFileListProps) {
-  const [displayItems, setDisplayItems] = useState<ItemsResponse | undefined>(items);
+  const [cachedItems, setCachedItems] = useState<ItemsResponse | undefined>(items);
   const [openDropdownName, setOpenDropdownName] = useState<string | null>(null);
   const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
 
@@ -103,10 +103,12 @@ export default function HomeFileList({
 
   useEffect(() => {
     if (items) {
-      setDisplayItems(items);
+      setCachedItems(items);
       setTransitioningFolder(null); // Reset transition state when items change
     }
   }, [items, setTransitioningFolder]);
+
+  const displayItems = items ?? cachedItems;
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 

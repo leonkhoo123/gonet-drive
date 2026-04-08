@@ -50,7 +50,7 @@ export default function MobileSelectionToolbar({
         <Button variant="ghost" size="sm" onClick={onProperties} className="h-12 w-10 p-0" title="Info">
           <Info className="h-8 w-8" />
         </Button>
-        <Button variant="ghost" size="sm" onClick={onDownload} disabled={isRecycleBinSelected} className="h-12 w-10 p-0" title="Download">
+        <Button variant="ghost" size="sm" onClick={onDownload} disabled={isRecycleBinSelected || isRecycleBin} className="h-12 w-10 p-0" title="Download">
           <Download className="h-8 w-8" />
         </Button>
         <Button variant="ghost" size="sm" onClick={onDelete} disabled={isRecycleBinSelected} className="h-12 w-10 p-0 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30" title="Delete">

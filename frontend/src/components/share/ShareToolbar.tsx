@@ -117,7 +117,7 @@ export default function ShareToolbar({
           <Trash2 className="h-4 w-4" />
         </Button>
       )}
-      <Button variant="ghost" size="sm" onClick={onDownload} disabled={(selectedItemsSize === 0 && isFolderEmpty) || isRecycleBinSelected} className="h-8 w-8 p-0" title="Download">
+      <Button variant="ghost" size="sm" onClick={onDownload} disabled={(selectedItemsSize === 0 && isFolderEmpty) || isRecycleBinSelected || isRecycleBin} className="h-8 w-8 p-0" title="Download">
         <Download className="h-4 w-4" />
       </Button>
 

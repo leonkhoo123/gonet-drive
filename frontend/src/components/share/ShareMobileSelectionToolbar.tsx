@@ -56,7 +56,7 @@ export default function ShareMobileSelectionToolbar({
         <Button variant="ghost" size="sm" onClick={onProperties} className="h-12 w-10 p-0" title="Info">
           <Info className="h-8 w-8" />
         </Button>
-        <Button variant="ghost" size="sm" onClick={onDownload} disabled={isRecycleBinSelected} className="h-12 w-10 p-0" title="Download">
+        <Button variant="ghost" size="sm" onClick={onDownload} disabled={isRecycleBinSelected || isRecycleBin} className="h-12 w-10 p-0" title="Download">
           <Download className="h-8 w-8" />
         </Button>
         {authority === 'modify' && (
