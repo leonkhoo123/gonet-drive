@@ -9,7 +9,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { Clipboard, Info } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useFileDragAndDrop } from "@/hooks/useFileManager/useFileDragAndDrop";
 import { useFileInteraction } from "@/hooks/useFileManager/useFileInteraction";
 import { FileListItem } from "./FileListItem";
@@ -111,24 +111,24 @@ export default function HomeFileList({
 
   const displayItems = items ?? cachedItems;
 
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTop = 0;
+    if (scrollElement) {
+      scrollElement.scrollTop = 0;
     }
-  }, [currentPath]);
+  }, [currentPath, scrollElement]);
 
   const rowVirtualizer = useVirtualizer({
-    count: displayItems?.items?.length ?? 0,
-    getScrollElement: () => scrollContainerRef.current,
+    count: displayItems?.items.length ?? 0,
+    getScrollElement: () => scrollElement,
     estimateSize: () => isTouchDevice ? 68 : 48,
     overscan: 5,
   });
 
   const fileListContainer = (
     <div 
-      ref={scrollContainerRef}
+      ref={setScrollElement}
       className="flex-1 min-h-0 relative overflow-y-scroll overscroll-y-none p-0 md:p-3 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar scrollbar-thumb-black/20 dark:scrollbar-thumb-white/20 scrollbar-track-transparent"
     >
       {/* Loading Overlay */}
