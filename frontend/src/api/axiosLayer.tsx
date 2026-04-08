@@ -58,7 +58,7 @@ instance.interceptors.response.use(
     }
 
     // If 401 and we haven't retried yet, and it's not the refresh endpoint itself
-    if (error.response?.status === 401 && originalRequest && !originalRequest._retry && originalRequest.url && !originalRequest.url.includes('/refresh') && !originalRequest.url.includes('/login')) {
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry && originalRequest.url && !originalRequest.url.includes('/refresh') && !originalRequest.url.includes('/login') && !originalRequest.url.includes('/mfa/verify') && !originalRequest.url.includes('/user/mfa/enable') && !originalRequest.url.includes('/logout')) {
       if (window.location.pathname.startsWith('/share')) {
         window.dispatchEvent(new Event('share:unauthorized'));
         return Promise.reject(error);
