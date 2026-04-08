@@ -519,6 +519,25 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
           max={100}
           step="any"
           value={progress || 0}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            if (videoRef.current) {
+              wasPlayingBeforeScrub.current = !videoRef.current.paused;
+              videoRef.current.pause();
+            }
+          }}
+          onPointerUp={(e) => {
+            e.stopPropagation();
+            if (videoRef.current && wasPlayingBeforeScrub.current) {
+              videoRef.current.play().catch(() => { setIsPlaying(false); });
+            }
+          }}
+          onPointerCancel={(e) => {
+            e.stopPropagation();
+            if (videoRef.current && wasPlayingBeforeScrub.current) {
+              videoRef.current.play().catch(() => { setIsPlaying(false); });
+            }
+          }}
           onChange={(e) => {
             const v = videoRef.current;
             if (!v || !duration) return;
@@ -531,7 +550,9 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
             setProgress(newProgress);
             setCurrentTime(newTime);
           }}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer m-0"
+          className={`absolute left-0 w-full opacity-0 cursor-pointer m-0 ${
+            showControls ? "h-[60px] top-1/2 -translate-y-1/2" : "inset-0 h-full"
+          }`}
         />
       </div>
 
