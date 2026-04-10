@@ -1,4 +1,4 @@
-import { Trash2, Folder, Pencil, Trash2 as TrashIcon, Download, Info, MoreVertical, Scissors, Copy, Clipboard } from "lucide-react";
+import { Trash2, Folder, Pencil, Trash2 as TrashIcon, Download, Info, MoreVertical, Scissors, Copy, Clipboard, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatBytes, formatLastModified } from "@/utils/utils";
 import type { FileInterface } from "@/api/api-file";
@@ -219,6 +219,8 @@ export function ShareFileListItem({
     );
   }
 
+  const canOpen = file.type === "dir" || ["video", "photo", "music", "text_documents", "pdf"].includes(file.media_type ?? "");
+
   return (
     <ContextMenu key={file.name} onOpenChange={(open) => {
       if (open) {
@@ -229,6 +231,15 @@ export function ShareFileListItem({
         {fileContent}
       </ContextMenuTrigger>
       <ContextMenuContent className="w-64">
+        {canOpen && (
+          <>
+            <ContextMenuItem onClick={(e) => { e.stopPropagation(); handleItemDoubleClick(file); }} disabled={selectedItemsSize > 1 || hasSelectedDelete}>
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Open
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+          </>
+        )}
         {authority === 'modify' && (
           <>
             <ContextMenuItem onClick={(e) => { e.stopPropagation(); onCut(); }} disabled={selectedItemsSize === 0 || hasSelectedDelete}>

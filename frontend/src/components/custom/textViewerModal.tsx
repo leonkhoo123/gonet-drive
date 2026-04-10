@@ -307,6 +307,7 @@ export default function TextViewerModal({ file, isOpen, onClose }: TextViewerMod
                   customStyle={{ margin: 0, padding: '1rem', minHeight: '100%', background: 'transparent' }}
                   showLineNumbers={true}
                   wrapLines={true}
+                  lineNumberStyle={{ userSelect: "none", WebkitUserSelect: "none", MozUserSelect: "none", msUserSelect: "none" }}
                 >
                   {content}
                 </SyntaxHighlighter>

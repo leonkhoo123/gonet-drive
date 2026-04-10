@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Trash2, Folder, Pencil, Trash2 as TrashIcon, Download, Info, Share2, MoreVertical, Scissors, Copy, Clipboard, Users } from "lucide-react";
+import { Trash2, Folder, Pencil, Trash2 as TrashIcon, Download, Info, Share2, MoreVertical, Scissors, Copy, Clipboard, Users, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatBytes, formatLastModified } from "@/utils/utils";
 import type { FileInterface } from "@/api/api-file";
@@ -232,6 +232,8 @@ export const FileListItem = memo(function FileListItem({
     );
   }
 
+  const canOpen = file.type === "dir" || ["video", "photo", "music", "text_documents", "pdf"].includes(file.media_type ?? "");
+
   return (
     <ContextMenu key={file.name} onOpenChange={(open) => {
       if (open) {
@@ -242,6 +244,15 @@ export const FileListItem = memo(function FileListItem({
         {fileContent}
       </ContextMenuTrigger>
       <ContextMenuContent className="w-64">
+        {canOpen && (
+          <>
+            <ContextMenuItem onClick={(e) => { e.stopPropagation(); handleItemDoubleClick(file); }} disabled={selectedItemsSize > 1 || hasSelectedDelete}>
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Open
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+          </>
+        )}
         <ContextMenuItem onClick={(e) => { e.stopPropagation(); onCut(); }} disabled={selectedItemsSize === 0 || hasSelectedDelete}>
           <Scissors className="mr-2 h-4 w-4" />
           Cut
