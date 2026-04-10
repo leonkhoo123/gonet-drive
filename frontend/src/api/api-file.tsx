@@ -7,7 +7,7 @@ export let isShareMode = false;
 export const setShareMode = (val: boolean) => { isShareMode = val; };
 
 export interface ItemsResponse {
-  items: FileInterface[];
+  items: FileInterface[] | null;
   path: string;
   share_root?: string;
   file_count?: number;

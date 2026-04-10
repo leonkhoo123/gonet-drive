@@ -120,7 +120,7 @@ export default function HomeFileList({
   }, [currentPath, scrollElement]);
 
   const rowVirtualizer = useVirtualizer({
-    count: displayItems?.items.length ?? 0,
+    count: displayItems?.items?.length ?? 0,
     getScrollElement: () => scrollElement,
     estimateSize: () => isTouchDevice ? 68 : 48,
     overscan: 5,
@@ -170,7 +170,7 @@ export default function HomeFileList({
               >
                 {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                   const index = virtualRow.index;
-                  const file = displayItems.items[index];
+                  const file = (displayItems.items ?? [])[index];
                   const isSelected = selectedItems.has(file.name);
                   const isHidden = file.name.startsWith('.');
                   const filePath = currentPath === "/" ? `/${file.name}` : `${currentPath}/${file.name}`;
