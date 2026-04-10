@@ -8,7 +8,7 @@ import { decodeUrlToPath } from "@/utils/utils";
 export type SortField = 'name' | 'size' | 'modified';
 export type SortOrder = 'asc' | 'desc';
 
-export function useFileSystem(baseRoute: string = "/home") {
+export function useFileSystem(baseRoute = "/home") {
   const location = useLocation();
   const navigate = useNavigate();
   const { showHidden } = usePreferences();
@@ -23,6 +23,7 @@ export function useFileSystem(baseRoute: string = "/home") {
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
   const prevPathRef = useRef<string>("/");
+  const fetchIdRef = useRef<number>(0);
 
   const handleSortChange = useCallback((field: SortField) => {
     if (sortField === field) {
@@ -39,6 +40,7 @@ export function useFileSystem(baseRoute: string = "/home") {
   }, [sortField, sortOrder]);
 
   const handleRefresh = useCallback(async () => {
+    const currentFetchId = ++fetchIdRef.current;
     setIsLoading(true);
     setError(false);
     try {
@@ -46,54 +48,15 @@ export function useFileSystem(baseRoute: string = "/home") {
         fetchDirList(currentPath, showHidden, sortField ?? undefined, sortField ? sortOrder : undefined),
         new Promise(resolve => setTimeout(resolve, 200))
       ]);
-      setItems(itemsrs);
-      if (itemsrs.share_root) {
-        setShareRoot(itemsrs.share_root);
-      }
-    } catch (err: any) {
-      console.error("MyErr: ", err);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      console.error("err.message: ", err.message);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      console.error(" err.response.status: ", err?.response?.status);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      if (err?.response?.status === 401) {
-        if (!baseRoute.includes("/share")) void navigate("/login");
-      }
-      setError(true);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentPath, showHidden, sortField, sortOrder, navigate, baseRoute]);
-
-  useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    if (!location) return;
-
-    const loadFiles = async () => {
-      setIsLoading(true);
-      setError(false);
-      
-      const rawPath = decodeURIComponent(location.pathname.replace(baseRoute, "")) || "/";
-      const path = decodeUrlToPath(rawPath);
-      
-      // Clear items to show skeleton ONLY on directory change
-      if (path !== prevPathRef.current) {
-        setItems(undefined);
-        prevPathRef.current = path;
-      }
-
-      try {
-        const [itemsrs] = await Promise.all([
-          fetchDirList(path, showHidden, sortField ?? undefined, sortField ? sortOrder : undefined),
-          new Promise(resolve => setTimeout(resolve, 200))
-        ]);
+      if (currentFetchId === fetchIdRef.current) {
         setItems(itemsrs);
-        setCurrentPath(itemsrs.path);
         if (itemsrs.share_root) {
           setShareRoot(itemsrs.share_root);
         }
-      } catch (err: any) {
+        setIsLoading(false);
+      }
+    } catch (err: any) {
+      if (currentFetchId === fetchIdRef.current) {
         console.error("MyErr: ", err);
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         console.error("err.message: ", err.message);
@@ -104,13 +67,62 @@ export function useFileSystem(baseRoute: string = "/home") {
           if (!baseRoute.includes("/share")) void navigate("/login");
         }
         setError(true);
-      } finally {
         setIsLoading(false);
+      }
+    }
+  }, [currentPath, showHidden, sortField, sortOrder, navigate, baseRoute]);
+
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (!location) return;
+
+    const loadFiles = async () => {
+      const currentFetchId = ++fetchIdRef.current;
+      setIsLoading(true);
+      setError(false);
+      
+      const rawPath = decodeURIComponent(location.pathname.replace(baseRoute, "")) || "/";
+      const path = decodeUrlToPath(rawPath);
+      
+      // Clear items to show skeleton ONLY on directory change
+      if (path !== prevPathRef.current) {
+        setItems(undefined);
+        setCurrentPath(path); // Immediately update currentPath so handleRefresh uses the new path
+        prevPathRef.current = path;
+      }
+
+      try {
+        const [itemsrs] = await Promise.all([
+          fetchDirList(path, showHidden, sortField ?? undefined, sortField ? sortOrder : undefined),
+          new Promise(resolve => setTimeout(resolve, 200))
+        ]);
+        if (currentFetchId === fetchIdRef.current) {
+          setItems(itemsrs);
+          setCurrentPath(itemsrs.path);
+          if (itemsrs.share_root) {
+            setShareRoot(itemsrs.share_root);
+          }
+          setIsLoading(false);
+        }
+      } catch (err: any) {
+        if (currentFetchId === fetchIdRef.current) {
+          console.error("MyErr: ", err);
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          console.error("err.message: ", err.message);
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          console.error(" err.response.status: ", err?.response?.status);
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          if (err?.response?.status === 401) {
+            if (!baseRoute.includes("/share")) void navigate("/login");
+          }
+          setError(true);
+          setIsLoading(false);
+        }
       }
     };
 
     void loadFiles();
-  }, [location, showHidden, sortField, sortOrder, navigate]);
+  }, [location, showHidden, sortField, sortOrder, navigate, baseRoute]);
 
   useEffect(() => {
     const unsubscribe = wsClient.subscribe((msg: OperationMessage) => {

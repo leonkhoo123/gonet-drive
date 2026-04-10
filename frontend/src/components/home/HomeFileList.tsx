@@ -1,4 +1,4 @@
-import { Folder, UploadCloud, Loader2, ArrowUp, ArrowDown } from "lucide-react";
+import { Folder, UploadCloud, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ItemsResponse, FileInterface } from "@/api/api-file";
 import {
@@ -44,6 +44,39 @@ interface HomeFileListProps {
   onSortChange?: (field: 'name' | 'size' | 'modified') => void;
 }
 
+import { Skeleton } from "@/components/ui/skeleton";
+
+const FileListSkeleton = () => {
+  // Generate 15 skeleton items to fill the view
+  return (
+    <div className="w-full flex flex-col pt-1">
+      {Array.from({ length: 15 }).map((_, i) => (
+        <div
+          key={i}
+          className="flex items-center pl-4 pr-1 md:pl-1 md:pr-3 py-2 md:py-3 min-h-[64px] md:min-h-[44px] mb-1"
+        >
+          <div className="flex-1 flex items-center space-x-3 min-w-0 pr-2 md:pr-4">
+            <Skeleton className="h-7 w-7 md:h-5 md:w-5 shrink-0" />
+            <div className="flex flex-col pl-1 min-w-0 w-full space-y-1.5">
+              {/* Vary the width slightly for a more natural look */}
+              <Skeleton className={`h-4 rounded ${i % 3 === 0 ? 'w-[40%]' : i % 2 === 0 ? 'w-[60%]' : 'w-[50%]'}`} />
+              <Skeleton className={`h-3 rounded lg:hidden ${i % 2 === 0 ? 'w-[30%]' : 'w-[40%]'}`} />
+            </div>
+          </div>
+          
+          <div className="w-24 md:w-32 hidden lg:flex justify-end">
+            <Skeleton className="h-4 w-12 rounded" />
+          </div>
+          
+          <div className="w-32 md:w-48 hidden lg:flex justify-end">
+            <Skeleton className="h-4 w-24 rounded" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export default function HomeFileList({
   isLoading,
   error,
@@ -72,7 +105,6 @@ export default function HomeFileList({
   sortOrder,
   onSortChange,
 }: HomeFileListProps) {
-  const [cachedItems, setCachedItems] = useState<ItemsResponse | undefined>(items);
   const [openDropdownName, setOpenDropdownName] = useState<string | null>(null);
   const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
 
@@ -103,13 +135,12 @@ export default function HomeFileList({
   });
 
   useEffect(() => {
-    if (items) {
-      setCachedItems(items);
-      setTransitioningFolder(null); // Reset transition state when items change
+    if (!items) {
+      setTransitioningFolder(null); // Reset transition state when navigating
     }
   }, [items, setTransitioningFolder]);
 
-  const displayItems = items ?? cachedItems;
+  const displayItems = items;
 
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null);
 
@@ -133,20 +164,17 @@ export default function HomeFileList({
     >
       {/* Loading Overlay */}
       <div 
-        className={`absolute inset-0 flex flex-col items-center justify-center transition-opacity duration-300 pointer-events-none z-10 ${
-          isLoading && !items ? 'opacity-100' : 'opacity-0'
+        className={`absolute inset-0 pointer-events-none z-10 p-0 md:p-3 ${
+          isLoading && !items ? 'block' : 'hidden'
         }`}
       >
-        <div className="flex flex-col items-center justify-center text-muted-foreground">
-          <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
-          <p>Loading</p>
-        </div>
+        <FileListSkeleton />
       </div>
 
       {/* Content Layer */}
       <div 
-        className={`transition-opacity duration-300 min-h-full ${
-          isLoading && !items ? 'opacity-0 pointer-events-none' : 'opacity-100'
+        className={`min-h-full ${
+          isLoading && !items ? 'hidden' : 'animate-in fade-in duration-200'
         }`}
       >
         {error ? (
