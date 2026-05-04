@@ -25,6 +25,7 @@ func ShareFileRoutes(router *gin.Engine) {
 
 		fileAccess.GET("/music/play/file/*filepath", ShareFileServe)
 		fileAccess.GET("/video/play/file/*filepath", ShareFileServe)
+		fileAccess.GET("/video/thumbnail/file/*filepath", ShareFileServe)
 		fileAccess.GET("/photo/play/file/*filepath", ShareFileServe)
 		fileAccess.GET("/photo/thumbnail/file/*filepath", ShareFileServe)
 		fileAccess.GET("/document/read/file/*filepath", ShareFileServe)
@@ -265,6 +266,8 @@ func ShareFileServe(c *gin.Context) {
 	// Check which service to call based on the URL
 	if strings.HasPrefix(c.Request.URL.Path, "/api/share/file/music/") {
 		service.ServeMusic(c, config.AppConfig)
+	} else if strings.HasPrefix(c.Request.URL.Path, "/api/share/file/video/thumbnail/") {
+		service.ServeVideoThumbnail(c, config.AppConfig)
 	} else if strings.HasPrefix(c.Request.URL.Path, "/api/share/file/video/") {
 		service.ServeVideo(c, config.AppConfig)
 	} else if strings.HasPrefix(c.Request.URL.Path, "/api/share/file/photo/thumbnail/") {

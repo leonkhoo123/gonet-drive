@@ -16,6 +16,11 @@ func VideoRoutes(router *gin.RouterGroup, cfg *config.CloudConfig) {
 		service.ServeVideo(c, cfg)
 	})
 
+	// serve video thumbnail
+	api.GET("/thumbnail/file/*filepath", func(c *gin.Context) {
+		service.ServeVideoThumbnail(c, cfg)
+	})
+
 	api.POST("/disqualified", func(c *gin.Context) {
 		service.VideoDisqualified(c, cfg)
 	})
