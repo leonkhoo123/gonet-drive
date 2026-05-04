@@ -350,13 +350,13 @@ export default function ShareHomePage() {
           />
         </div>
 
-        {!selectedVideo && !selectedPhoto && authority === 'modify' && (
+        {authority === 'modify' && (
           <div className={clipboardItems.items.length > 0 ? "hidden md:block" : ""}>
             <OperationQueueProgress />
           </div>
         )}
 
-        {!selectedVideo && !selectedPhoto && authority === 'modify' && (
+        {authority === 'modify' && (
           <MobileClipboardToast
             clipboardItemsCount={clipboardItems.items.length}
             operation={clipboardItems.operation}
@@ -368,7 +368,7 @@ export default function ShareHomePage() {
         )}
 
         {/* Mobile Floating Action Button */}
-        {!selectedVideo && !selectedPhoto && authority === 'modify' && !items?.is_single_file && (
+        {authority === 'modify' && !items?.is_single_file && (
           <div className="md:hidden absolute bottom-4 right-4 z-50">
             <input 
               type="file" 

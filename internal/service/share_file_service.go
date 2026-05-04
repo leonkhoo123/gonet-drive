@@ -723,7 +723,7 @@ func ShareUploadChunk(c *gin.Context, cfg *config.CloudConfig) {
 		return
 	}
 
-	tempDir := filepath.Join(cfg.Server.FileRoot, ".cloud_reserve", "upload_emp", identifier)
+	tempDir := filepath.Join(cfg.Server.FileRoot, ".cloud_reserve", "upload_temp", identifier)
 
 	if status == "cancel" {
 		size := storage.GetPathSize(tempDir)

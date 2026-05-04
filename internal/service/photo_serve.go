@@ -10,6 +10,7 @@ import (
 	"go-file-server/internal/config"
 	"go-file-server/internal/util"
 
+	"github.com/chai2010/webp"
 	"github.com/disintegration/imaging"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/sync/singleflight"
@@ -69,7 +70,7 @@ func ServePhotoThumbnail(c *gin.Context, cfg *config.CloudConfig) {
 	hasher := md5.New()
 	hasher.Write([]byte(fullPath))
 	hashStr := hex.EncodeToString(hasher.Sum(nil))
-	thumbPath := filepath.Join(thumbnailsDir, hashStr+".jpg")
+	thumbPath := filepath.Join(thumbnailsDir, hashStr+".webp")
 
 	// Check if thumbnail exists and is newer than the original file
 	thumbStat, err := os.Stat(thumbPath)
@@ -81,16 +82,23 @@ func ServePhotoThumbnail(c *gin.Context, cfg *config.CloudConfig) {
 	// Use singleflight to prevent multiple requests from generating the same thumbnail concurrently
 	_, err, _ = thumbnailGroup.Do(thumbPath, func() (interface{}, error) {
 		// Open original image
-		src, err := imaging.Open(fullPath)
+		src, err := imaging.Open(fullPath, imaging.AutoOrientation(true))
 		if err != nil {
 			return nil, err
 		}
 
-		// Resize to 200px width, preserving aspect ratio
-		dst := imaging.Resize(src, 200, 0, imaging.Box)
+		// Resize to 300px width, preserving aspect ratio
+		// Using Lanczos for better downscaling quality compared to Box
+		dst := imaging.Resize(src, 300, 0, imaging.Lanczos)
 
-		// Save as JPG
-		if err := imaging.Save(dst, thumbPath, imaging.JPEGQuality(80)); err != nil {
+		// Save as WebP
+		out, err := os.Create(thumbPath)
+		if err != nil {
+			return nil, err
+		}
+		defer out.Close()
+
+		if err := webp.Encode(out, dst, &webp.Options{Lossless: false, Quality: 85}); err != nil {
 			return nil, err
 		}
 		return nil, nil

@@ -44,8 +44,8 @@ func UploadChunk(c *gin.Context, cfg *config.CloudConfig) {
 		return
 	}
 
-	// Create temp directory for this upload inside .cloud_reserve/upload_emp
-	tempDir := filepath.Join(cfg.Server.FileRoot, ".cloud_reserve", "upload_emp", identifier)
+	// Create temp directory for this upload inside .cloud_reserve/upload_temp
+	tempDir := filepath.Join(cfg.Server.FileRoot, ".cloud_reserve", "upload_temp", identifier)
 
 	// If the frontend is aborting the upload
 	if status == "cancel" {

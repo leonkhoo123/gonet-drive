@@ -157,16 +157,14 @@ export default function HomePage() {
   return (
     <DefaultLayout>
       <div className="flex flex-1 w-full overflow-hidden relative">
-        {!selectedVideo && !selectedPhoto && (
-          <HomeSidebar 
-            isOpen={isSidebarOpen} 
-            onClose={() => { setIsSidebarOpen(false); }} 
-            isWsConnected={isWsConnected}
-            isHealthConnected={isHealthConnected}
-            titleName={healthData?.service_name}
-            storageUsage={items?.storage}
-          />
-        )}
+        <HomeSidebar 
+          isOpen={isSidebarOpen} 
+          onClose={() => { setIsSidebarOpen(false); }} 
+          isWsConnected={isWsConnected}
+          isHealthConnected={isHealthConnected}
+          titleName={healthData?.service_name}
+          storageUsage={items?.storage}
+        />
 
         <div className="flex-1 flex flex-col min-w-0 bg-background overflow-hidden" onClick={(e) => {
           // Prevent clearing selection if clicking inside a toolbar button, menu, dialog, or popover
@@ -276,30 +274,24 @@ export default function HomePage() {
           />
         </div>
 
-        {!selectedVideo && !selectedPhoto && (
-          <div className={clipboardItems.items.length > 0 ? "hidden md:block" : ""}>
-            <OperationQueueProgress />
-          </div>
-        )}
+        <div className={clipboardItems.items.length > 0 ? "hidden md:block" : ""}>
+          <OperationQueueProgress />
+        </div>
 
-        {!selectedVideo && !selectedPhoto && (
-          <MobileClipboardToast
-            clipboardItemsCount={clipboardItems.items.length}
-            operation={clipboardItems.operation}
-            sourceDir={clipboardItems.sourceDir}
-            currentPath={currentPath}
-            onPaste={handlePaste}
-            onClearClipboard={handleClearClipboard}
-          />
-        )}
+        <MobileClipboardToast
+          clipboardItemsCount={clipboardItems.items.length}
+          operation={clipboardItems.operation}
+          sourceDir={clipboardItems.sourceDir}
+          currentPath={currentPath}
+          onPaste={handlePaste}
+          onClearClipboard={handleClearClipboard}
+        />
 
-        {!selectedVideo && !selectedPhoto && (
-          <MobileFloatingActionButton
-            isHidden={clipboardItems.items.length > 0}
-            onCreateFolder={handleCreateFolder}
-            onUploadFiles={(files) => handleUploadFiles(files, currentPath)}
-          />
-        )}
+        <MobileFloatingActionButton
+          isHidden={clipboardItems.items.length > 0}
+          onCreateFolder={handleCreateFolder}
+          onUploadFiles={(files) => handleUploadFiles(files, currentPath)}
+        />
       </div>
 
       {selectedVideo && (
