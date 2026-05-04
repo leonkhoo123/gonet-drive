@@ -322,7 +322,7 @@ const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   }, [handleKeyPress]);
 
   return (
-    <div className="fixed inset-0 z-10 bg-black select-none"
+    <div className="fixed inset-0 z-[100] bg-black select-none"
       onMouseDown={handleInteractionStart}
       onMouseUp={handleInteractionEnd}
       onTouchStart={handleInteractionStart}

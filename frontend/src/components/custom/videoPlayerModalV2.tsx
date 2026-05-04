@@ -449,7 +449,7 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
 
 
   return (
-    <div className="fixed inset-0 bg-black z-10 select-none">
+    <div className="fixed inset-0 bg-black z-[100] select-none">
       {/* VIDEO AREA */}
       <div
         className="flex items-center justify-center h-full touch-none"

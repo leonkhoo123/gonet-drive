@@ -195,7 +195,7 @@ const VideoPlayerCompressModal: React.FC<VideoPlayerCompressModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-10 bg-black">
+    <div className="fixed inset-0 z-[100] bg-black">
       <div className="flex items-center justify-center bg-black h-full">
         {/* video element */}
         <video
