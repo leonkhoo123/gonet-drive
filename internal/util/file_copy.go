@@ -27,8 +27,15 @@ import (
 //	sources := []string{"/path/to/file1.txt", "/path/to/folder1", "/path/to/file2.txt"}
 //	destDir := "/path/to/destination"
 //	err := CopyFiles(tracker, sources, destDir)
-//
 func CopyFiles(tracker *ProgressTracker, sources []string, destDir string, opID string, isSameDir bool, onSizeCalculated func(int64) error) error {
+	if strings.Contains(destDir, "..") {
+		return fmt.Errorf("invalid destination directory")
+	}
+	for _, source := range sources {
+		if strings.Contains(source, "..") {
+			return fmt.Errorf("invalid source path")
+		}
+	}
 	destDir = filepath.Clean(destDir)
 	// Truncate opID if it's too long
 	shortID := opID
@@ -124,10 +131,18 @@ func CopyFiles(tracker *ProgressTracker, sources []string, destDir string, opID 
 
 		if isSameDir {
 			// Same-directory paste: always use unique name (adds (1) since original exists)
-			destPath = GetUniqueDestPath(destPath)
+			if d, err := GetUniqueDestPath(destPath); err == nil {
+				destPath = d
+			} else {
+				return finalErr
+			}
 		} else if !entry.IsDir() {
 			// Cross-directory file paste: use unique name to avoid overwrite
-			destPath = GetUniqueDestPath(destPath)
+			if d, err := GetUniqueDestPath(destPath); err == nil {
+				destPath = d
+			} else {
+				return finalErr
+			}
 		}
 
 		if entry.IsDir() {
@@ -180,6 +195,9 @@ func calculateSize(path string, tracker *ProgressTracker) error {
 // copyFile copies a single file from src to dst with progress tracking
 // dst should already be a unique path (use GetUniqueDestPath if needed)
 func copyFile(src, dst string, tracker *ProgressTracker, opID string) error {
+	if strings.Contains(src, "..") || strings.Contains(dst, "..") {
+		return fmt.Errorf("invalid path")
+	}
 	src = filepath.Clean(src)
 	dst = filepath.Clean(dst)
 	// Open source file
@@ -239,6 +257,9 @@ func copyFile(src, dst string, tracker *ProgressTracker, opID string) error {
 // copyDir recursively copies a directory from src to dst with progress tracking
 // Merges with existing destination directory if it exists
 func copyDir(src, dst string, tracker *ProgressTracker, opID string) error {
+	if strings.Contains(src, "..") || strings.Contains(dst, "..") {
+		return fmt.Errorf("invalid path")
+	}
 	src = filepath.Clean(src)
 	dst = filepath.Clean(dst)
 	// Get source directory info
@@ -274,7 +295,11 @@ func copyDir(src, dst string, tracker *ProgressTracker, opID string) error {
 			}
 		} else {
 			// Copy file with auto-rename if conflict
-			destPath = GetUniqueDestPath(destPath)
+			if d, err := GetUniqueDestPath(destPath); err == nil {
+				destPath = d
+			} else {
+				return err
+			}
 			if err := copyFile(sourcePath, destPath, tracker, opID); err != nil {
 				return err
 			}

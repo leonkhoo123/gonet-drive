@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // RenameFile renames a file at the given full path to a new name.
@@ -11,6 +12,10 @@ import (
 // The second argument is the new name (not a full path, just the filename).
 // The file will be renamed in the same directory.
 func RenameFile(fullPath string, newName string) error {
+	if strings.Contains(fullPath, "..") || strings.Contains(newName, "..") {
+		return fmt.Errorf("invalid path")
+	}
+
 	// Check if the source file exists
 	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
 		return fmt.Errorf("Source file does not exist: %s", fullPath)

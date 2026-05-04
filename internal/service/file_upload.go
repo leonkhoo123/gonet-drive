@@ -200,7 +200,13 @@ func UploadChunk(c *gin.Context, cfg *config.CloudConfig) {
 
 		// Prepare the final path
 		finalDest := filepath.Join(destPath, cleanFilename)
-		finalDest = filepath.Clean(util.GetUniqueDestPath(finalDest))
+		var err error
+		finalDest, err = util.GetUniqueDestPath(finalDest)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid destination path"})
+			return
+		}
+		finalDest = filepath.Clean(finalDest)
 
 		outFile, err := os.Create(finalDest)
 		if err != nil {

@@ -371,6 +371,9 @@ func ShareCreateFolder(req CreateFolderReq, cfg *config.CloudConfig) error {
 	}
 
 	newFolderPath := filepath.Clean(filepath.Join(safeDir, safeFolderName))
+	if strings.Contains(newFolderPath, "..") {
+		return fmt.Errorf("invalid path")
+	}
 
 	if _, err := os.Stat(newFolderPath); !os.IsNotExist(err) {
 		return fmt.Errorf("folder already exists")
@@ -869,7 +872,13 @@ func ShareUploadChunk(c *gin.Context, cfg *config.CloudConfig) {
 		}
 
 		finalDest := filepath.Join(destPath, cleanFilename)
-		finalDest = filepath.Clean(util.GetUniqueDestPath(finalDest))
+		var err error
+		finalDest, err = util.GetUniqueDestPath(finalDest)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid destination path"})
+			return
+		}
+		finalDest = filepath.Clean(finalDest)
 
 		outFile, err := os.Create(finalDest)
 		if err != nil {

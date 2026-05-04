@@ -446,6 +446,9 @@ func CreateFolder(req CreateFolderReq, cfg *config.CloudConfig) error {
 	}
 
 	newFolderPath := filepath.Clean(filepath.Join(safeDir, safeFolderName))
+	if strings.Contains(newFolderPath, "..") {
+		return fmt.Errorf("invalid path")
+	}
 
 	if _, err := os.Stat(newFolderPath); !os.IsNotExist(err) {
 		return fmt.Errorf("folder already exists")

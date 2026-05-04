@@ -59,7 +59,12 @@ func VideoRenameDone(c *gin.Context, cfg *config.CloudConfig) {
 	}
 
 	// Target path
-	destPath := filepath.Clean(util.ResolveDuplicatePath(doneDir, newName))
+	destPath, err := util.ResolveDuplicatePath(doneDir, newName)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid destination path"})
+		return
+	}
+	destPath = filepath.Clean(destPath)
 	srcPath = filepath.Clean(srcPath)
 	// Rename (move)
 	if err := os.Rename(srcPath, destPath); err != nil {

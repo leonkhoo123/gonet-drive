@@ -49,7 +49,11 @@ func VideoDisqualified(c *gin.Context, cfg *config.CloudConfig) {
 	// Destination file path
 	// destPath := filepath.Join(disqualifiedDir, filepath.Base(srcPath))
 
-	destPath := util.ResolveDuplicatePath(disqualifiedDir, filepath.Base(srcPath))
+	destPath, err := util.ResolveDuplicatePath(disqualifiedDir, filepath.Base(srcPath))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid path"})
+		return
+	}
 	// Move (rename) file
 	if err := os.Rename(srcPath, destPath); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{

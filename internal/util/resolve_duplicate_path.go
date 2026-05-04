@@ -9,10 +9,13 @@ import (
 )
 
 // ResolveDuplicatePath adds a numeric suffix to a filename if it already exists in the given directory.
-func ResolveDuplicatePath(dir, filename string) string {
+func ResolveDuplicatePath(dir, filename string) (string, error) {
+	if strings.Contains(dir, "..") || strings.Contains(filename, "..") {
+		return "", fmt.Errorf("invalid path")
+	}
 	dest := filepath.Join(dir, filepath.Base(filepath.Clean(filename)))
 	if _, err := os.Stat(dest); os.IsNotExist(err) {
-		return dest
+		return dest, nil
 	}
 	log.Printf("File name [%s] duplicate at %s", filename, filepath.Dir(dest))
 	ext := filepath.Ext(filename)
@@ -22,17 +25,20 @@ func ResolveDuplicatePath(dir, filename string) string {
 		newPath := filepath.Join(dir, newName)
 		if _, err := os.Stat(newPath); os.IsNotExist(err) {
 			log.Printf("Rename file to  %s", filepath.Base(newPath))
-			return newPath
+			return newPath, nil
 		}
 	}
 }
 
 // GetUniqueDestPath generates a unique destination path by adding (1), (2), etc. if file exists
-func GetUniqueDestPath(destPath string) string {
+func GetUniqueDestPath(destPath string) (string, error) {
+	if strings.Contains(destPath, "..") {
+		return "", fmt.Errorf("invalid path")
+	}
 	destPath = filepath.Clean(destPath)
 	// If destination doesn't exist, return as is
 	if _, err := os.Stat(destPath); os.IsNotExist(err) {
-		return destPath
+		return destPath, nil
 	}
 
 	// Extract directory, filename, and extension
@@ -46,7 +52,7 @@ func GetUniqueDestPath(destPath string) string {
 		newName := fmt.Sprintf("%s (%d)%s", nameWithoutExt, i, ext)
 		newPath := filepath.Join(dir, newName)
 		if _, err := os.Stat(newPath); os.IsNotExist(err) {
-			return newPath
+			return newPath, nil
 		}
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // MoveFiles moves multiple files and/or folders to a destination directory.
@@ -25,8 +26,15 @@ import (
 //	sources := []string{"/path/to/file1.txt", "/path/to/folder1", "/path/to/file2.txt"}
 //	destDir := "/path/to/destination"
 //	err := MoveFiles(tracker, sources, destDir)
-//
 func MoveFiles(tracker *ProgressTracker, sources []string, destDir string, opID string) error {
+	if strings.Contains(destDir, "..") {
+		return fmt.Errorf("invalid destination directory")
+	}
+	for _, source := range sources {
+		if strings.Contains(source, "..") {
+			return fmt.Errorf("invalid source path")
+		}
+	}
 	destDir = filepath.Clean(destDir)
 	// Tracker is passed in now
 
@@ -96,7 +104,11 @@ func MoveFiles(tracker *ProgressTracker, sources []string, destDir string, opID 
 			}
 		} else {
 			// For files, auto-rename if conflict exists (always, as per requirements)
-			destPath = GetUniqueDestPath(destPath)
+			if d, err := GetUniqueDestPath(destPath); err == nil {
+				destPath = d
+			} else {
+				return err
+			}
 			if err := moveFile(source, destPath, tracker); err != nil {
 				finalErr = fmt.Errorf("failed to move file '%s': %w", source, err)
 				return finalErr
@@ -140,6 +152,9 @@ func countFiles(path string, tracker *ProgressTracker) error {
 
 // moveFile moves a single file from src to dst
 func moveFile(src, dst string, tracker *ProgressTracker) error {
+	if strings.Contains(src, "..") || strings.Contains(dst, "..") {
+		return fmt.Errorf("invalid path")
+	}
 	src = filepath.Clean(src)
 	dst = filepath.Clean(dst)
 	// Perform the actual move using os.Rename
@@ -155,6 +170,9 @@ func moveFile(src, dst string, tracker *ProgressTracker) error {
 
 // moveDirWithMerge moves a directory, merging with destination if it exists
 func moveDirWithMerge(src, dst string, tracker *ProgressTracker, opID string) error {
+	if strings.Contains(src, "..") || strings.Contains(dst, "..") {
+		return fmt.Errorf("invalid path")
+	}
 	src = filepath.Clean(src)
 	dst = filepath.Clean(dst)
 	if IsCanceled(opID) {
@@ -169,7 +187,11 @@ func moveDirWithMerge(src, dst string, tracker *ProgressTracker, opID string) er
 	} else if err == nil {
 		// Destination exists but is a file - this is a conflict
 		// Auto-rename the destination path
-		dst = GetUniqueDestPath(dst)
+		if d, err := GetUniqueDestPath(dst); err == nil {
+			dst = d
+		} else {
+			return err
+		}
 	}
 
 	// Destination doesn't exist or we got a unique name - try simple rename first
@@ -184,6 +206,9 @@ func moveDirWithMerge(src, dst string, tracker *ProgressTracker, opID string) er
 
 // mergeMoveDir recursively moves directory contents, merging with existing destination
 func mergeMoveDir(src, dst string, tracker *ProgressTracker, opID string) error {
+	if strings.Contains(src, "..") || strings.Contains(dst, "..") {
+		return fmt.Errorf("invalid path")
+	}
 	src = filepath.Clean(src)
 	dst = filepath.Clean(dst)
 	// Ensure destination directory exists
@@ -218,7 +243,11 @@ func mergeMoveDir(src, dst string, tracker *ProgressTracker, opID string) error 
 			}
 		} else {
 			// Move file with auto-rename if conflict
-			destPath = GetUniqueDestPath(destPath)
+			if d, err := GetUniqueDestPath(destPath); err == nil {
+				destPath = d
+			} else {
+				return err
+			}
 			if err := moveFile(sourcePath, destPath, tracker); err != nil {
 				return err
 			}
