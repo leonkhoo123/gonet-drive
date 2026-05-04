@@ -50,3 +50,9 @@ logs/
 *.ntvs*
 *.njsproj
 *.sln
+
+# VitePress
+docs/node_modules/
+docs/.vitepress/dist/
+docs/.vitepress/cache/
+
