@@ -4,18 +4,54 @@ GoNet Drive is a high-performance, self-hosted file management and media streami
 
 ## Features
 
-- 📁 **File Management**: Upload (including chunking smaller than 100mb & drag-and-drop), download, move, copy, rename, delete, and check for duplicate files.
-- 🎬 **Video Streaming**: Built-in video player with streaming support.
-- 🎵 **Music Player**: Listen to your music right in the browser with full queue and playlist support.
-- 📚 **Audiobook Player**: Dedicated player for audiobooks that automatically remembers your playback progress across sessions.
+- 📁 **File Management**: Upload (support Cloudflare Tunnel, upload chunk always smaller than 100mb), download, move, copy, rename, delete, and check for duplicate files.
+- 🖼️ **Photo Viewer**: View your photos directly in the browser.
+- 🎬 **Video Streaming**: Built-in video player with streaming support. *(Note: Some MP4 encodings may not play natively on iOS; these can be downloaded and played using a third-party player like VLC).*
+- 🎵 **Music Player**: Listen to your music right in the browser.
 - 📄 **Document Viewing**: View PDF files and plain text documents directly in the web UI without downloading them first.
 - 🔗 **Secure File Sharing**: Create shareable links for files and folders. You can set optional passwords, expiration dates, and manage all your active shared links from an admin interface.
 - 🔐 **Security & Access**:
   - Every critical endpoint is protected by secured JWTs using HTTP-only cookies.
   - Multi-Factor Authentication (eg.Google Authenticator) support.
   - API rate-limiting to prevent brute-force attacks (e.g., password or MFA guessing).
-- 📱 **Modern UI**: Dark/Light mode, responsive design that works beautifully on desktop and mobile devices (PWA supported).
+- 📱 **Modern UI**: Dark/Light mode, responsive design that works beautifully on desktop and mobile devices.
+- 🌐 **Progressive Web App (PWA)**: Install GoNet Drive to your device for a native app-like experience. Tested and fully supported on Windows, macOS, Linux, Android, iOS, and Chromium browsers.
 - 🚀 **Easy Deployment**: A multi-stage Dockerfile builds a single binary output with frontend fully embedded.
+
+## Screenshots
+
+| Desktop View - Home Page | Text Viewer with Syntax Highlight |
+|:---:|:---:|
+| <img src="./assets/desktop-view-home-page.png" alt="Desktop View - Home Page" width="400"/> | <img src="./assets/text-viewer-syntax-highlight.png" alt="Text Viewer with Syntax Highlight" width="400"/> |
+
+| Mobile View | File List (List View) | File List (Grid View) |
+|:---:|:---:|:---:|
+| <img src="./assets/mobile-view-home-page.png" alt="Mobile View - Home Page" width="250"/> | <img src="./assets/file-list-list-view.png" alt="File List - List View" width="250"/> | <img src="./assets/file-list-grid-view-with-bigger-thumbnail-area.png" alt="File List - Grid View" width="250"/> |
+
+## Architecture
+
+```mermaid
+flowchart LR
+    Browser["🖥️ Web Browser<br/><br/>- Media Streaming<br/>- File Management<br/>- Shared Links Viewing"]
+
+    subgraph Env ["Docker Container / K8s (k3s)"]
+        subgraph Binary ["GoNet Drive (Single Binary)"]
+            Frontend["⚛️ Embedded Frontend<br/>(React/Vite/PWA)"]
+            Backend["🐹 Go Backend<br/>(Gin / API)"]
+        end
+        
+        Storage[/"📁 Mounted Volume<br/>(User Storage)<br/>/app/data"/]
+        DB[("🗄️ SQLite DB<br/>(Users, Metadata)<br/>/app/db")]
+    end
+
+    Browser <-->|"HTTP / WS"| Frontend
+    Frontend <--> Backend
+    Backend --> Storage
+    Backend --> DB
+
+    style Env fill:none,stroke:#888,stroke-width:2px,stroke-dasharray: 5 5
+    style Binary fill:none,stroke:#888,stroke-width:2px
+```
 
 ## Tech Stack
 
@@ -42,7 +78,7 @@ docker build -t gonet-drive .
 # This exposes the web UI on port 8080.
 # Make sure to mount volumes for both your files (bind mount) and the database (docker volume) to persist them.
 # ⚠️ For maximum security in production, set APP_ENV to "prod" and properly configure ALLOWED_ORIGINS.
-# ⚠️ If you need to access the UI from a non-HTTPS URL (e.g. local network), remove these 2 environment variables to prevent blocking.
+# ⚠️ If you need to access the UI from a non-HTTPS URL (e.g. local network), remove APP_ENV and ALLOWED_ORIGINS environment variables to prevent blocking.
 docker run -d \
   --name gonet-drive \
   -p 8080:8080 \
@@ -51,7 +87,7 @@ docker run -d \
   -e APP_JWTSECRET="<your_jwt_secret_key>" \
   -e ADMIN_USER="<admin_username>" \
   -e ADMIN_PASS="<admin_secure_password>" \
-  -v /path/to/your/files:/app/data \
+  -v /path/to/your/folder-you-wanted-to-serve:/app/data \
   -v gonet_db:/app/db \
   gonet-drive
 ```
@@ -64,6 +100,7 @@ The server can be configured using environment variables. You can set them direc
 - `DB_DIR`: The directory where the SQLite metadata database is stored. *(Default: `/app/db` in Docker, empty otherwise)*
 - `LISTEN_ADDR`: The host and port for the server to listen on. *(Default: `:8080`)*
 - `APP_JWTSECRET`: The secret key used to sign JWT auth tokens. **(Required)**
+- `APP_JWT`: Set to `OFF` to disable JWT authentication middleware (enabled by default).
 - `ADMIN_USER`: The username for the initial superadmin account. 
 - `ADMIN_PASS`: The password for the initial superadmin account.
 - `APP_ENV`: Application environment. Set to `prod` for maximum security in production. *(Default: `local`)*
