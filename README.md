@@ -20,13 +20,21 @@ GoNet Drive is a high-performance, self-hosted file management and media streami
 
 ## Screenshots
 
-| Desktop View - Home Page | Text Viewer with Syntax Highlight |
+| Desktop View - Home Page | Desktop View (Dark Mode) |
 |:---:|:---:|
-| <img src="./assets/desktop-view-home-page.png" alt="Desktop View - Home Page" width="400"/> | <img src="./assets/text-viewer-syntax-highlight.png" alt="Text Viewer with Syntax Highlight" width="400"/> |
+| <img src="./docs/assets/desktop-view-home-page.png" alt="Desktop View - Home Page" width="400"/> | <img src="./docs/assets/desktop-view-home-page-dark.png" alt="Desktop View - Dark Mode" width="400"/> |
+
+| Text Viewer with Syntax Highlight | Manage Shares |
+|:---:|:---:|
+| <img src="./docs/assets/text-viewer-syntax-highlight.png" alt="Text Viewer with Syntax Highlight" width="400"/> | <img src="./docs/assets/manage-share-item.png" alt="Manage Shares" width="400"/> |
+
+| Photo Viewer | Music Player |
+|:---:|:---:|
+| <img src="./docs/assets/photo-viewer.png" alt="Photo Viewer" width="400"/> | <img src="./docs/assets/music-player.png" alt="Music Player" width="400"/> |
 
 | Mobile View | File List (List View) | File List (Grid View) |
 |:---:|:---:|:---:|
-| <img src="./assets/mobile-view-home-page.png" alt="Mobile View - Home Page" width="250"/> | <img src="./assets/file-list-list-view.png" alt="File List - List View" width="250"/> | <img src="./assets/file-list-grid-view-with-bigger-thumbnail-area.png" alt="File List - Grid View" width="250"/> |
+| <img src="./docs/assets/mobile-view-home-page.png" alt="Mobile View - Home Page" width="250"/> | <img src="./docs/assets/file-list-list-view.png" alt="File List - List View" width="250"/> | <img src="./docs/assets/file-list-grid-view-with-bigger-thumbnail-area.png" alt="File List - Grid View" width="250"/> |
 
 ## Architecture
 

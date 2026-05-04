@@ -51,8 +51,3 @@ logs/
 *.njsproj
 *.sln
 
-# VitePress
-docs/node_modules/
-docs/.vitepress/dist/
-docs/.vitepress/cache/
-
