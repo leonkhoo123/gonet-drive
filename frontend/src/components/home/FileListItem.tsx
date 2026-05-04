@@ -172,7 +172,7 @@ export const FileListItem = memo(function FileListItem({
                 <DropdownMenuItem disabled={isRecycleBin} onClick={(e) => { 
                   e.stopPropagation(); setOpenDropdownName(null); onDownload(file.name);
                 }}>
-                  <Download className="mr-2 h-4 w-4" /> Download
+                  <Download className="mr-2 h-4 w-4" /> {file.type === "dir" ? "Download All" : "Download"}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={(e) => { 
                   e.stopPropagation(); setOpenDropdownName(null); onProperties(file.name);
@@ -318,7 +318,7 @@ export const FileListItem = memo(function FileListItem({
                   onDownload(file.name);
                 }}>
                   <Download className="mr-2 h-4 w-4" />
-                  Download
+                  {file.type === "dir" ? "Download All" : "Download"}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={(e) => { 
                   e.stopPropagation(); 
@@ -416,7 +416,7 @@ export const FileListItem = memo(function FileListItem({
         <ContextMenuSeparator />
         <ContextMenuItem onClick={(e) => { e.stopPropagation(); onDownload(file.name); }} disabled={isRecycleBin || selectedItemsSize === 0 || hasSelectedDelete}>
           <Download className="mr-2 h-4 w-4" />
-          Download
+          {file.type === "dir" ? "Download All" : "Download"}
         </ContextMenuItem>
         <ContextMenuItem onClick={(e) => { e.stopPropagation(); onProperties(file.name); }} disabled={selectedItemsSize === 0}>
           <Info className="mr-2 h-4 w-4" />
