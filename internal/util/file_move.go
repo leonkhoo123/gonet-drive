@@ -35,6 +35,9 @@ func MoveFiles(tracker *ProgressTracker, sources []string, destDir string, opID 
 			return fmt.Errorf("invalid source path")
 		}
 	}
+	if strings.Contains(opID, "/") || strings.Contains(opID, "\\") || strings.Contains(opID, "..") {
+		return fmt.Errorf("invalid opID")
+	}
 	destDir = filepath.Clean(destDir)
 	// Tracker is passed in now
 
