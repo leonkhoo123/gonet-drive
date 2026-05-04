@@ -228,9 +228,9 @@ export function ShareFileListItem({
           {file.type === "dir" ? (
             <>
               {file.name === ".cloud_delete" ? (
-                <Trash2 className="h-7 w-7 md:h-5 md:w-5 shrink-0 text-primary" />
+                <Trash2 className="h-10 w-10 md:h-8 md:w-8 shrink-0 text-primary" />
               ) : (
-                <Folder className="h-7 w-7 md:h-5 md:w-5 shrink-0 text-primary fill-primary/20" />
+                <Folder className="h-10 w-10 md:h-8 md:w-8 shrink-0 text-primary fill-primary/20" />
               )}
               <div className="flex flex-col pl-1 min-w-0 w-full text-left">
                 <TruncatedText className="font-medium text-foreground" text={file.name === ".cloud_delete" ? "Recycle Bin" : file.name} />
