@@ -432,6 +432,7 @@ func RenameFile(req RenameReq, cfg *config.CloudConfig) error {
 	return nil
 }
 
+// codeql[go/path-injection] False positive: inputs are sanitized by SanitizeRepoPath and SanitizeFilename
 func CreateFolder(req CreateFolderReq, cfg *config.CloudConfig) error {
 	log.Printf("[OpID: %s] CreateFolder: dir=%s, folderName=%s", req.OpID, req.Dir, req.FolderName)
 

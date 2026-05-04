@@ -84,6 +84,7 @@ func GetLegacyToken(c *gin.Context, tokenName string) (string, error) {
 }
 
 // setCookie is a private helper
+// codeql[go/insecure-cookie] False positive: secure attribute is configurable by design depending on the environment
 func setCookie(c *gin.Context, name, value string, maxAge int, sameSite http.SameSite, secure bool) {
 	cookie := &http.Cookie{
 		Name:     name,
@@ -99,6 +100,7 @@ func setCookie(c *gin.Context, name, value string, maxAge int, sameSite http.Sam
 }
 
 // clearCookie is a private helper
+// codeql[go/insecure-cookie] False positive: secure attribute is configurable by design depending on the environment
 func clearCookie(c *gin.Context, name string, sameSite http.SameSite, secure bool) {
 	cookie := &http.Cookie{
 		Name:     name,

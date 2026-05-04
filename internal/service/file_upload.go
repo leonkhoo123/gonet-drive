@@ -21,6 +21,7 @@ import (
 )
 
 // UploadChunk handles chunked file uploads from the frontend.
+// codeql[go/path-injection] False positive: identifier is sanitized with IsSafePathComponent, and destination/filename with SanitizeRepoPath/SanitizeFilename
 func UploadChunk(c *gin.Context, cfg *config.CloudConfig) {
 	// Quick check on Content-Length to prevent massive abuse before parsing
 	if config.AppCloudConfig != nil {
@@ -41,6 +42,11 @@ func UploadChunk(c *gin.Context, cfg *config.CloudConfig) {
 
 	if identifier == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing identifier"})
+		return
+	}
+
+	if !util.IsSafePathComponent(identifier) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid identifier"})
 		return
 	}
 

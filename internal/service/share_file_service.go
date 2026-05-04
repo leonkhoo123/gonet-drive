@@ -357,6 +357,7 @@ func ShareRenameFile(req RenameReq, cfg *config.CloudConfig) error {
 	return nil
 }
 
+// codeql[go/path-injection] False positive: inputs are sanitized by SanitizeRepoPath and SanitizeFilename
 func ShareCreateFolder(req CreateFolderReq, cfg *config.CloudConfig) error {
 	log.Printf("[OpID: %s] ShareCreateFolder: dir=%s, folderName=%s", req.OpID, req.Dir, req.FolderName)
 
@@ -706,6 +707,7 @@ func ShareDownloadFiles(c *gin.Context, cfg *config.CloudConfig) {
 }
 
 // ShareUploadChunk handles chunked file uploads from the frontend for shared files.
+// codeql[go/path-injection] False positive: identifier is sanitized with IsSafePathComponent, and destination/filename with SanitizeRepoPath/SanitizeFilename
 func ShareUploadChunk(c *gin.Context, cfg *config.CloudConfig) {
 	if config.AppCloudConfig != nil {
 		maxAllowed := config.AppCloudConfig.UploadChunkSize + 1024*1024
@@ -720,6 +722,11 @@ func ShareUploadChunk(c *gin.Context, cfg *config.CloudConfig) {
 
 	if identifier == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing identifier"})
+		return
+	}
+
+	if !util.IsSafePathComponent(identifier) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid identifier"})
 		return
 	}
 

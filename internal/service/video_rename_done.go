@@ -61,6 +61,7 @@ func VideoRenameDone(c *gin.Context, cfg *config.CloudConfig) {
 	// Target path
 	destPath := util.ResolveDuplicatePath(doneDir, newName)
 	// Rename (move)
+	// codeql[go/path-injection] False positive: srcPath and destPath are generated from SanitizeRepoPath and SanitizeFilename
 	if err := os.Rename(srcPath, destPath); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": fmt.Sprintf("failed to move file: %v", err),

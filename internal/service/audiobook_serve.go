@@ -302,10 +302,16 @@ func (s *AudiobookService) ListAudioBooks(cfg *config.CloudConfig) gin.HandlerFu
 	}
 }
 
+// codeql[go/path-injection] False positive: name is sanitized with IsSafePathComponent
 func (s *AudiobookService) StreamAudioBook(cfg *config.CloudConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username := c.GetString("username")
 		name := c.Param("name") // e.g., xyz.mp3 (without ab_)
+
+		if !util.IsSafePathComponent(name) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid name"})
+			return
+		}
 
 		targetFile := "ab_" + name
 

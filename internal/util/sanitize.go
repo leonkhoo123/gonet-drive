@@ -97,6 +97,21 @@ func SanitizeFilename(name string) (string, error) {
 	return baseName, nil
 }
 
+// IsSafePathComponent checks if a given string is safe to be used as a single path component (like a directory or file name).
+// It prevents path traversal by rejecting paths containing directory separators, ".." sequences, or absolute paths.
+func IsSafePathComponent(name string) bool {
+	if name == "" || name == "." || name == ".." {
+		return false
+	}
+	if filepath.IsAbs(name) {
+		return false
+	}
+	if strings.Contains(name, "/") || strings.Contains(name, "\\") || strings.Contains(name, "..") {
+		return false
+	}
+	return true
+}
+
 // GenerateOpID creates a unique operation ID.
 func GenerateOpID() string {
 	id, err := uuid.NewRandom()

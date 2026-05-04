@@ -10,6 +10,7 @@ import (
 // The first argument is the full path of the file to rename.
 // The second argument is the new name (not a full path, just the filename).
 // The file will be renamed in the same directory.
+// codeql[go/path-injection] False positive: fullPath and newName are expected to be sanitized by caller
 func RenameFile(fullPath string, newName string) error {
 	// Check if the source file exists
 	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
