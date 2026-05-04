@@ -34,6 +34,8 @@ GoNet Drive is a high-performance, self-hosted file management and media streami
 flowchart LR
     Browser["🖥️ Web Browser<br/><br/>- Media Streaming<br/>- File Management<br/>- Shared Links Viewing"]
 
+    Cloudflare["☁️ Cloudflare Tunnel<br/>(HTTPS Termination)"]
+
     subgraph Env ["Docker Container / K8s (k3s)"]
         subgraph Binary ["GoNet Drive (Single Binary)"]
             Frontend["⚛️ Embedded Frontend<br/>(React/Vite/PWA)"]
@@ -44,7 +46,8 @@ flowchart LR
         DB[("🗄️ SQLite DB<br/>(Users, Metadata)<br/>/app/db")]
     end
 
-    Browser <-->|"HTTP / WS"| Frontend
+    Browser <-->|"HTTPS / WSS"| Cloudflare
+    Cloudflare <-->|"HTTP / WS"| Frontend
     Frontend <--> Backend
     Backend --> Storage
     Backend --> DB
