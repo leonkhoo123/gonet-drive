@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
-import { X, Loader2 } from "lucide-react";
-import type { FileInterface } from "@/api/api-file";
+import { X, Loader2, Download } from "lucide-react";
+import { type FileInterface, downloadFiles } from "@/api/api-file";
 import { useDialogHistory } from "@/hooks/useDialogHistory";
 
 interface PhotoViewerModalProps {
@@ -52,23 +52,39 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
   if (!isOpen || !initialFile) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center select-none touch-none">
+    <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center select-none">
       {/* Top Bar */}
       <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center bg-gradient-to-b from-black/60 to-transparent z-10 text-white">
-        <div className="flex items-center gap-2 max-w-[80%]">
-          <span className="font-medium truncate">{initialFile.name}</span>
+        <div className="flex items-center gap-2 max-w-[70%] overflow-x-auto scrollbar-hide touch-pan-x">
+          <span className="font-medium whitespace-nowrap">{initialFile.name}</span>
         </div>
-        <button
-          onClick={onClose}
-          className="p-2 hover:bg-white/20 rounded-full transition-colors"
-        >
-          <X className="w-6 h-6" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              downloadFiles([initialFile.path]);
+            }}
+            className="p-2 hover:bg-white/20 rounded-full transition-colors"
+            title="Download"
+          >
+            <Download className="w-6 h-6" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
+            className="p-2 hover:bg-white/20 rounded-full transition-colors"
+            title="Close"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
       </div>
 
       {/* Image Container */}
       <div 
-        className="w-full h-full flex items-center justify-center p-4 relative"
+        className="w-full h-full flex items-center justify-center p-4 relative touch-none"
         onClick={onClose} // Clicking background closes
       >
         {isLoading && (
