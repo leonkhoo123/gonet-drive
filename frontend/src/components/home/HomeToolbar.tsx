@@ -1,4 +1,4 @@
-import { ArrowLeft, CheckSquare, Scissors, Copy, Clipboard, Pencil, Trash2, Plus, RefreshCcw, FolderPlus, Upload, FolderUp, Download } from "lucide-react";
+import { ArrowLeft, CheckSquare, Scissors, Copy, Clipboard, Pencil, Trash2, Plus, RefreshCcw, FolderPlus, Upload, FolderUp, Download, LayoutGrid, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRef } from "react";
 import {
@@ -7,6 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { usePreferences } from "@/context/PreferencesContext";
 
 interface HomeToolbarProps {
   currentPath: string;
@@ -53,6 +54,7 @@ export default function HomeToolbar({
 }: HomeToolbarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
+  const { viewMode, setViewMode } = usePreferences();
 
   const isRecycleBin = currentPath === '/.cloud_delete' || currentPath.startsWith('/.cloud_delete/');
 
@@ -143,6 +145,16 @@ export default function HomeToolbar({
           <span className="hidden md:inline">Empty Recycle Bin</span>
         </Button>
       )}
+
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => { setViewMode(viewMode === 'list' ? 'grid' : 'list'); }}
+        className="h-8 w-8 p-0 text-muted-foreground mr-1"
+        title={viewMode === 'list' ? "Switch to Grid View" : "Switch to List View"}
+      >
+        {viewMode === 'list' ? <LayoutGrid className="h-4 w-4" /> : <List className="h-4 w-4" />}
+      </Button>
 
       <Button variant="ghost" size="sm" onClick={onRefresh} className="h-8 w-8 p-0 text-muted-foreground" title="Refresh">
         <RefreshCcw className="h-4 w-4" />

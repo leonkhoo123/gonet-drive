@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Trash2, Folder, Pencil, Trash2 as TrashIcon, Download, Info, MoreVertical, Scissors, Copy, Clipboard, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatBytes, formatLastModified } from "@/utils/utils";
@@ -49,6 +50,7 @@ interface ShareFileListItemProps {
   currentPath: string;
   selectedItemsSize: number;
   hasSelectedDelete: boolean; // if selectedItems.has('.cloud_delete')
+  viewMode?: 'list' | 'grid';
 }
 
 export function ShareFileListItem({
@@ -82,8 +84,122 @@ export function ShareFileListItem({
   currentPath,
   selectedItemsSize,
   hasSelectedDelete,
+  viewMode = 'list',
 }: ShareFileListItemProps) {
-  const fileContent = (
+  const [imgErrorUrl, setImgErrorUrl] = useState<string | null>(null);
+
+  const fileContent = viewMode === 'grid' ? (
+    <div id={`file-item-${index}`} className="group h-full w-full">
+      <div
+        onClick={(e) => { handleItemClick(file, index, e); }}
+        onDoubleClick={() => { handleItemDoubleClick(file); }}
+        onTouchStart={() => { handleTouchStart(file, index); }}
+        onTouchEnd={handleTouchEnd}
+        onTouchMove={handleTouchMove}
+        onTouchCancel={handleTouchEnd}
+        onContextMenu={(e) => {
+          if (window.matchMedia("(pointer: coarse)").matches) { e.preventDefault(); }
+        }}
+        className={`flex flex-col items-center p-3 cursor-pointer rounded-lg transition-all duration-75 ease-out select-none relative w-full h-full border [-webkit-touch-callout:none] [-webkit-tap-highlight-color:transparent] ${
+          transitioningFolder === file.name
+            ? 'bg-primary/30 border-primary/50'
+            : isSelected
+              ? 'bg-primary/10 border-primary/30 @media(hover:hover):hover:bg-primary/20'
+              : 'bg-card border-transparent @media(hover:hover):hover:bg-muted/50 @media(hover:hover):hover:border-border'
+        } ${isCut ? 'opacity-50' : ''}`}
+      >
+        <div className={`w-full aspect-square flex items-center justify-center mb-3 overflow-hidden rounded-md bg-muted/20 ${isHidden ? 'opacity-60' : ''}`}>
+          {file.type === "dir" ? (
+            file.name === ".cloud_delete" ? (
+              <Trash2 className="h-16 w-16 text-primary" />
+            ) : (
+              <Folder className="h-16 w-16 text-primary fill-primary/20" />
+            )
+          ) : (
+            file.media_type === "photo" && imgErrorUrl !== file.url ? (
+              <img 
+                src={file.url.replace('/photo/play/', '/photo/thumbnail/')} 
+                loading="lazy" 
+                alt={file.name} 
+                className="object-contain w-full h-full transition-opacity duration-300"
+                onLoad={(e) => { e.currentTarget.style.opacity = '1'; }}
+                style={{ opacity: 0 }}
+                onError={() => { setImgErrorUrl(file.url); }}
+              />
+            ) : (
+              <div className="[&>svg]:w-16 [&>svg]:h-16">
+                {getFileIcon(file)}
+              </div>
+            )
+          )}
+        </div>
+
+        <div className={`w-full flex flex-col items-center text-center ${isHidden ? 'opacity-60' : ''}`}>
+          <div className="flex items-center justify-center space-x-1 w-full px-1 relative">
+            <TruncatedText className="text-sm font-medium text-foreground w-full" text={file.name === ".cloud_delete" ? "Recycle Bin" : file.name} />
+          </div>
+          {file.type !== "dir" && (
+            <div className="text-xs text-muted-foreground mt-1 opacity-80">
+              {formatBytes(file.size)}
+            </div>
+          )}
+        </div>
+
+        {selectedItemsSize === 0 && (
+          <div className="md:hidden absolute top-1 right-1">
+            <DropdownMenu 
+              open={openDropdownName === file.name}
+              onOpenChange={(open) => {
+                if (!open) setOpenDropdownName(null);
+              }}
+            >
+              <DropdownMenuTrigger asChild>
+                <div className="absolute inset-0 pointer-events-none" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48" onClick={(e) => { e.stopPropagation(); }}>
+                {authority === 'modify' && (
+                  <DropdownMenuItem disabled={isRecycleBin || file.name === '.cloud_delete'} onClick={(e) => { 
+                    e.stopPropagation(); setOpenDropdownName(null); onRename(file.name);
+                  }}>
+                    <Pencil className="mr-2 h-4 w-4" /> Rename
+                  </DropdownMenuItem>
+                )}
+                {authority === 'modify' && (
+                  <DropdownMenuItem disabled={file.name === '.cloud_delete'} onClick={(e) => { 
+                    e.stopPropagation(); setOpenDropdownName(null); onDelete(file.name);
+                  }} className="text-red-600 focus:bg-red-50 focus:text-red-600 dark:focus:bg-red-950/30">
+                    <TrashIcon className="mr-2 h-4 w-4" /> Delete
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem disabled={isRecycleBin} onClick={(e) => { 
+                  e.stopPropagation(); setOpenDropdownName(null); onDownload(file.name);
+                }}>
+                  <Download className="mr-2 h-4 w-4" /> Download
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { 
+                  e.stopPropagation(); setOpenDropdownName(null); onProperties(file.name);
+                }}>
+                  <Info className="mr-2 h-4 w-4" /> Info
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 text-muted-foreground bg-background/50 hover:bg-background/80 rounded-full" 
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                setOpenDropdownName(openDropdownName === file.name ? null : file.name);
+              }}
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  ) : (
     <div id={`file-item-${index}`} className="group">
       <div
         onClick={(e) => {
@@ -123,7 +239,21 @@ export function ShareFileListItem({
             </>
           ) : (
             <>
-              {getFileIcon(file)}
+              {file.media_type === "photo" && imgErrorUrl !== file.url ? (
+                <div className="h-10 w-10 md:h-8 md:w-8 shrink-0 rounded overflow-hidden bg-muted/50 flex items-center justify-center relative">
+                  <img 
+                    src={file.url.replace('/photo/play/', '/photo/thumbnail/')} 
+                    loading="lazy" 
+                    alt={file.name} 
+                    className="object-contain w-full h-full transition-opacity duration-300"
+                    onLoad={(e) => { e.currentTarget.style.opacity = '1'; }}
+                    style={{ opacity: 0 }}
+                    onError={() => { setImgErrorUrl(file.url); }}
+                  />
+                </div>
+              ) : (
+                getFileIcon(file)
+              )}
               <div className="flex flex-col pl-1 min-w-0 w-full text-left">
                 <TruncatedText className="text-foreground" text={file.name} />
                 <TruncatedText className="text-xs mt-0.5 lg:hidden text-muted-foreground" text={`${formatBytes(file.size)} • ${formatLastModified(file.modified)}`} />

@@ -173,7 +173,9 @@ export function useFileSystem(baseRoute = "/home") {
     shareRoot,
     handleRefresh,
     sortField,
+    setSortField,
     sortOrder,
+    setSortOrder,
     handleSortChange
   };
 }

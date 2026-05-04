@@ -120,7 +120,9 @@ export default function ShareHomePage() {
     setIsDownloadDirDialogOpen,
     confirmDownloadDir,
     sortField,
+    setSortField,
     sortOrder,
+    setSortOrder,
     handleSortChange,
     handleCut,
     handleCopy,
@@ -340,7 +342,9 @@ export default function ShareHomePage() {
             currentPath={currentPath}
             onUploadDrop={(files: File[], path: string) => { void handleUploadFiles(files, path); }}
             sortField={sortField}
+            setSortField={setSortField}
             sortOrder={sortOrder}
+            setSortOrder={setSortOrder}
             onSortChange={handleSortChange}
             authority={authority}
           />

@@ -4,6 +4,8 @@ import type { ReactNode } from 'react';
 interface PreferencesContextType {
   showHidden: boolean;
   setShowHidden: (value: boolean) => void;
+  viewMode: 'list' | 'grid';
+  setViewMode: (value: 'list' | 'grid') => void;
 }
 
 const PreferencesContext = createContext<PreferencesContextType | undefined>(undefined);
@@ -16,12 +18,21 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     return Boolean(parsed);
   });
 
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>(() => {
+    const saved = localStorage.getItem('preferences_viewMode');
+    return saved === 'grid' ? 'grid' : 'list';
+  });
+
   useEffect(() => {
     localStorage.setItem('preferences_showHidden', JSON.stringify(showHidden));
   }, [showHidden]);
 
+  useEffect(() => {
+    localStorage.setItem('preferences_viewMode', viewMode);
+  }, [viewMode]);
+
   return (
-    <PreferencesContext.Provider value={{ showHidden, setShowHidden }}>
+    <PreferencesContext.Provider value={{ showHidden, setShowHidden, viewMode, setViewMode }}>
       {children}
     </PreferencesContext.Provider>
   );

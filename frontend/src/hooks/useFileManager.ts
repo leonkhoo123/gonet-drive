@@ -24,7 +24,9 @@ export function useFileManager({ uploadChunkSize, baseRoute = "/home" }: { uploa
     shareRoot,
     handleRefresh,
     sortField,
+    setSortField,
     sortOrder,
+    setSortOrder,
     handleSortChange
   } = useFileSystem(baseRoute);
 
@@ -203,7 +205,9 @@ export function useFileManager({ uploadChunkSize, baseRoute = "/home" }: { uploa
     duplicateItems,
     executePaste,
     sortField,
+    setSortField,
     sortOrder,
+    setSortOrder,
     handleSortChange,
   };
 }

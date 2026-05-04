@@ -14,4 +14,9 @@ func PhotoRoutes(router *gin.RouterGroup, cfg *config.CloudConfig) {
 	api.GET("/play/file/*filepath", func(c *gin.Context) {
 		service.ServePhoto(c, cfg)
 	})
+
+	// serve photo thumbnail
+	api.GET("/thumbnail/file/*filepath", func(c *gin.Context) {
+		service.ServePhotoThumbnail(c, cfg)
+	})
 }

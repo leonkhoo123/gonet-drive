@@ -1,4 +1,4 @@
-import { Folder, UploadCloud, ArrowUp, ArrowDown } from "lucide-react";
+import { Folder, UploadCloud, ArrowUp, ArrowDown, LayoutGrid, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ItemsResponse, FileInterface } from "@/api/api-file";
 import {
@@ -8,12 +8,22 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+} from "@/components/ui/dropdown-menu";
 import { Clipboard, Info } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useFileDragAndDrop } from "@/hooks/useFileManager/useFileDragAndDrop";
 import { useFileInteraction } from "@/hooks/useFileManager/useFileInteraction";
 import { FileListItem } from "./FileListItem";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { usePreferences } from "@/context/PreferencesContext";
 
 interface HomeFileListProps {
   isLoading: boolean;
@@ -40,7 +50,9 @@ interface HomeFileListProps {
   currentPath: string;
   onUploadDrop: (files: File[], targetPath: string) => void;
   sortField?: 'name' | 'size' | 'modified' | null;
+  setSortField?: (field: 'name' | 'size' | 'modified' | null) => void;
   sortOrder?: 'asc' | 'desc';
+  setSortOrder?: (order: 'asc' | 'desc') => void;
   onSortChange?: (field: 'name' | 'size' | 'modified') => void;
 }
 
@@ -102,11 +114,14 @@ export default function HomeFileList({
   currentPath,
   onUploadDrop,
   sortField,
+  setSortField,
   sortOrder,
+  setSortOrder,
   onSortChange,
 }: HomeFileListProps) {
   const [openDropdownName, setOpenDropdownName] = useState<string | null>(null);
   const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
+  const { viewMode, setViewMode } = usePreferences();
 
   const isRecycleBin = currentPath === '/.cloud_delete' || currentPath.startsWith('/.cloud_delete/');
 
@@ -189,35 +204,15 @@ export default function HomeFileList({
           </div>
         ) : (
             <div className={`transition-opacity duration-300 ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}>
-              <div
-                style={{
-                  height: `${rowVirtualizer.getTotalSize()}px`,
-                  width: '100%',
-                  position: 'relative',
-                }}
-              >
-                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                  const index = virtualRow.index;
-                  const file = (displayItems.items ?? [])[index];
-                  const isSelected = selectedItems.has(file.name);
-                  const isHidden = file.name.startsWith('.');
-                  const filePath = currentPath === "/" ? `/${file.name}` : `${currentPath}/${file.name}`;
-                  const isCut = clipboardOperation === 'cut' && clipboardItems.includes(filePath);
+              {viewMode === 'grid' ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4 p-4 pb-0">
+                  {displayItems.items.map((file, index) => {
+                    const isSelected = selectedItems.has(file.name);
+                    const isHidden = file.name.startsWith('.');
+                    const filePath = currentPath === "/" ? `/${file.name}` : `${currentPath}/${file.name}`;
+                    const isCut = clipboardOperation === 'cut' && clipboardItems.includes(filePath);
 
-                  return (
-                    <div
-                      key={virtualRow.key}
-                      data-index={index}
-                      ref={rowVirtualizer.measureElement}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        transform: `translateY(${virtualRow.start}px)`,
-                      }}
-                      className="pb-1"
-                    >
+                    return (
                       <FileListItem
                         key={file.name}
                         file={file}
@@ -250,11 +245,80 @@ export default function HomeFileList({
                         currentPath={currentPath}
                         selectedItemsSize={selectedItems.size}
                         hasSelectedDelete={selectedItems.has('.cloud_delete')}
+                        viewMode={viewMode}
                       />
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div
+                  style={{
+                    height: `${rowVirtualizer.getTotalSize()}px`,
+                    width: '100%',
+                    position: 'relative',
+                  }}
+                >
+                  {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                    const index = virtualRow.index;
+                    const file = (displayItems.items ?? [])[index];
+                    const isSelected = selectedItems.has(file.name);
+                    const isHidden = file.name.startsWith('.');
+                    const filePath = currentPath === "/" ? `/${file.name}` : `${currentPath}/${file.name}`;
+                    const isCut = clipboardOperation === 'cut' && clipboardItems.includes(filePath);
+
+                    return (
+                      <div
+                        key={virtualRow.key}
+                        data-index={index}
+                        ref={rowVirtualizer.measureElement}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          transform: `translateY(${virtualRow.start}px)`,
+                        }}
+                        className="pb-1"
+                      >
+                        <FileListItem
+                          key={file.name}
+                          file={file}
+                          index={index}
+                          isSelected={isSelected}
+                          isHidden={isHidden}
+                          isCut={isCut}
+                          isRecycleBin={isRecycleBin}
+                          isTouchDevice={isTouchDevice}
+                          transitioningFolder={transitioningFolder}
+                          openDropdownName={openDropdownName}
+                          setOpenDropdownName={setOpenDropdownName}
+                          handleItemClick={handleItemClick}
+                          handleItemDoubleClick={handleItemDoubleClick}
+                          handleTouchStart={handleTouchStart}
+                          handleTouchEnd={handleTouchEnd}
+                          handleTouchMove={handleTouchMove}
+                          onRename={onRename}
+                          onDelete={onDelete}
+                          onDownload={onDownload}
+                          onProperties={onProperties}
+                          onShare={onShare}
+                          onCut={onCut}
+                          onCopy={onCopy}
+                          onPaste={onPaste}
+                          onFileContextMenu={onFileContextMenu}
+                          clipboardItemsCount={clipboardItemsCount}
+                          clipboardOperation={clipboardOperation}
+                          clipboardSourceDir={clipboardSourceDir}
+                          currentPath={currentPath}
+                          selectedItemsSize={selectedItems.size}
+                          hasSelectedDelete={selectedItems.has('.cloud_delete')}
+                          viewMode={viewMode}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             
             {/* Counts acting as spacer */}
             <div className="flex items-center justify-center text-sm text-muted-foreground min-h-[64px] md:min-h-[44px] border-t mt-2 border-border/50 [-webkit-touch-callout:none] [-webkit-tap-highlight-color:transparent]">
@@ -289,32 +353,77 @@ export default function HomeFileList({
 
       {/* Table Header */}
       <div className="flex border-b font-semibold py-3 md:py-2 px-6 md:pl-5 md:pr-8 text-base md:text-sm bg-muted/30 shrink-0 overflow-y-scroll scrollbar scrollbar-thumb-transparent scrollbar-track-transparent">
-        <div 
-          className="flex-1 text-left text-muted-foreground flex items-center cursor-pointer hover:text-foreground transition-colors group"
-          onClick={() => onSortChange?.('name')}
-        >
-          Name
-          {sortField === 'name' && (
-            sortOrder === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
-          )}
-        </div>
-        <div 
-          className="w-24 md:w-32 hidden lg:flex justify-end text-muted-foreground items-center cursor-pointer hover:text-foreground transition-colors group"
-          onClick={() => onSortChange?.('size')}
-        >
-          Size
-          {sortField === 'size' && (
-            sortOrder === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
-          )}
-        </div>
-        <div 
-          className="w-32 md:w-48 hidden lg:flex justify-end text-muted-foreground items-center cursor-pointer hover:text-foreground transition-colors group"
-          onClick={() => onSortChange?.('modified')}
-        >
-          Last Modified
-          {sortField === 'modified' && (
-            sortOrder === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
-          )}
+        {viewMode === 'list' ? (
+          <>
+            <div 
+              className="flex-1 text-left text-muted-foreground flex items-center cursor-pointer hover:text-foreground transition-colors group"
+              onClick={() => onSortChange?.('name')}
+            >
+              Name
+              {sortField === 'name' && (
+                sortOrder === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
+              )}
+            </div>
+            <div 
+              className="w-24 md:w-32 hidden lg:flex justify-end text-muted-foreground items-center cursor-pointer hover:text-foreground transition-colors group"
+              onClick={() => onSortChange?.('size')}
+            >
+              Size
+              {sortField === 'size' && (
+                sortOrder === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
+              )}
+            </div>
+            <div 
+              className="w-32 md:w-48 hidden lg:flex justify-end text-muted-foreground items-center cursor-pointer hover:text-foreground transition-colors group"
+              onClick={() => onSortChange?.('modified')}
+            >
+              Last Modified
+              {sortField === 'modified' && (
+                sortOrder === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 flex items-center">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <div className="text-left text-muted-foreground flex items-center cursor-pointer hover:text-foreground transition-colors group">
+                  Sort by: {sortField === 'name' ? 'Name' : sortField === 'size' ? 'Size' : sortField === 'modified' ? 'Modified' : 'Name'}
+                  {sortOrder === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />}
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48">
+                <DropdownMenuRadioGroup value={sortField ?? 'name'} onValueChange={(val) => setSortField?.(val as 'name' | 'size' | 'modified')}>
+                  <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="size">Size</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="modified">Modified</DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuRadioGroup value={sortOrder ?? 'asc'} onValueChange={(val) => {
+                  setSortOrder?.(val as 'asc' | 'desc');
+                  if (!sortField) setSortField?.('name');
+                }}>
+                  <DropdownMenuRadioItem value="asc">Ascending</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="desc">Descending</DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => { setSortField?.(null); setSortOrder?.('asc'); }}>
+                  Default (Name Asc)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
+        <div className="md:hidden flex items-center justify-end pl-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => { e.stopPropagation(); setViewMode(viewMode === 'list' ? 'grid' : 'list'); }}
+            className="h-6 w-6 p-0 text-muted-foreground"
+            title={viewMode === 'list' ? "Switch to Grid View" : "Switch to List View"}
+          >
+            {viewMode === 'list' ? <LayoutGrid className="h-4 w-4" /> : <List className="h-4 w-4" />}
+          </Button>
         </div>
       </div>
 

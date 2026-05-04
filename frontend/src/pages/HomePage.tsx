@@ -109,7 +109,9 @@ export default function HomePage() {
     duplicateItems,
     executePaste,
     sortField,
+    setSortField,
     sortOrder,
+    setSortOrder,
     handleSortChange,
   } = useFileManager({ uploadChunkSize: healthData?.upload_chunk_size });
 
@@ -267,7 +269,9 @@ export default function HomePage() {
             currentPath={currentPath}
             onUploadDrop={(files, path) => { void handleUploadFiles(files, path); }}
             sortField={sortField}
+            setSortField={setSortField}
             sortOrder={sortOrder}
+            setSortOrder={setSortOrder}
             onSortChange={handleSortChange}
           />
         </div>
