@@ -357,7 +357,6 @@ func ShareRenameFile(req RenameReq, cfg *config.CloudConfig) error {
 	return nil
 }
 
-// codeql[go/path-injection] False positive: inputs are sanitized by SanitizeRepoPath and SanitizeFilename
 func ShareCreateFolder(req CreateFolderReq, cfg *config.CloudConfig) error {
 	log.Printf("[OpID: %s] ShareCreateFolder: dir=%s, folderName=%s", req.OpID, req.Dir, req.FolderName)
 
@@ -371,7 +370,7 @@ func ShareCreateFolder(req CreateFolderReq, cfg *config.CloudConfig) error {
 		return err
 	}
 
-	newFolderPath := filepath.Join(safeDir, safeFolderName)
+	newFolderPath := filepath.Clean(filepath.Join(safeDir, safeFolderName))
 
 	if _, err := os.Stat(newFolderPath); !os.IsNotExist(err) {
 		return fmt.Errorf("folder already exists")
@@ -707,7 +706,6 @@ func ShareDownloadFiles(c *gin.Context, cfg *config.CloudConfig) {
 }
 
 // ShareUploadChunk handles chunked file uploads from the frontend for shared files.
-// codeql[go/path-injection] False positive: identifier is sanitized with IsSafePathComponent, and destination/filename with SanitizeRepoPath/SanitizeFilename
 func ShareUploadChunk(c *gin.Context, cfg *config.CloudConfig) {
 	if config.AppCloudConfig != nil {
 		maxAllowed := config.AppCloudConfig.UploadChunkSize + 1024*1024
@@ -871,7 +869,7 @@ func ShareUploadChunk(c *gin.Context, cfg *config.CloudConfig) {
 		}
 
 		finalDest := filepath.Join(destPath, cleanFilename)
-		finalDest = util.GetUniqueDestPath(finalDest)
+		finalDest = filepath.Clean(util.GetUniqueDestPath(finalDest))
 
 		outFile, err := os.Create(finalDest)
 		if err != nil {

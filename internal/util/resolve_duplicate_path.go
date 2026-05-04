@@ -9,15 +9,14 @@ import (
 )
 
 // ResolveDuplicatePath adds a numeric suffix to a filename if it already exists in the given directory.
-// codeql[go/path-injection] False positive: dir and filename are expected to be sanitized by caller before reaching this function
 func ResolveDuplicatePath(dir, filename string) string {
-	dest := filepath.Join(dir, filename)
+	dest := filepath.Join(dir, filepath.Base(filepath.Clean(filename)))
 	if _, err := os.Stat(dest); os.IsNotExist(err) {
 		return dest
 	}
 	log.Printf("File name [%s] duplicate at %s", filename, filepath.Dir(dest))
 	ext := filepath.Ext(filename)
-	name := strings.TrimSuffix(filename, ext)
+	name := strings.TrimSuffix(filepath.Base(filename), ext)
 	for i := 1; ; i++ {
 		newName := fmt.Sprintf("%s(%d)%s", name, i, ext)
 		newPath := filepath.Join(dir, newName)
@@ -29,8 +28,8 @@ func ResolveDuplicatePath(dir, filename string) string {
 }
 
 // GetUniqueDestPath generates a unique destination path by adding (1), (2), etc. if file exists
-// codeql[go/path-injection] False positive: destPath is expected to be sanitized by caller before reaching this function
 func GetUniqueDestPath(destPath string) string {
+	destPath = filepath.Clean(destPath)
 	// If destination doesn't exist, return as is
 	if _, err := os.Stat(destPath); os.IsNotExist(err) {
 		return destPath

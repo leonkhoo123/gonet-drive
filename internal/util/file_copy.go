@@ -28,8 +28,8 @@ import (
 //	destDir := "/path/to/destination"
 //	err := CopyFiles(tracker, sources, destDir)
 //
-// codeql[go/path-injection] False positive: inputs are expected to be sanitized by the service layer using SanitizeRepoPaths
 func CopyFiles(tracker *ProgressTracker, sources []string, destDir string, opID string, isSameDir bool, onSizeCalculated func(int64) error) error {
+	destDir = filepath.Clean(destDir)
 	// Truncate opID if it's too long
 	shortID := opID
 	if len(shortID) > 8 {
@@ -179,8 +179,9 @@ func calculateSize(path string, tracker *ProgressTracker) error {
 
 // copyFile copies a single file from src to dst with progress tracking
 // dst should already be a unique path (use GetUniqueDestPath if needed)
-// codeql[go/path-injection] False positive: inputs are expected to be sanitized by the service layer using SanitizeRepoPaths
 func copyFile(src, dst string, tracker *ProgressTracker, opID string) error {
+	src = filepath.Clean(src)
+	dst = filepath.Clean(dst)
 	// Open source file
 	sourceFile, err := os.Open(src)
 	if err != nil {
@@ -237,8 +238,9 @@ func copyFile(src, dst string, tracker *ProgressTracker, opID string) error {
 
 // copyDir recursively copies a directory from src to dst with progress tracking
 // Merges with existing destination directory if it exists
-// codeql[go/path-injection] False positive: inputs are expected to be sanitized by the service layer using SanitizeRepoPaths
 func copyDir(src, dst string, tracker *ProgressTracker, opID string) error {
+	src = filepath.Clean(src)
+	dst = filepath.Clean(dst)
 	// Get source directory info
 	sourceInfo, err := os.Stat(src)
 	if err != nil {

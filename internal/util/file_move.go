@@ -26,8 +26,8 @@ import (
 //	destDir := "/path/to/destination"
 //	err := MoveFiles(tracker, sources, destDir)
 //
-// codeql[go/path-injection] False positive: inputs are expected to be sanitized by the service layer using SanitizeRepoPaths
 func MoveFiles(tracker *ProgressTracker, sources []string, destDir string, opID string) error {
+	destDir = filepath.Clean(destDir)
 	// Tracker is passed in now
 
 	log.Println("Counting files to move...")
@@ -139,8 +139,9 @@ func countFiles(path string, tracker *ProgressTracker) error {
 }
 
 // moveFile moves a single file from src to dst
-// codeql[go/path-injection] False positive: inputs are expected to be sanitized by the service layer using SanitizeRepoPaths
 func moveFile(src, dst string, tracker *ProgressTracker) error {
+	src = filepath.Clean(src)
+	dst = filepath.Clean(dst)
 	// Perform the actual move using os.Rename
 	if err := os.Rename(src, dst); err != nil {
 		return fmt.Errorf("failed to rename '%s' to '%s': %w", src, dst, err)
@@ -153,8 +154,9 @@ func moveFile(src, dst string, tracker *ProgressTracker) error {
 }
 
 // moveDirWithMerge moves a directory, merging with destination if it exists
-// codeql[go/path-injection] False positive: inputs are expected to be sanitized by the service layer using SanitizeRepoPaths
 func moveDirWithMerge(src, dst string, tracker *ProgressTracker, opID string) error {
+	src = filepath.Clean(src)
+	dst = filepath.Clean(dst)
 	if IsCanceled(opID) {
 		return fmt.Errorf("operation canceled")
 	}
@@ -181,8 +183,9 @@ func moveDirWithMerge(src, dst string, tracker *ProgressTracker, opID string) er
 }
 
 // mergeMoveDir recursively moves directory contents, merging with existing destination
-// codeql[go/path-injection] False positive: inputs are expected to be sanitized by the service layer using SanitizeRepoPaths
 func mergeMoveDir(src, dst string, tracker *ProgressTracker, opID string) error {
+	src = filepath.Clean(src)
+	dst = filepath.Clean(dst)
 	// Ensure destination directory exists
 	srcInfo, err := os.Stat(src)
 	if err != nil {

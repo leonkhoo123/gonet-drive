@@ -36,7 +36,8 @@ func SanitizeRepoPaths(repoRoot string, paths []string) ([]string, error) {
 			return nil, fmt.Errorf("failed to resolve absolute path for '%s': %w", p, err)
 		}
 
-		if !strings.HasPrefix(absPath, absRepoRoot) {
+		rel, err := filepath.Rel(absRepoRoot, absPath)
+		if err != nil || strings.HasPrefix(rel, "..") {
 			return nil, fmt.Errorf("path is outside the allowed directory: %s", p)
 		}
 
@@ -71,7 +72,8 @@ func SanitizeRepoPath(repoRoot string, path string) (string, error) {
 		return "", fmt.Errorf("failed to resolve absolute path for '%s': %w", path, err)
 	}
 
-	if !strings.HasPrefix(absPath, absRepoRoot) {
+	rel, err := filepath.Rel(absRepoRoot, absPath)
+	if err != nil || strings.HasPrefix(rel, "..") {
 		return "", fmt.Errorf("path is outside the allowed directory: %s", path)
 	}
 

@@ -302,7 +302,6 @@ func (s *AudiobookService) ListAudioBooks(cfg *config.CloudConfig) gin.HandlerFu
 	}
 }
 
-// codeql[go/path-injection] False positive: name is sanitized with IsSafePathComponent
 func (s *AudiobookService) StreamAudioBook(cfg *config.CloudConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username := c.GetString("username")
