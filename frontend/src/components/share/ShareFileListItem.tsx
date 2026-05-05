@@ -108,7 +108,7 @@ export function ShareFileListItem({
               : 'bg-card border-transparent @media(hover:hover):hover:bg-muted/50 @media(hover:hover):hover:border-border'
         } ${isCut ? 'opacity-50' : ''}`}
       >
-        <div className={`w-full aspect-square flex items-center justify-center mb-3 overflow-hidden rounded-md bg-muted/20 ${isHidden ? 'opacity-60' : ''}`}>
+        <div className={`w-full aspect-square flex items-center justify-center mb-3 overflow-hidden rounded-md ${(file.media_type === "photo" || file.media_type === "video") && imgErrorUrl !== file.url ? 'bg-transparent' : 'bg-muted/20'} ${isHidden ? 'opacity-60' : ''}`}>
           {file.type === "dir" ? (
             file.name === ".cloud_delete" ? (
               <Trash2 className="h-16 w-16 text-primary" />
@@ -240,7 +240,7 @@ export function ShareFileListItem({
           ) : (
             <>
               {(file.media_type === "photo" || file.media_type === "video") && imgErrorUrl !== file.url ? (
-                <div className="h-10 w-10 md:h-8 md:w-8 shrink-0 rounded overflow-hidden bg-muted/50 flex items-center justify-center relative">
+                <div className="h-10 w-10 md:h-8 md:w-8 shrink-0 rounded overflow-hidden bg-transparent flex items-center justify-center relative">
                   <img 
                     src={file.media_type === "photo" ? file.url.replace('/photo/play/', '/photo/thumbnail/') : file.url.replace('/video/play/', '/video/thumbnail/')} 
                     loading="lazy" 
