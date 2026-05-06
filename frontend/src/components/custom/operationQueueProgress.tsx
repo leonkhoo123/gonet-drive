@@ -3,7 +3,7 @@ import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { useOperationProgress } from '../../context/OperationProgressContext';
 import { Progress } from '../ui/progress';
 import { Button } from '../ui/button';
-import { X, ChevronDown, CheckCircle2, AlertCircle, Loader2, Files, Trash2, Edit, Move, Copy, UploadCloud } from 'lucide-react';
+import { X, ChevronDown, CheckCircle2, AlertCircle, Loader2, Files, Trash2, Edit, Scissors, Copy, UploadCloud } from 'lucide-react';
 import type { OperationMessage } from '@/api/wsClient';
 import { cancelOperation, uploadControllers, cancelledUploads } from '@/api/api-file';
 
@@ -103,7 +103,7 @@ export function OperationQueueProgress() {
     const getIconForType = (type: string) => {
         switch (type) {
             case 'copy': return <Copy className="w-4 h-4" />;
-            case 'move': return <Move className="w-4 h-4" />;
+            case 'move': return <Scissors className="w-4 h-4" />;
             case 'delete': return <Trash2 className="w-4 h-4" />;
             case 'delete_permanent': return <Trash2 className="w-4 h-4 text-red-500" />;
             case 'rename': return <Edit className="w-4 h-4" />;

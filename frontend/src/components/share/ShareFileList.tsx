@@ -25,16 +25,36 @@ import { ShareFileListItem } from "./ShareFileListItem";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePreferences } from "@/context/PreferencesContext";
 
-const FileListSkeleton = () => {
+const FileListSkeleton = ({ viewMode }: { viewMode: 'list' | 'grid' }) => {
+  const fadeOpacities = ['', 'opacity-70', 'opacity-40', 'opacity-20'];
+
+  if (viewMode === 'grid') {
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4 p-4 pb-0">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div
+            key={i}
+            className={`flex flex-col items-center p-3 rounded-lg border border-transparent ${i >= 5 ? fadeOpacities[i - 5] : ''}`}
+          >
+            <Skeleton className="w-full aspect-square rounded-md mb-3" />
+            <Skeleton className={`h-4 rounded mb-1.5 ${i % 3 === 0 ? 'w-[70%]' : i % 2 === 0 ? 'w-[85%]' : 'w-[60%]'}`} />
+            <Skeleton className={`h-3 rounded ${i % 2 === 0 ? 'w-[40%]' : 'w-[50%]'}`} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // List mode skeleton
   return (
     <div className="w-full flex flex-col pt-1">
-      {Array.from({ length: 15 }).map((_, i) => (
+      {Array.from({ length: 8 }).map((_, i) => (
         <div
           key={i}
-          className="flex items-center pl-4 pr-1 md:pl-1 md:pr-3 py-2 md:py-3 min-h-[64px] md:min-h-[44px] mb-1"
+          className={`flex items-center pl-4 pr-1 md:pl-1 md:pr-3 py-2 md:py-3 min-h-[64px] md:min-h-[44px] mb-1 ${i >= 5 ? fadeOpacities[i - 5] : ''}`}
         >
           <div className="flex-1 flex items-center space-x-3 min-w-0 pr-2 md:pr-4">
-            <Skeleton className="h-7 w-7 md:h-5 md:w-5 shrink-0" />
+            <Skeleton className="h-10 w-10 md:h-8 md:w-8 shrink-0" />
             <div className="flex flex-col pl-1 min-w-0 w-full space-y-1.5">
               <Skeleton className={`h-4 rounded ${i % 3 === 0 ? 'w-[40%]' : i % 2 === 0 ? 'w-[60%]' : 'w-[50%]'}`} />
               <Skeleton className={`h-3 rounded lg:hidden ${i % 2 === 0 ? 'w-[30%]' : 'w-[40%]'}`} />
@@ -172,7 +192,7 @@ export default function ShareFileList({
           isLoading && !items ? 'block' : 'hidden'
         }`}
       >
-        <FileListSkeleton />
+        <FileListSkeleton viewMode={viewMode} />
       </div>
 
       {/* Content Layer */}
