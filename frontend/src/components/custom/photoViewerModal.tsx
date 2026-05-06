@@ -31,20 +31,22 @@ const ThumbnailItem = React.memo(
         e.stopPropagation();
         onGoTo(index);
       }}
-      className={`flex-shrink-0 w-16 h-16 rounded-md transition-all focus:outline-none ${
+      className={`flex-shrink-0 h-16 transition-all focus:outline-none ${
         isActive
-          ? "ring-2 ring-white ring-offset-1 ring-offset-black/50 scale-105"
+          ? "scale-105"
           : "opacity-60 hover:opacity-100"
       }`}
     >
-      <div className="w-full h-full rounded-md overflow-hidden">
-        <img
-          src={thumbUrl(file)}
-          alt={file.name}
-          className="w-full h-full object-cover"
-          loading="lazy"
-        />
-      </div>
+      <img
+        src={thumbUrl(file)}
+        alt={file.name}
+        className={`h-full w-auto rounded-md ${
+          isActive
+            ? "ring-2 ring-white ring-offset-1 ring-offset-transparent"
+            : ""
+        }`}
+        loading="lazy"
+      />
     </button>
   )
 );
@@ -259,33 +261,41 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
         </div>
       </div>
 
-      {/* Left/Right hit zones — 1/4 screen each, dead zones top/bottom for close bar & thumbnail strip */}
+      {/* Left/Right hit zones — always clickable, arrow icon follows UI visibility + bounds */}
       {hasMultiple && (
         <>
-          {!isFirst && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                goPrev();
-              }}
-              className={`flex absolute left-0 top-24 bottom-24 w-1/4 z-20 items-center justify-start pl-2 text-white/60 hover:text-white transition-colors cursor-pointer ${uiHidden}`}
-              title="Previous"
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              goPrev();
+            }}
+            className="flex absolute left-0 top-24 bottom-24 w-1/4 z-20 items-center justify-start pl-4 cursor-pointer"
+            title="Previous"
+          >
+            <span
+              className={`inline-flex items-center justify-center w-12 h-12 rounded-full bg-black/40 transition-opacity ${
+                !showUI || isFirst ? "opacity-0" : "opacity-100"
+              }`}
             >
-              <ChevronLeft className="w-10 h-10 drop-shadow-lg" />
-            </button>
-          )}
-          {!isLast && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                goNext();
-              }}
-              className={`flex absolute right-0 top-24 bottom-24 w-1/4 z-20 items-center justify-end pr-2 text-white/60 hover:text-white transition-colors cursor-pointer ${uiHidden}`}
-              title="Next"
+              <ChevronLeft className="w-8 h-8 text-white drop-shadow-lg" />
+            </span>
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              goNext();
+            }}
+            className="flex absolute right-0 top-24 bottom-24 w-1/4 z-20 items-center justify-end pr-4 cursor-pointer"
+            title="Next"
+          >
+            <span
+              className={`inline-flex items-center justify-center w-12 h-12 rounded-full bg-black/40 transition-opacity ${
+                !showUI || isLast ? "opacity-0" : "opacity-100"
+              }`}
             >
-              <ChevronRight className="w-10 h-10 drop-shadow-lg" />
-            </button>
-          )}
+              <ChevronRight className="w-8 h-8 text-white drop-shadow-lg" />
+            </span>
+          </button>
         </>
       )}
 
@@ -318,12 +328,12 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
       {/* Bottom Thumbnail Strip */}
       {hasMultiple && (
         <div
-          className={`absolute bottom-0 left-0 right-0 z-20 bg-black/50 backdrop-blur-sm pt-3 pb-4 ${uiHidden}`}
+          className={`absolute bottom-0 left-0 right-0 z-20 pt-3 pb-4 ${uiHidden}`}
           style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom, 8px))" }}
         >
           <div
             ref={thumbStripRef}
-            className="flex gap-2 overflow-x-auto scrollbar-hide py-1"
+            className="flex gap-3 overflow-x-auto scrollbar-hide py-1"
             onScroll={handleStripScroll}
             style={{
               paddingLeft: "calc(50% - 2rem)",
