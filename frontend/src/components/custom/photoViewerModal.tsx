@@ -148,7 +148,7 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
     if (btn) {
       btn.scrollIntoView({ behavior: "auto", block: "nearest", inline: "center" });
     }
-  }, [currentIndex]);
+  }, [currentIndex, showUI]);
 
   // ---- Keyboard ----
   const handleKeyDown = useCallback(
@@ -305,9 +305,9 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Loading spinner — shown while image not yet loaded */}
+        {/* Loading spinner — pointer-events-none so clicks pass through to close/prev/next */}
         {!imageLoaded && (
-          <div className="absolute inset-0 flex items-center justify-center z-10">
+          <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
             <Loader2 className="w-12 h-12 text-white/70 animate-spin" />
           </div>
         )}
