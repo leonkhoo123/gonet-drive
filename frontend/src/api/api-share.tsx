@@ -1,5 +1,10 @@
 import axiosLayer from './axiosLayer';
 
+// isNeverExpires checks if the expires_at string is the sentinel "never" value (year 9999).
+export const isNeverExpires = (expiresAt: string): boolean => {
+  return new Date(expiresAt).getFullYear() >= 9999;
+};
+
 export interface VerifyShareResponse {
   message: string;
   authority: 'view' | 'modify';

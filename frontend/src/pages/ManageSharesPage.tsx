@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { getShares, toggleShareBlock, deleteShare } from "@/api/api-share";
+import { getShares, toggleShareBlock, deleteShare, isNeverExpires } from "@/api/api-share";
 import type { ShareItem } from "@/api/api-share";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -220,7 +220,8 @@ export default function ManageSharesPage() {
                         {isExpanded && (
                           <div className="bg-muted/10 border-t flex flex-col divide-y divide-border/50">
                             {pathShares.map(share => {
-                              const isExpired = new Date(share.expires_at) < new Date();
+                              const never = isNeverExpires(share.expires_at);
+                              const isExpired = !never && new Date(share.expires_at) < new Date();
                               return (
                                 <div key={share.id} className={`p-4 md:px-6 md:py-4 flex flex-col md:flex-row md:items-center gap-3 md:gap-6 ${share.blocked || isExpired ? "opacity-60 bg-muted/30" : "hover:bg-muted/20"}`}>
                                   <div className="flex flex-col gap-1.5 flex-1 min-w-0">
@@ -246,7 +247,7 @@ export default function ManageSharesPage() {
                                     <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-4 text-xs text-muted-foreground">
                                       <span className="font-mono bg-muted/50 px-1.5 py-0.5 rounded" title={`ID: ${share.id}`}>ID: {share.id.substring(0, 8)}...</span>
                                       <span className="flex items-center">
-                                        Expires: {new Date(share.expires_at).toLocaleString()}
+                                        {never ? "Never Expires" : <>Expires: {new Date(share.expires_at).toLocaleString()}</>}
                                         {isExpired && <span className="ml-1.5 text-red-500 font-semibold">(Expired)</span>}
                                       </span>
                                     </div>

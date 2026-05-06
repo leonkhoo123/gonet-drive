@@ -23,7 +23,7 @@ import (
 type CreateShareRequest struct {
 	Path        string `json:"path" binding:"required"`
 	Description string `json:"description" binding:"required"`
-	ExpiresIn   int    `json:"expires_in_hours" binding:"required,min=1"`
+	ExpiresIn   int    `json:"expires_in_hours" binding:"required"`
 	Authority   string `json:"authority"`
 }
 
@@ -61,6 +61,12 @@ func (s *SharingService) CreateShareEndpoint(c *gin.Context) {
 		req.Authority = "view"
 	}
 
+	// Validate expires_in_hours: -1 = never, >= 1 = hours
+	if req.ExpiresIn != -1 && req.ExpiresIn < 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "expires_in_hours must be -1 (never) or >= 1"})
+		return
+	}
+
 	pin := generateRandomPin()
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(pin), bcrypt.DefaultCost)
@@ -70,7 +76,12 @@ func (s *SharingService) CreateShareEndpoint(c *gin.Context) {
 	}
 
 	id := generateRandomID()
-	expiresAt := time.Now().Add(time.Duration(req.ExpiresIn) * time.Hour)
+	var expiresAt time.Time
+	if req.ExpiresIn == -1 {
+		expiresAt = model.NeverExpires
+	} else {
+		expiresAt = time.Now().Add(time.Duration(req.ExpiresIn) * time.Hour)
+	}
 	createdAt := time.Now()
 
 	share := &model.SharingInfo{

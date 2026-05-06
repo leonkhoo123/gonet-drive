@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { createShare } from "@/api/api-share";
+import { createShare, isNeverExpires } from "@/api/api-share";
 import type { CreateShareResponse, CreateShareRequest } from "@/api/api-share";
 import { Loader2, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
@@ -75,7 +75,8 @@ export default function HomeShareDialog({
   const handleCopy = async () => {
     if (!successData) return;
     const shareLink = `${window.location.origin}/share/${successData.share.id}`;
-    const expiryDate = new Date(successData.share.expires_at).toLocaleString();
+    const never = isNeverExpires(successData.share.expires_at);
+    const expiryDate = never ? "Never Expires" : new Date(successData.share.expires_at).toLocaleString();
     const textToCopy = `Please use the PIN below to access the shared content.\nLink: ${shareLink}\nPIN: ${successData.pin}\nExpires: ${expiryDate}`;
     
     try {
@@ -101,7 +102,9 @@ export default function HomeShareDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {successData ? (
+        {successData ? (() => {
+          const never = isNeverExpires(successData.share.expires_at);
+          return (
           <div className="grid gap-6 py-4">
             <div className="flex flex-col gap-2">
               <Label>Share Information</Label>
@@ -114,9 +117,13 @@ export default function HomeShareDialog({
                   <br />
                   <br />
                   PIN: <span className="font-bold tracking-widest">{successData.pin}</span>
-                  <br />
-                  <br />
-                  Expires: {new Date(successData.share.expires_at).toLocaleString()}
+                  {!never && (
+                    <>
+                      <br />
+                      <br />
+                      Expires: {new Date(successData.share.expires_at).toLocaleString()}
+                    </>
+                  )}
                 </div>
                 <Button 
                   size="icon" 
@@ -131,10 +138,11 @@ export default function HomeShareDialog({
             </div>
             
             <p className="text-sm text-muted-foreground">
-              Anyone with this link and PIN can {successData.share.authority === 'modify' ? 'view and modify' : 'view'} this item until it expires.
+              Anyone with this link and PIN can {successData.share.authority === 'modify' ? 'view and modify' : 'view'} this item{never ? " indefinitely" : " until it expires"}.
             </p>
           </div>
-        ) : (
+          );
+        })() : (
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label>Description <span className="text-red-500">*</span></Label>
@@ -148,9 +156,9 @@ export default function HomeShareDialog({
 
             <div className="grid gap-2">
               <Label>Expiration Time</Label>
-              <select 
-                value={expiresInHours} 
-                onChange={(e) => { setExpiresInHours(e.target.value); }} 
+              <select
+                value={expiresInHours}
+                onChange={(e) => { setExpiresInHours(e.target.value); }}
                 disabled={loading}
                 className="flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -158,6 +166,7 @@ export default function HomeShareDialog({
                 <option value="168" className="bg-background text-foreground">7 Days (Default)</option>
                 <option value="336" className="bg-background text-foreground">14 Days</option>
                 <option value="720" className="bg-background text-foreground">1 Month (30 Days)</option>
+                <option value="-1" className="bg-background text-foreground">Never Expire</option>
               </select>
             </div>
 

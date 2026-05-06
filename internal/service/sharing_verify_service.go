@@ -40,7 +40,7 @@ func (s *SharingService) VerifySharePINEndpoint(c *gin.Context) {
 		return
 	}
 
-	if time.Now().After(share.ExpiresAt) {
+	if !share.IsNeverExpires() && time.Now().After(share.ExpiresAt) {
 		c.JSON(http.StatusGone, gin.H{"error": "Share link has expired"})
 		return
 	}
@@ -52,9 +52,11 @@ func (s *SharingService) VerifySharePINEndpoint(c *gin.Context) {
 	}
 
 	tokenDuration := config.AppConfig.Auth.ShareJwtMaxAge
-	timeUntilExpiry := time.Until(share.ExpiresAt)
-	if timeUntilExpiry < tokenDuration {
-		tokenDuration = timeUntilExpiry
+	if !share.IsNeverExpires() {
+		timeUntilExpiry := time.Until(share.ExpiresAt)
+		if timeUntilExpiry < tokenDuration {
+			tokenDuration = timeUntilExpiry
+		}
 	}
 
 	secret := config.AppConfig.Auth.JwtSecret
@@ -119,7 +121,7 @@ func (s *SharingService) CheckSharePermissionEndpoint(c *gin.Context) {
 		return
 	}
 
-	if time.Now().After(share.ExpiresAt) {
+	if !share.IsNeverExpires() && time.Now().After(share.ExpiresAt) {
 		c.JSON(http.StatusGone, gin.H{"error": "Share link has expired"})
 		return
 	}
