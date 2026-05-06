@@ -1,7 +1,7 @@
 {
-  "name": "Leon Cloud",
-  "short_name": "Leon Cloud",
-  "description": "My Leon Cloud",
+  "name": "GoNet Drive",
+  "short_name": "GoNet Drive",
+  "description": "My GoNet Drive",
   "start_url": "/",
   "display": "standalone",
   "theme_color": "#ffffff",

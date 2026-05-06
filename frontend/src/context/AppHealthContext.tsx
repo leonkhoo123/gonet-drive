@@ -26,7 +26,7 @@ export function AppHealthProvider({ children }: { children: ReactNode }) {
     if (healthData?.service_name) {
       document.title = healthData.service_name;
     } else {
-      document.title = "Leon Cloud";
+      document.title = "GoNet Drive";
     }
   }, [healthData?.service_name]);
 

@@ -38,8 +38,8 @@ export default defineConfig({
       },
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'robots.txt'],
       manifest: {
-        name: 'Leon Cloud',
-        short_name: 'Leon Cloud',
+        name: 'GoNet Drive',
+        short_name: 'GoNet Drive',
         start_url: '/',
         display: 'standalone',
         background_color: '#ffffff',
