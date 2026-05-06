@@ -77,7 +77,7 @@ export default function HomeShareDialog({
     const shareLink = `${window.location.origin}/share/${successData.share.id}`;
     const never = isNeverExpires(successData.share.expires_at);
     const expiryDate = never ? "Never Expires" : new Date(successData.share.expires_at).toLocaleString();
-    const textToCopy = `Please use the PIN below to access the shared content.\nLink: ${shareLink}\nPIN: ${successData.pin}\nExpires: ${expiryDate}`;
+    const textToCopy = `Please use the PIN below to access the shared content.\n\nLink: ${shareLink}\n\nPIN: ${successData.pin}${never ? "" : `\n\nExpires: ${expiryDate}`}`;
     
     try {
       await navigator.clipboard.writeText(textToCopy);
