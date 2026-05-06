@@ -3,6 +3,7 @@ package controller
 import (
 	"go-file-server/internal/config"
 	"go-file-server/internal/middleware"
+	"go-file-server/internal/repository"
 	"go-file-server/internal/service"
 	"go-file-server/internal/ws"
 	"net/http"
@@ -13,10 +14,10 @@ import (
 )
 
 // ShareFileRoutes handles accessing share files
-func ShareFileRoutes(router *gin.Engine) {
+func ShareFileRoutes(router *gin.Engine, shareRepo repository.SharingRepository) {
 	// Share File Access (requires shareJwt token)
 	fileAccess := router.Group("/api/share/file")
-	fileAccess.Use(middleware.ShareAuthMiddleware(config.AppConfig))
+	fileAccess.Use(middleware.ShareAuthMiddleware(config.AppConfig, shareRepo))
 	{
 		fileAccess.GET("/ws", ws.WsHandler)
 		fileAccess.GET("/list", ShareFileList)

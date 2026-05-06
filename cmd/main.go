@@ -81,7 +81,7 @@ func main() {
 
 	// Public share routes
 	controller.PublicShareRoutes(router, sharingService)
-	controller.ShareFileRoutes(router)
+	controller.ShareFileRoutes(router, shareRepo)
 
 	// register authenticated routes
 	controller.UserRoutes(router, cfg, userService, sharingService, audiobookService, configRepo)

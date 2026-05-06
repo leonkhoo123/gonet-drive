@@ -1,7 +1,10 @@
 package middleware
 
 import (
+	"database/sql"
 	"go-file-server/internal/config"
+	"go-file-server/internal/repository"
+	"go-file-server/internal/state"
 	"go-file-server/internal/util"
 	"net/http"
 	"strings"
@@ -46,8 +49,10 @@ func ValidateShareTokenString(tokenStr string, secret string) (*jwt.Token, error
 	})
 }
 
-// ShareAuthMiddleware verifies shareJwt token on share endpoints
-func ShareAuthMiddleware(cfg *config.CloudConfig) gin.HandlerFunc {
+// ShareAuthMiddleware verifies shareJwt token on share endpoints.
+// After JWT validation, checks cache then DB to ensure the share row
+// still exists and is not blocked.
+func ShareAuthMiddleware(cfg *config.CloudConfig, shareRepo repository.SharingRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		shareID := c.GetHeader("X-Share-Id")
 		if shareID == "" {
@@ -79,6 +84,35 @@ func ShareAuthMiddleware(cfg *config.CloudConfig) gin.HandlerFunc {
 		claims, ok := token.Claims.(*ShareTokenClaims)
 		if !ok {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid share token claims"})
+			return
+		}
+
+		// Check cache-first, fall back to DB, to block deleted/blocked shares
+		// even when the JWT is still valid.
+		exists, blocked, found := state.GetShareStatus(claims.ShareID)
+		if !found {
+			share, err := shareRepo.GetByID(claims.ShareID)
+			if err != nil {
+				// ErrNoRows means share was deleted
+				if err == sql.ErrNoRows {
+					state.SetShareStatus(claims.ShareID, false, false)
+					c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "share link no longer valid"})
+					return
+				}
+				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to validate share"})
+				return
+			}
+			exists = true
+			blocked = share.Blocked
+			state.SetShareStatus(claims.ShareID, exists, blocked)
+		}
+
+		if !exists {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "share link no longer valid"})
+			return
+		}
+		if blocked {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "share link no longer valid"})
 			return
 		}
 

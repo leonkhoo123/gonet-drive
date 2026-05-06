@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"go-file-server/internal/model"
+	"go-file-server/internal/state"
 	"go-file-server/internal/util"
 
 	"github.com/gin-gonic/gin"
@@ -172,6 +173,9 @@ func (s *SharingService) ToggleShareBlockedEndpoint(c *gin.Context) {
 		return
 	}
 
+	// Invalidate cache so ShareAuthMiddleware picks up the new blocked status immediately
+	state.InvalidateShareStatus(id)
+
 	c.JSON(http.StatusOK, gin.H{"message": "Status updated", "blocked": newBlocked})
 }
 
@@ -194,6 +198,9 @@ func (s *SharingService) DeleteShareEndpoint(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Share link not found or already deleted"})
 		return
 	}
+
+	// Invalidate cache so ShareAuthMiddleware blocks access immediately
+	state.InvalidateShareStatus(id)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Share link deleted"})
 }
