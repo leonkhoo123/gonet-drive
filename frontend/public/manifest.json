@@ -1,7 +1,7 @@
 {
-  "name": "Demo Cloud",
-  "short_name": "Demo Cloud",
-  "description": "My Demo Cloud",
+  "name": "Leon Cloud",
+  "short_name": "Leon Cloud",
+  "description": "My Leon Cloud",
   "start_url": "/",
   "display": "standalone",
   "theme_color": "#ffffff",

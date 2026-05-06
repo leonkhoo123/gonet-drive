@@ -38,8 +38,8 @@ export default defineConfig({
       },
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'robots.txt'],
       manifest: {
-        name: 'Demo Cloud',
-        short_name: 'Demo Cloud',
+        name: 'Leon Cloud',
+        short_name: 'Leon Cloud',
         start_url: '/',
         display: 'standalone',
         background_color: '#ffffff',
