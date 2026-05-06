@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate, useParams } from "react-router-dom";
-import { RefreshCcw, ArrowLeft, MoreVertical, Info, Download, Folder, File, Users } from "lucide-react";
+import { RefreshCcw, ArrowLeft, MoreVertical, Info, Download, Folder, File, Users, FolderPlus } from "lucide-react";
 import { encodePathToUrl } from "@/utils/utils";
 import {
   DropdownMenu,
@@ -17,16 +17,18 @@ interface ShareBreadcrumbProps {
   onProperties?: (fileName?: string, isCurrentDir?: boolean) => void;
   onRefresh?: () => void;
   onDownload?: () => void;
+  onCreateFolder?: () => void;
 }
 
-export default function ShareBreadcrumb({ 
-  currentPath, 
+export default function ShareBreadcrumb({
+  currentPath,
   shareRoot,
   isFolderEmpty = false,
   isSingleFile = false,
   onProperties,
   onRefresh,
   onDownload,
+  onCreateFolder,
 }: ShareBreadcrumbProps) {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -122,9 +124,13 @@ export default function ShareBreadcrumb({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={() => onCreateFolder?.()}>
+                <FolderPlus className="mr-2 h-4 w-4" />
+                Create Folder
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onDownload?.()} disabled={isFolderEmpty || currentPath.split("/").filter(Boolean).pop() === '.cloud_delete'}>
                 <Download className="mr-2 h-4 w-4" />
-                Download
+                Download All
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onProperties?.(undefined, true)}>
                 <Info className="mr-2 h-4 w-4" />

@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Menu, LogOut, RefreshCcw, Settings, Sun, Moon, Monitor, Eye, EyeOff, ArrowLeft, MoreVertical, Info, Sliders, Trash2, Download, Share2 } from "lucide-react";
+import { Menu, LogOut, RefreshCcw, Settings, Sun, Moon, Monitor, Eye, EyeOff, ArrowLeft, MoreVertical, Info, Sliders, Trash2, Download, Share2, FolderPlus } from "lucide-react";
 import { encodePathToUrl } from "@/utils/utils";
 import { logout, getMe } from "@/api/api-auth";
 import { useTheme } from "@/components/theme-provider";
@@ -27,10 +27,11 @@ interface HomeBreadcrumbProps {
   onRefresh?: () => void;
   onDownload?: () => void;
   onEmptyRecycleBin?: () => void;
+  onCreateFolder?: () => void;
 }
 
-export default function HomeBreadcrumb({ 
-  currentPath, 
+export default function HomeBreadcrumb({
+  currentPath,
   isFolderEmpty = false,
   onToggleSidebar,
   onProperties,
@@ -38,6 +39,7 @@ export default function HomeBreadcrumb({
   onRefresh,
   onDownload,
   onEmptyRecycleBin,
+  onCreateFolder,
 }: HomeBreadcrumbProps) {
   const navigate = useNavigate();
   const { updateServiceWorker } = useRegisterSW();
@@ -215,6 +217,10 @@ export default function HomeBreadcrumb({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={() => onCreateFolder?.()}>
+                <FolderPlus className="mr-2 h-4 w-4" />
+                Create Folder
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onDownload?.()} disabled={isFolderEmpty || currentPath.split("/").filter(Boolean).pop() === '.cloud_delete'}>
                 <Download className="mr-2 h-4 w-4" />
                 Download All

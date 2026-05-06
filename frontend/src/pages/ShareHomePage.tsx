@@ -273,25 +273,27 @@ export default function ShareHomePage() {
                 authority={authority}
               />
             ) : (
-              <ShareBreadcrumb 
-                currentPath={currentPath} 
+              <ShareBreadcrumb
+                currentPath={currentPath}
                 shareRoot={shareRoot}
                 isFolderEmpty={!items?.items || items.items.length === 0}
                 isSingleFile={items?.is_single_file}
                 onProperties={(name?: string, isCurrentDir?: boolean) => { void handleProperties(name, isCurrentDir); }}
                 onRefresh={() => { void handleRefresh(); }}
                 onDownload={() => { handleDownload(); }}
+                onCreateFolder={handleCreateFolder}
               />
             )}
           </div>
 
           <div className="hidden md:block">
-            <ShareBreadcrumb 
-              currentPath={currentPath} 
+            <ShareBreadcrumb
+              currentPath={currentPath}
               shareRoot={shareRoot}
               isSingleFile={items?.is_single_file}
               onProperties={(name?: string, isCurrentDir?: boolean) => { void handleProperties(name, isCurrentDir); }}
               onRefresh={() => { void handleRefresh(); }}
+              onCreateFolder={handleCreateFolder}
             />
           </div>
 

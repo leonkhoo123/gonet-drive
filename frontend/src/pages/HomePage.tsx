@@ -194,27 +194,29 @@ export default function HomePage() {
                 isRecycleBinSelected={selectedItems.has('.cloud_delete')}
               />
             ) : (
-              <HomeBreadcrumb 
-                currentPath={currentPath} 
+              <HomeBreadcrumb
+                currentPath={currentPath}
                 isFolderEmpty={!items?.items || items.items.length === 0}
-                onToggleSidebar={toggleSidebar} 
+                onToggleSidebar={toggleSidebar}
                 onProperties={(name, isCurrentDir) => { void handleProperties(name, isCurrentDir); }}
                 onShare={(name: string | undefined, isCurrentDir: boolean | undefined) => { handleShare(name, isCurrentDir); }}
                 onRefresh={() => { void handleRefresh(); }}
                 onDownload={() => { handleDownload(); }}
                 onEmptyRecycleBin={() => { handleEmptyRecycleBin((items?.items ?? []).map(i => i.name)); }}
+                onCreateFolder={handleCreateFolder}
               />
             )}
           </div>
 
           <div className="hidden md:block">
-            <HomeBreadcrumb 
-              currentPath={currentPath} 
-              onToggleSidebar={toggleSidebar} 
+            <HomeBreadcrumb
+              currentPath={currentPath}
+              onToggleSidebar={toggleSidebar}
               onProperties={(name, isCurrentDir) => { void handleProperties(name, isCurrentDir); }}
               onShare={(name, isCurrentDir) => { handleShare(name, isCurrentDir); }}
               onRefresh={() => { void handleRefresh(); }}
               onEmptyRecycleBin={() => { handleEmptyRecycleBin((items?.items ?? []).map(i => i.name)); }}
+              onCreateFolder={handleCreateFolder}
             />
           </div>
 
