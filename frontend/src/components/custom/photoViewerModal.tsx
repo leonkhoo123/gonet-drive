@@ -3,6 +3,8 @@ import { X, Download, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { type FileInterface, downloadFiles } from "@/api/api-file";
 import { useDialogHistory } from "@/hooks/useDialogHistory";
 
+const HIT_FLASH_DURATION = 300; // ms
+
 interface PhotoViewerModalProps {
   initialFile: FileInterface | null;
   allItems?: FileInterface[];
@@ -69,6 +71,8 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
   const isScrollingStrip = useRef(false);
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isProgrammaticScroll = useRef(false);
+  const leftHitRef = useRef<HTMLButtonElement>(null);
+  const rightHitRef = useRef<HTMLButtonElement>(null);
 
   const handleStripScroll = useCallback(() => {
     // Ignore scroll events triggered by our own scrollIntoView calls.
@@ -151,6 +155,20 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
   const hasMultiple = photoFiles.length > 1;
   const isFirst = currentIndex === 0;
   const isLast = currentIndex === photoFiles.length - 1;
+
+  // ---- Hit flash (Web Animations API — survives React reconciliation) ----
+  const triggerHitFlash = useCallback((side: "left" | "right") => {
+    const el = side === "left" ? leftHitRef.current : rightHitRef.current;
+    if (!el) return;
+    el.animate(
+      [
+        { backgroundColor: "rgba(255,255,255,0)" },
+        { backgroundColor: "rgba(255,255,255,0.3)" },
+        { backgroundColor: "rgba(255,255,255,0)" },
+      ],
+      { duration: HIT_FLASH_DURATION, easing: "ease-out" }
+    );
+  }, []);
 
   // ---- Navigation (reset loading synchronously to avoid race) ----
   const goPrev = useCallback(() => {
@@ -312,37 +330,37 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
         <>
           {/* Mobile left hit zone */}
           <button
+            ref={leftHitRef}
             onClick={(e) => {
               e.stopPropagation();
+              triggerHitFlash("left");
               goPrev();
             }}
-            className="flex md:hidden absolute left-0 top-24 bottom-24 w-1/5 z-20 items-center justify-start pl-4 cursor-pointer"
+            className="flex md:hidden absolute left-0 top-24 bottom-24 w-1/5 z-20 items-center justify-start pl-4 cursor-pointer rounded-r-xl transition-colors"
             title="Previous"
           >
-            <span
-              className={`inline-flex items-center justify-center w-12 h-12 rounded-full bg-black/40 transition-opacity ${
+            <ChevronLeft
+              className={`w-8 h-8 text-white drop-shadow-lg transition-opacity ${
                 !showUI || isFirst ? "opacity-0" : "opacity-100"
               }`}
-            >
-              <ChevronLeft className="w-8 h-8 text-white drop-shadow-lg" />
-            </span>
+            />
           </button>
           {/* Mobile right hit zone */}
           <button
+            ref={rightHitRef}
             onClick={(e) => {
               e.stopPropagation();
+              triggerHitFlash("right");
               goNext();
             }}
-            className="flex md:hidden absolute right-0 top-24 bottom-24 w-1/5 z-20 items-center justify-end pr-4 cursor-pointer"
+            className="flex md:hidden absolute right-0 top-24 bottom-24 w-1/5 z-20 items-center justify-end pr-4 cursor-pointer rounded-l-xl transition-colors"
             title="Next"
           >
-            <span
-              className={`inline-flex items-center justify-center w-12 h-12 rounded-full bg-black/40 transition-opacity ${
+            <ChevronRight
+              className={`w-8 h-8 text-white drop-shadow-lg transition-opacity ${
                 !showUI || isLast ? "opacity-0" : "opacity-100"
               }`}
-            >
-              <ChevronRight className="w-8 h-8 text-white drop-shadow-lg" />
-            </span>
+            />
           </button>
 
           {/* Desktop: precise arrow buttons (no wide hit area) */}
