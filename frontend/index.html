@@ -10,6 +10,13 @@
 
     <!-- Theme color for browser UI -->
     <meta name="theme-color" content="#ffffff" />
+    <script>
+      (function() {
+        var theme = localStorage.getItem('vite-ui-theme');
+        var isDark = theme === 'dark' || ((!theme || theme === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', isDark ? '#0a0a0a' : '#ffffff');
+      })();
+    </script>
 
     <!-- Optional: better iOS PWA support -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
