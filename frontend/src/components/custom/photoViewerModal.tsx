@@ -83,6 +83,16 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
     }, 150);
   }, []);
 
+  // Translate vertical mouse-wheel into horizontal scroll for the thumbnail strip.
+  const handleStripWheel = useCallback((e: React.WheelEvent) => {
+    const strip = thumbStripRef.current;
+    if (!strip) return;
+    // Only intercept if there is horizontal overflow to scroll
+    if (strip.scrollWidth <= strip.clientWidth) return;
+    e.preventDefault();
+    strip.scrollLeft += e.deltaY;
+  }, []);
+
   // Build ordered photo list from file-list order
   const photoFiles = useMemo(() => {
     if (!allItems || allItems.length === 0) {
@@ -257,7 +267,10 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
   const uiHidden = showUI ? "" : "hidden";
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center select-none">
+    <div
+      className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center select-none"
+      onClick={onClose}
+    >
       {/* Top Bar */}
       <div
         className={`absolute top-0 left-0 right-0 p-4 flex justify-between items-center bg-gradient-to-b from-black/60 to-transparent z-10 text-white ${uiHidden}`}
@@ -294,15 +307,16 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
         </div>
       </div>
 
-      {/* Left/Right hit zones — always clickable, arrow icon follows UI visibility + bounds */}
+      {/* Mobile: wide hit zones w-1/5 for easy thumb navigation */}
       {hasMultiple && (
         <>
+          {/* Mobile left hit zone */}
           <button
             onClick={(e) => {
               e.stopPropagation();
               goPrev();
             }}
-            className="flex absolute left-0 top-24 bottom-24 w-1/4 z-20 items-center justify-start pl-4 cursor-pointer"
+            className="flex md:hidden absolute left-0 top-24 bottom-24 w-1/5 z-20 items-center justify-start pl-4 cursor-pointer"
             title="Previous"
           >
             <span
@@ -313,12 +327,13 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
               <ChevronLeft className="w-8 h-8 text-white drop-shadow-lg" />
             </span>
           </button>
+          {/* Mobile right hit zone */}
           <button
             onClick={(e) => {
               e.stopPropagation();
               goNext();
             }}
-            className="flex absolute right-0 top-24 bottom-24 w-1/4 z-20 items-center justify-end pr-4 cursor-pointer"
+            className="flex md:hidden absolute right-0 top-24 bottom-24 w-1/5 z-20 items-center justify-end pr-4 cursor-pointer"
             title="Next"
           >
             <span
@@ -328,6 +343,30 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
             >
               <ChevronRight className="w-8 h-8 text-white drop-shadow-lg" />
             </span>
+          </button>
+
+          {/* Desktop: precise arrow buttons (no wide hit area) */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              goPrev();
+            }}
+            className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 z-20 items-center justify-center w-12 h-12 rounded-full bg-black/40 hover:bg-black/60 transition-colors cursor-pointer"
+            title="Previous"
+            style={{ opacity: !showUI || isFirst ? 0 : 1 }}
+          >
+            <ChevronLeft className="w-8 h-8 text-white drop-shadow-lg" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              goNext();
+            }}
+            className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 z-20 items-center justify-center w-12 h-12 rounded-full bg-black/40 hover:bg-black/60 transition-colors cursor-pointer"
+            title="Next"
+            style={{ opacity: !showUI || isLast ? 0 : 1 }}
+          >
+            <ChevronRight className="w-8 h-8 text-white drop-shadow-lg" />
           </button>
         </>
       )}
@@ -372,11 +411,13 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
         <div
           className={`absolute bottom-0 left-0 right-0 z-20 pt-3 pb-4 ${uiHidden}`}
           style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom, 8px))" }}
+          onClick={(e) => { e.stopPropagation(); }}
         >
           <div
             ref={thumbStripRef}
             className="flex gap-3 overflow-x-auto scrollbar-hide py-1"
             onScroll={handleStripScroll}
+            onWheel={handleStripWheel}
             style={{
               paddingLeft: "calc(50% - 2rem)",
               paddingRight: "calc(50% - 2rem)",
