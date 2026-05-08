@@ -65,8 +65,10 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
   onClose,
 }) => {
   const [showUI, setShowUI] = useState(true);
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [imageError, setImageError] = useState(false);
+  // Two-layer loading: thumbnail first, then original HD
+  const [originalReady, setOriginalReady] = useState(false);
+  const [thumbError, setThumbError] = useState(false);
+  const [imageError, setImageError] = useState(false); // HD load error
   const [isClosing, setIsClosing] = useState(false); // swipe-down close animation state
   const closeAnimRef = useRef(false); // prevent double-close during animation
   const imgRef = useRef<HTMLImageElement>(null);
@@ -132,7 +134,8 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
     if (isOpen) {
       setCurrentIndex(initialIndex);
       setShowUI(true);
-      setImageLoaded(false);
+      setOriginalReady(false);
+      setThumbError(false);
       setImageError(false);
       setIsClosing(false);
       closeAnimRef.current = false;
@@ -141,20 +144,32 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
 
   const currentFile = photoFiles[currentIndex] ?? initialFile;
 
-  // Guard against cached images where onLoad fires before React binds the handler.
-  // HTMLImageElement.complete is true when the image finished loading (success or error),
-  // regardless of whether anyone listened to the load event.
+  // Preload original HD image via JS Image() — works for both fresh and cached images
   useEffect(() => {
-    if (imgRef.current?.complete) {
-      setImageLoaded(true);
+    if (!currentFile.url) return;
+    let cancelled = false;
+    const img = new Image();
+    const onDone = () => { if (!cancelled) setOriginalReady(true); };
+    const onFail = () => { if (!cancelled) setImageError(true); };
+    img.onload = onDone;
+    img.onerror = onFail;
+    img.src = currentFile.url;
+    // Cached images may have already loaded before onload was attached
+    if (img.complete) {
+      if (img.naturalWidth > 0) onDone();
+      else onFail();
     }
+    return () => {
+      cancelled = true;
+      img.onload = null;
+      img.onerror = null;
+    };
   }, [currentFile.url]);
 
-  // Timeout fallback: if image never loads and never errors, force-show after 10s
-  // so the user is not stuck with an infinite spinner.
+  // Timeout fallback: if HD never loads and never errors, force-show after 10s
   useEffect(() => {
     const timer = setTimeout(() => {
-      setImageLoaded((prev) => {
+      setOriginalReady((prev) => {
         if (!prev && !imageError) return true;
         return prev;
       });
@@ -178,7 +193,8 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
   // ---- Navigation (reset loading synchronously to avoid race) ----
   const goPrev = useCallback(() => {
     if (!isFirst) {
-      setImageLoaded(false);
+      setOriginalReady(false);
+      setThumbError(false);
       setImageError(false);
       setCurrentIndex((i) => i - 1);
     }
@@ -186,7 +202,8 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
 
   const goNext = useCallback(() => {
     if (!isLast) {
-      setImageLoaded(false);
+      setOriginalReady(false);
+      setThumbError(false);
       setImageError(false);
       setCurrentIndex((i) => i + 1);
     }
@@ -196,7 +213,8 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
     (index: number) => {
       if (isScrollingStrip.current) return;
       if (index >= 0 && index < photoFiles.length) {
-        setImageLoaded(false);
+        setOriginalReady(false);
+        setThumbError(false);
         setImageError(false);
         setCurrentIndex(index);
       }
@@ -452,32 +470,33 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
       <div
         className="w-full h-full flex items-center justify-center relative"
       >
-        {/* Loading spinner — pointer-events-none so clicks pass through to close/prev/next */}
-        {!imageLoaded && !imageError && (
+        {/* Loading spinner — only when thumbnail failed and HD not ready */}
+        {thumbError && !originalReady && !imageError && (
           <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
             <Loader2 className="w-12 h-12 text-white/70 animate-spin" />
           </div>
         )}
 
-        {/* Error message */}
-        {imageError && (
+        {/* Error message — only when HD failed and no thumbnail fallback */}
+        {imageError && thumbError && (
           <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
             <span className="text-white/50 text-sm">Failed to load image</span>
           </div>
         )}
 
+        {/* Visible layer: starts as thumbnail, swaps to HD when cached */}
         <img
           ref={imgRef}
           key={currentFile.url}
-          src={currentFile.url}
+          src={originalReady ? currentFile.url : thumbUrl(currentFile)}
           alt={currentFile.name}
-          className={`max-w-full max-h-full object-contain transition-opacity duration-300 ${
-            imageLoaded ? "opacity-100" : "opacity-0"
-          }`}
+          className="w-full h-full object-contain"
           onClick={handleImageClick}
           draggable={false}
-          onLoad={() => { setImageLoaded(true); }}
-          onError={() => { setImageError(true); }}
+          onError={() => {
+            if (!originalReady) setThumbError(true);
+            else setImageError(true);
+          }}
         />
       </div>
 
