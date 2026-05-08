@@ -37,31 +37,20 @@ export default defineConfig({
         enabled: true,
       },
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'robots.txt'],
-      manifest: {
-        name: 'GoNet Drive',
-        short_name: 'GoNet Drive',
-        start_url: '/',
-        display: 'standalone',
-        background_color: '#ffffff',
-        theme_color: '#ffffff',
-        icons: [
-          {
-            src: '/api/config/logo',
-            sizes: '192x192',
-            type: 'image/png',
-          },
-          {
-            src: '/api/config/logo',
-            sizes: '512x512',
-            type: 'image/png',
-          },
-        ],
-      },
+      manifest: false,
     }),
   ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+    },
+  },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3333',
+        changeOrigin: true,
+      },
     },
   },
 })

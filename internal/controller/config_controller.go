@@ -18,7 +18,31 @@ func PublicConfigRoutes(router *gin.RouterGroup) {
 	configGroup := router.Group("/config")
 	{
 		configGroup.GET("/logo", getLogo)
+		configGroup.GET("/manifest", getManifest)
 	}
+}
+
+func getManifest(c *gin.Context) {
+	cloudConfig := config.AppCloudConfig
+	serviceName := "GoNet Drive"
+	if cloudConfig != nil && cloudConfig.TitleName != "" {
+		serviceName = cloudConfig.TitleName
+	}
+
+	c.Header("Content-Type", "application/manifest+json")
+	c.JSON(http.StatusOK, gin.H{
+		"name":             serviceName,
+		"short_name":       serviceName,
+		"description":      serviceName,
+		"start_url":        "/",
+		"display":          "standalone",
+		"theme_color":      "#ffffff",
+		"background_color": "#ffffff",
+		"icons": []gin.H{
+			{"src": "/api/config/logo", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+			{"src": "/api/config/logo", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+		},
+	})
 }
 
 func getLogo(c *gin.Context) {
