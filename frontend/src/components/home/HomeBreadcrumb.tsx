@@ -7,7 +7,7 @@ import { useTheme } from "@/components/theme-provider";
 import { toast } from "sonner";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import { usePreferences } from "@/context/PreferencesContext";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,7 +42,13 @@ export default function HomeBreadcrumb({
   onCreateFolder,
 }: HomeBreadcrumbProps) {
   const navigate = useNavigate();
-  const { updateServiceWorker } = useRegisterSW();
+  const swRegistrationRef = useRef<ServiceWorkerRegistration | undefined>(undefined);
+
+  const { updateServiceWorker } = useRegisterSW({
+    onRegistered(r) {
+      swRegistrationRef.current = r;
+    },
+  });
   const { theme, setTheme } = useTheme();
   const { showHidden, setShowHidden } = usePreferences();
   const [isAdmin, setIsAdmin] = useState(false);
@@ -55,9 +61,63 @@ export default function HomeBreadcrumb({
   }, []);
 
   const handleReload = async () => {
-    console.log("Force reloaded");
-    await updateServiceWorker(true); // force service worker update + reload
-    toast.success("App Reloaded");
+    const registration = swRegistrationRef.current;
+
+    if (!registration) {
+      // No SW (dev mode), just hard reload
+      window.location.reload();
+      return;
+    }
+
+    try {
+      // Actively check for new service worker
+      const updateComplete = new Promise<void>((resolve) => {
+        const timeout = setTimeout(() => { resolve(); }, 4000);
+
+        const finish = () => {
+          clearTimeout(timeout);
+          resolve();
+        };
+
+        // Already have a waiting SW
+        if (registration.waiting) {
+          finish();
+          return;
+        }
+
+        // Listen for new SW being found
+        const onUpdateFound = () => {
+          const newWorker = registration.installing;
+          if (!newWorker) {
+            finish();
+            return;
+          }
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed') {
+              finish();
+            }
+          });
+        };
+
+        registration.addEventListener('updatefound', onUpdateFound, { once: true });
+      });
+
+      await registration.update();
+      await updateComplete;
+
+      if (registration.waiting) {
+        // New SW ready, activate it (this triggers page reload)
+        console.log("Force reload - activating new service worker");
+        await updateServiceWorker(true);
+        return;
+      }
+    } catch (err) {
+      console.error('SW update check failed:', err);
+    }
+
+    // No update available, hard reload to clear runtime state
+    console.log("No SW update available, hard reloading page");
+    window.location.reload();
   };
 
   const handleLogout = async () => {
