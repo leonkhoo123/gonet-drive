@@ -123,8 +123,24 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    overscroll-behavior: none;
+    position: fixed;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+  }
   body {
     @apply bg-background text-foreground;
+    overscroll-behavior: none;
+    position: fixed;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+  }
+  #root {
+    height: 100%;
+    overflow: hidden;
   }
 }
 
@@ -156,6 +172,6 @@
     100% { transform: translateX(60%); opacity: 0; }
   }
   .animate-slide-out-right {
-    animation: slide-out-right 350ms ease-in forwards;
+    animation: slide-out-right 500ms ease-out forwards;
   }
 }
