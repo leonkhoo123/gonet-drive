@@ -10,6 +10,7 @@ import axiosLayer from '@/api/axiosLayer';
 import { getConfigs, updateConfig } from "@/api/api-config";
 import { getMe } from "@/api/api-auth";
 import { getConfig } from '@/config';
+import { Logo } from '@/components/Logo';
 import type { ConfigItem } from "@/api/api-config";
 import { 
   Loader2, 
@@ -275,7 +276,7 @@ const AdminPage = () => {
               </CardHeader>
               <CardContent className="pt-6 flex flex-col sm:flex-row items-start gap-6">
                 <div className="bg-muted rounded-lg p-4 flex items-center justify-center border w-32 h-32 shrink-0">
-                  <img src={logoUrl} alt="Site Logo" className="max-w-full max-h-full object-contain" />
+                  <Logo src={logoUrl} className="max-w-full max-h-full object-contain" />
                 </div>
                 <div className="space-y-4 flex-1">
                   <div className="flex flex-col sm:flex-row sm:items-center gap-4">

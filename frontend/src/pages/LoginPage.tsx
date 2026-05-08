@@ -16,7 +16,7 @@ import OtpInput from 'react-otp-input';
 import { QRCodeSVG } from 'qrcode.react';
 import axios from 'axios';
 import { Eye, EyeOff } from 'lucide-react';
-import { getConfig } from '@/config';
+import { Logo } from '@/components/Logo';
 
 const LoginPage: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -109,7 +109,7 @@ const LoginPage: React.FC = () => {
   return (
       <div className="flex flex-col items-center justify-center p-4 min-h-[calc(100dvh-4rem)] gap-6">
         <div className="flex items-center gap-3">
-          <img src={`${getConfig().apiBaseUrl}/config/logo`} alt="Logo" className="w-12 h-12 object-contain" />
+          <Logo className="w-12 h-12 object-contain" />
           <h1 className="text-2xl font-bold text-foreground tracking-tight">GoNet Drive</h1>
         </div>
         <Card className="w-full max-w-md shadow-xl transition-all duration-300">

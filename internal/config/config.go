@@ -134,25 +134,32 @@ func initCloudReserve(workDir string) {
 	initLogo(cloudReserveDir)
 }
 
-func initLogo(cloudReserveDir string) {
-	iconDir := filepath.Join(cloudReserveDir, "config", "icon")
+func GetLogoPath() string {
+	return filepath.Join(AppConfig.Server.FileRoot, ".cloud_reserve", "config", "icon", "logo.png")
+}
+
+func EnsureDefaultLogo() {
+	logoPath := GetLogoPath()
+	iconDir := filepath.Dir(logoPath)
+
 	if _, err := os.Stat(iconDir); os.IsNotExist(err) {
-		err = os.MkdirAll(iconDir, 0755)
-		if err != nil {
+		if err := os.MkdirAll(iconDir, 0755); err != nil {
 			log.Printf("Failed to create %s directory: %v", iconDir, err)
 			return
 		}
 	}
 
-	logoPath := filepath.Join(iconDir, "logo.png")
 	if _, err := os.Stat(logoPath); os.IsNotExist(err) {
-		err = os.WriteFile(logoPath, assets.DefaultLogo, 0644)
-		if err != nil {
+		if err := os.WriteFile(logoPath, assets.DefaultLogo, 0644); err != nil {
 			log.Printf("Failed to write default logo to %s: %v", logoPath, err)
 		} else {
 			log.Printf("Initialized default logo at %s", logoPath)
 		}
 	}
+}
+
+func initLogo(_ string) {
+	EnsureDefaultLogo()
 }
 
 // getEnv returns the value from env or fallback if not found

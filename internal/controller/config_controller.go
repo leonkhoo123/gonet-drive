@@ -46,10 +46,10 @@ func getManifest(c *gin.Context) {
 }
 
 func getLogo(c *gin.Context) {
-	logoPath := filepath.Join(config.AppConfig.Server.FileRoot, ".cloud_reserve", "config", "icon", "logo.png")
+	config.EnsureDefaultLogo()
 
 	c.Header("Cache-Control", "no-cache")
-	c.File(logoPath)
+	c.File(config.GetLogoPath())
 }
 
 func UpdateLogo(c *gin.Context) {
@@ -72,15 +72,13 @@ func UpdateLogo(c *gin.Context) {
 		return
 	}
 
-	iconDir := filepath.Join(config.AppConfig.Server.FileRoot, ".cloud_reserve", "config", "icon")
+	iconDir := filepath.Dir(config.GetLogoPath())
 	if err := os.MkdirAll(iconDir, 0755); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create directory", "details": err.Error()})
 		return
 	}
 
-	logoPath := filepath.Join(iconDir, "logo.png")
-
-	if err := c.SaveUploadedFile(file, logoPath); err != nil {
+	if err := c.SaveUploadedFile(file, config.GetLogoPath()); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save logo file", "details": err.Error()})
 		return
 	}
