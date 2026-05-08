@@ -109,6 +109,28 @@ export function useFileSelection(
     });
   };
 
+  const handleDragSelectStart = (file: FileInterface, index: number) => {
+    setSelectedItems(new Set([file.name]));
+    setSelectionAnchorIndex(index);
+    setLastSelectedIndex(index);
+  };
+
+  const handleDragSelectItem = (index: number) => {
+    const anchor = selectionAnchorIndex;
+    const itemList = items?.items;
+    if (anchor === null || !itemList) return;
+    setSelectedItems(() => {
+      const start = Math.min(anchor, index);
+      const end = Math.max(anchor, index);
+      const newSet = new Set<string>();
+      for (let i = start; i <= end; i++) {
+        newSet.add(itemList[i].name);
+      }
+      return newSet;
+    });
+    setLastSelectedIndex(index);
+  };
+
   const handleFileContextMenu = (fileInfo: FileInterface, index: number) => {
     setSelectedItems(prev => {
       if (prev.has(fileInfo.name)) {
@@ -156,6 +178,8 @@ export function useFileSelection(
     handleSelectAll,
     handleFileClick,
     handleFileContextMenu,
-    handleFileDoubleClick
+    handleFileDoubleClick,
+    handleDragSelectStart,
+    handleDragSelectItem,
   };
 }

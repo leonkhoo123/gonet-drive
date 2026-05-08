@@ -32,7 +32,7 @@ interface ShareFileListItemProps {
   setOpenDropdownName: (name: string | null) => void;
   handleItemClick: (file: FileInterface, index: number, e: React.MouseEvent) => void;
   handleItemDoubleClick: (file: FileInterface) => void;
-  handleTouchStart: (file: FileInterface, index: number) => void;
+  handleTouchStart: (file: FileInterface, index: number, e: React.TouchEvent) => void;
   handleTouchEnd: () => void;
   handleTouchMove: () => void;
   onRename: (fileName?: string) => void;
@@ -91,9 +91,10 @@ export function ShareFileListItem({
   const fileContent = viewMode === 'grid' ? (
     <div id={`file-item-${index}`} className="group h-full w-full">
       <div
+        data-file-index={index}
         onClick={(e) => { handleItemClick(file, index, e); }}
         onDoubleClick={() => { handleItemDoubleClick(file); }}
-        onTouchStart={() => { handleTouchStart(file, index); }}
+        onTouchStart={(e) => { handleTouchStart(file, index, e); }}
         onTouchEnd={handleTouchEnd}
         onTouchMove={handleTouchMove}
         onTouchCancel={handleTouchEnd}
@@ -202,11 +203,12 @@ export function ShareFileListItem({
   ) : (
     <div id={`file-item-${index}`} className="group">
       <div
+        data-file-index={index}
         onClick={(e) => {
           handleItemClick(file, index, e);
         }}
         onDoubleClick={() => { handleItemDoubleClick(file); }}
-        onTouchStart={() => { handleTouchStart(file, index); }}
+        onTouchStart={(e) => { handleTouchStart(file, index, e); }}
         onTouchEnd={handleTouchEnd}
         onTouchMove={handleTouchMove}
         onTouchCancel={handleTouchEnd}

@@ -82,6 +82,8 @@ export default function HomePage() {
     handleFileClick,
     handleFileContextMenu,
     handleFileDoubleClick,
+    handleDragSelectStart,
+    handleDragSelectItem,
     handlePlayerClose,
     handleRefresh,
     handleProperties,
@@ -253,6 +255,8 @@ export default function HomePage() {
             onFileClick={handleFileClick}
             onFileContextMenu={handleFileContextMenu}
             onFileDoubleClick={handleFileDoubleClick}
+            onDragSelectStart={handleDragSelectStart}
+            onDragSelectItem={handleDragSelectItem}
             onCut={handleCut}
             onCopy={handleCopy}
             onRename={handleRename}

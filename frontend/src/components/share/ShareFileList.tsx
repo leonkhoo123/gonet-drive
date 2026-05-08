@@ -83,6 +83,8 @@ interface ShareFileListProps {
   onFileClick: (fileInfo: FileInterface, index: number, event: React.MouseEvent) => void;
   onFileDoubleClick: (fileInfo: FileInterface) => void;
   onFileContextMenu: (fileInfo: FileInterface, index: number) => void;
+  onDragSelectStart?: (file: FileInterface, index: number) => void;
+  onDragSelectItem?: (index: number) => void;
   onCut: () => void;
   onCopy: () => void;
   onRename: (fileName?: string) => void;
@@ -93,7 +95,7 @@ interface ShareFileListProps {
   onCreateFolder: () => void;
   clipboardItems: string[];
   clipboardItemsCount: number;
-  clipboardOperation: 'cut' | 'copy' | null; 
+  clipboardOperation: 'cut' | 'copy' | null;
   clipboardSourceDir?: string;
   currentPath: string;
   onUploadDrop: (files: File[], targetPath: string) => void;
@@ -114,6 +116,8 @@ export default function ShareFileList({
   onFileClick,
   onFileDoubleClick,
   onFileContextMenu,
+  onDragSelectStart,
+  onDragSelectItem,
   onCut,
   onCopy,
   onRename,
@@ -140,6 +144,7 @@ export default function ShareFileList({
   const { viewMode, setViewMode } = usePreferences();
 
   const isRecycleBin = currentPath === '/.cloud_delete' || currentPath.startsWith('/.cloud_delete/');
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const {
     isDragging,
@@ -163,6 +168,9 @@ export default function ShareFileList({
     onFileContextMenu,
     selectedItems,
     isTouchDevice,
+    onDragSelectStart,
+    onDragSelectItem,
+    scrollContainerRef,
   });
 
   useEffect(() => {
@@ -172,8 +180,6 @@ export default function ShareFileList({
   }, [items, setTransitioningFolder]);
 
   const displayItems = items;
-
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (scrollContainerRef.current) {

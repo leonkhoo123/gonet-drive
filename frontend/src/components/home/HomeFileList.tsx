@@ -18,7 +18,7 @@ import {
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import { Clipboard, Info } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useFileDragAndDrop } from "@/hooks/useFileManager/useFileDragAndDrop";
 import { useFileInteraction } from "@/hooks/useFileManager/useFileInteraction";
 import { FileListItem } from "./FileListItem";
@@ -34,6 +34,8 @@ interface HomeFileListProps {
   onFileClick: (fileInfo: FileInterface, index: number, event: React.MouseEvent) => void;
   onFileDoubleClick: (fileInfo: FileInterface) => void;
   onFileContextMenu: (fileInfo: FileInterface, index: number) => void;
+  onDragSelectStart?: (file: FileInterface, index: number) => void;
+  onDragSelectItem?: (index: number) => void;
   onCut: () => void;
   onCopy: () => void;
   onRename: (fileName?: string) => void;
@@ -45,7 +47,7 @@ interface HomeFileListProps {
   onCreateFolder: () => void;
   clipboardItems: string[];
   clipboardItemsCount: number;
-  clipboardOperation: 'cut' | 'copy' | null; 
+  clipboardOperation: 'cut' | 'copy' | null;
   clipboardSourceDir?: string;
   currentPath: string;
   onUploadDrop: (files: File[], targetPath: string) => void;
@@ -116,6 +118,8 @@ export default function HomeFileList({
   onFileClick,
   onFileDoubleClick,
   onFileContextMenu,
+  onDragSelectStart,
+  onDragSelectItem,
   onCut,
   onCopy,
   onRename,
@@ -140,6 +144,7 @@ export default function HomeFileList({
   const [openDropdownName, setOpenDropdownName] = useState<string | null>(null);
   const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
   const { viewMode, setViewMode } = usePreferences();
+  const scrollRef = useRef<HTMLDivElement | null>(null);
 
   const isRecycleBin = currentPath === '/.cloud_delete' || currentPath.startsWith('/.cloud_delete/');
 
@@ -165,6 +170,9 @@ export default function HomeFileList({
     onFileContextMenu,
     selectedItems,
     isTouchDevice,
+    onDragSelectStart,
+    onDragSelectItem,
+    scrollContainerRef: scrollRef,
   });
 
   useEffect(() => {
@@ -191,8 +199,11 @@ export default function HomeFileList({
   });
 
   const fileListContainer = (
-    <div 
-      ref={setScrollElement}
+    <div
+      ref={(el) => {
+        scrollRef.current = el;
+        setScrollElement(el);
+      }}
       className="flex-1 min-h-0 relative overflow-y-scroll overscroll-y-none p-0 md:p-3 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar scrollbar-thumb-black/20 dark:scrollbar-thumb-white/20 scrollbar-track-transparent"
     >
       {/* Loading Overlay */}
@@ -288,6 +299,7 @@ export default function HomeFileList({
                       <div
                         key={virtualRow.key}
                         data-index={index}
+                        data-file-index={index}
                         ref={rowVirtualizer.measureElement}
                         style={{
                           position: 'absolute',
