@@ -143,4 +143,12 @@
   .animate-marquee {
     animation: marquee 10s linear infinite;
   }
+  @keyframes hit-flash {
+    0% { background-color: rgba(255,255,255,0); }
+    50% { background-color: rgba(255,255,255,0.3); }
+    100% { background-color: rgba(255,255,255,0); }
+  }
+  .animate-hit-flash {
+    animation: hit-flash 300ms ease-out;
+  }
 }

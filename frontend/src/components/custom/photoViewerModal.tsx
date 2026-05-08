@@ -79,8 +79,8 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
   const isScrollingStrip = useRef(false);
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isProgrammaticScroll = useRef(false);
-  const leftHitRef = useRef<HTMLButtonElement>(null);
-  const rightHitRef = useRef<HTMLButtonElement>(null);
+  const [flashSide, setFlashSide] = useState<"left" | "right" | null>(null);
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleStripScroll = useCallback(() => {
     // Ignore scroll events triggered by our own scrollIntoView calls.
@@ -166,18 +166,13 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
   const isFirst = currentIndex === 0;
   const isLast = currentIndex === photoFiles.length - 1;
 
-  // ---- Hit flash (Web Animations API — survives React reconciliation) ----
+  // ---- Hit flash via React state + CSS animation (WAAPI dies on re-render) ----
   const triggerHitFlash = useCallback((side: "left" | "right") => {
-    const el = side === "left" ? leftHitRef.current : rightHitRef.current;
-    if (!el) return;
-    el.animate(
-      [
-        { backgroundColor: "rgba(255,255,255,0)" },
-        { backgroundColor: "rgba(255,255,255,0.3)" },
-        { backgroundColor: "rgba(255,255,255,0)" },
-      ],
-      { duration: HIT_FLASH_DURATION, easing: "ease-out" }
-    );
+    setFlashSide(side);
+    if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+    flashTimerRef.current = setTimeout(() => {
+      setFlashSide(null);
+    }, HIT_FLASH_DURATION);
   }, []);
 
   // ---- Navigation (reset loading synchronously to avoid race) ----
@@ -338,6 +333,7 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
       className={`fixed inset-0 z-[100] bg-black/90 flex items-center justify-center select-none transition-transform duration-200 ease-out ${
         isClosing ? "translate-y-full" : "translate-y-0"
       }`}
+      style={{ touchAction: "none" }}
       onClick={handleBackdropClick}
     >
       {/* Top Bar */}
@@ -381,13 +377,14 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
         <>
           {/* Mobile left hit zone */}
           <button
-            ref={leftHitRef}
             onClick={(e) => {
               e.stopPropagation();
               triggerHitFlash("left");
-              goPrev();
+              setTimeout(() => { goPrev(); }, 120);
             }}
-            className="flex md:hidden absolute left-0 top-24 bottom-24 w-1/5 z-20 items-center justify-start pl-4 cursor-pointer rounded-r-xl transition-colors"
+            className={`flex md:hidden absolute left-0 top-24 bottom-24 w-1/5 z-20 items-center justify-start pl-4 cursor-pointer rounded-r-xl transition-colors ${
+              flashSide === "left" ? "animate-hit-flash" : ""
+            }`}
             title="Previous"
           >
             <ChevronLeft
@@ -398,13 +395,14 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
           </button>
           {/* Mobile right hit zone */}
           <button
-            ref={rightHitRef}
             onClick={(e) => {
               e.stopPropagation();
               triggerHitFlash("right");
-              goNext();
+              setTimeout(() => { goNext(); }, 120);
             }}
-            className="flex md:hidden absolute right-0 top-24 bottom-24 w-1/5 z-20 items-center justify-end pr-4 cursor-pointer rounded-l-xl transition-colors"
+            className={`flex md:hidden absolute right-0 top-24 bottom-24 w-1/5 z-20 items-center justify-end pr-4 cursor-pointer rounded-l-xl transition-colors ${
+              flashSide === "right" ? "animate-hit-flash" : ""
+            }`}
             title="Next"
           >
             <ChevronRight
