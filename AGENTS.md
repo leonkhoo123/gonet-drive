@@ -89,3 +89,8 @@ cd frontend && npm run dev
 - WebSocket connections are managed by `internal/ws/manager.go` and started in a goroutine at `cmd/main.go:74`. Clients receive real-time progress for file operations.
 - File operations (copy/move/delete) are processed sequentially via a worker started at `cmd/main.go:77` to avoid filesystem lock contention.
 - The backend creates a `.cloud_reserve` directory inside `WORK_DIR` for internal assets (logo, etc.) on startup.
+
+
+## Temporary directory
+- If temporary directory is needed for testing purpose or anything else - create a /temp/ dir to perform all the action inside, and do a clean up afterward.
+- Try to not use Temporary directory outside project directory.

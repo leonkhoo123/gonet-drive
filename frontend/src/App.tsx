@@ -8,7 +8,8 @@ import { OperationProgressProvider } from './context/OperationProgressContext';
 import { PreferencesProvider } from './context/PreferencesContext';
 import { AppHealthProvider } from './context/AppHealthContext';
 import { UpdateBanner } from './components/custom/UpdateBanner';
-import { Loader2 } from "lucide-react";
+import { AuthGate } from './components/auth/AuthGate';
+import { VerificationScreen } from './components/auth/VerificationScreen';
 
 const HomePage = lazy(() => import('./pages/HomePage'));
 const ShareVerifyPage = lazy(() => import('./pages/ShareVerifyPage'));
@@ -21,11 +22,7 @@ const AudioBookPage = lazy(() => import('./pages/AudioBookPage'));
 const ManageSharesPage = lazy(() => import('./pages/ManageSharesPage'));
 
 function AppLoadingFallback() {
-  return (
-    <div className="flex h-screen w-screen items-center justify-center bg-background">
-      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-    </div>
-  );
+  return <VerificationScreen subtitle="Loading..." />;
 }
 
 function App() {
@@ -42,8 +39,10 @@ function App() {
             <Suspense fallback={<AppLoadingFallback />}>
               <Routes>
                 <Route element={<IndexPage />} path="/" />
-                <Route element={<HomePage />} path="/home" />
-                <Route element={<HomePage />} path="/home/*" />
+                <Route element={<AuthGate />} path="/home">
+                  <Route index element={<HomePage />} />
+                  <Route path="*" element={<HomePage />} />
+                </Route>
                 
                 <Route element={<ShareVerifyPage />} path="/share/:id" />
                 <Route element={<ShareHomePage />} path="/share/:id/home" />
