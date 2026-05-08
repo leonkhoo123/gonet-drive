@@ -172,6 +172,6 @@
     100% { transform: translateX(60%); opacity: 0; }
   }
   .animate-slide-out-right {
-    animation: slide-out-right 500ms ease-out forwards;
+    animation: slide-out-right 300ms ease-out forwards;
   }
 }

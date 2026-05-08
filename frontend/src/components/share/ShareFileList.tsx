@@ -224,7 +224,16 @@ export default function ShareFileList({
     const endX = e.changedTouches[0].clientX;
     const dx = touchStartX.current > 0 ? endX - touchStartX.current : 0;
     if (swipeDir === 'right' && dx > MIN_SWIPE_DISTANCE && currentPath !== '/') {
-      onBack();
+      // Let slide-out animation play, then navigate and reset together.
+      // Clear swipeDir before onBack so new content doesn't get
+      // animate-slide-out-right → blank screen.
+      setTimeout(() => {
+        setSwipeDir(null);
+        onBack();
+      }, 300);
+      touchStartX.current = 0;
+      touchStartY.current = 0;
+      return;
     }
     setSwipeDir(null);
     touchStartX.current = 0;
