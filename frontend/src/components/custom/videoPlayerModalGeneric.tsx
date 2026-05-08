@@ -18,6 +18,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { FileInterface } from "@/api/api-file";
 
+const SWIPE_CLOSE_THRESHOLD = 100; // px vertical to trigger close
+const SWIPE_CLOSE_VELOCITY = 0.5; // px/ms flick threshold
+const CLOSE_ANIM_DURATION = 200; // ms
+
 interface VideoPlayerModalProps {
   file: FileInterface;
   isOpen: boolean;
@@ -45,6 +49,14 @@ const VideoPlayerModalGeneric: React.FC<VideoPlayerModalProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // ---- Swipe-down close (mobile) ----
+  const [isClosing, setIsClosing] = useState(false);
+  const closeAnimRef = useRef(false);
+  const swipeHandled = useRef(false);
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  const touchStartTime = useRef(0);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -54,45 +66,95 @@ const VideoPlayerModalGeneric: React.FC<VideoPlayerModalProps> = ({
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
+  const [isInteracting, setIsInteracting] = useState(false);
+  const isInteractingRef = useRef(false);
 
   const hideControlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleMouseMove = useCallback(() => {
-    setShowControls(true);
+  const clearHideTimer = useCallback(() => {
     if (hideControlsTimeoutRef.current) {
       clearTimeout(hideControlsTimeoutRef.current);
+      hideControlsTimeoutRef.current = null;
     }
-    if (isPlaying) {
-      hideControlsTimeoutRef.current = setTimeout(() => {
+  }, []);
+
+  const startHideTimer = useCallback(() => {
+    clearHideTimer();
+    hideControlsTimeoutRef.current = setTimeout(() => {
+      if (!isInteractingRef.current) {
         setShowControls(false);
-      }, 3000);
-    }
-  }, [isPlaying]);
+      }
+    }, 3000);
+  }, [clearHideTimer]);
 
-  const handleMouseLeave = useCallback(() => {
-    if (isPlaying) {
-      setShowControls(false);
-    }
-  }, [isPlaying]);
-
+  /* Show controls on open, start 3s timer */
   useEffect(() => {
     if (!isOpen) return;
+    setShowControls(true);
+    startHideTimer();
+    return clearHideTimer;
+  }, [isOpen, startHideTimer, clearHideTimer]);
 
-    if (isPlaying) {
-      handleMouseMove();
+  /* Reset swipe-close state on open */
+  useEffect(() => {
+    if (isOpen) {
+      setIsClosing(false);
+      closeAnimRef.current = false;
+    }
+  }, [isOpen]);
+
+  /* Pause → keep controls. Play → start timer. */
+  useEffect(() => {
+    if (!isPlaying) {
+      clearHideTimer();
+      setShowControls(true);
+    } else {
+      startHideTimer();
+    }
+  }, [isPlaying, startHideTimer, clearHideTimer]);
+
+  /* =====================================================
+     MOUSE / TOUCH ON VIDEO AREA
+     ===================================================== */
+
+  const handleMouseMove = useCallback(() => {
+    if (!isInteracting) {
+      setShowControls(true);
+      startHideTimer();
+    }
+  }, [isInteracting, startHideTimer]);
+
+  const handleMouseLeave = useCallback(() => {
+    if (isPlaying && !isInteracting) {
+      setShowControls(false);
+    }
+  }, [isPlaying, isInteracting]);
+
+  const handleVideoTap = useCallback(() => {
+    if (showControls) {
+      clearHideTimer();
+      setShowControls(false);
     } else {
       setShowControls(true);
-      if (hideControlsTimeoutRef.current) {
-        clearTimeout(hideControlsTimeoutRef.current);
-      }
+      startHideTimer();
     }
+  }, [showControls, clearHideTimer, startHideTimer]);
 
-    return () => {
-      if (hideControlsTimeoutRef.current) {
-        clearTimeout(hideControlsTimeoutRef.current);
-      }
-    };
-  }, [isPlaying, isOpen, handleMouseMove]);
+  /* =====================================================
+     CONTROL BAR INTERACTION LOCK
+     ===================================================== */
+
+  const handleControlPressStart = useCallback(() => {
+    isInteractingRef.current = true;
+    setIsInteracting(true);
+    clearHideTimer();
+  }, [clearHideTimer]);
+
+  const handleControlPressEnd = useCallback(() => {
+    isInteractingRef.current = false;
+    setIsInteracting(false);
+    startHideTimer();
+  }, [startHideTimer]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -140,6 +202,7 @@ const VideoPlayerModalGeneric: React.FC<VideoPlayerModalProps> = ({
     }
   }, []);
 
+
   const handleVolumeChange = useCallback((newVolume: number[]) => {
     const val = newVolume[0];
     setVolume(val);
@@ -172,6 +235,48 @@ const VideoPlayerModalGeneric: React.FC<VideoPlayerModalProps> = ({
     }
     onClose(false, file.path, false, "", 0);
   }, [file.path, onClose]);
+
+  /* =====================================================
+     SWIPE-DOWN CLOSE (MOBILE)
+     ===================================================== */
+
+  const triggerSwipeClose = useCallback(() => {
+    if (closeAnimRef.current) return;
+    closeAnimRef.current = true;
+    setIsClosing(true);
+    setTimeout(() => {
+      handleClose();
+    }, CLOSE_ANIM_DURATION);
+  }, [handleClose]);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    touchStartTime.current = Date.now();
+    swipeHandled.current = false;
+  }, []);
+
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      if (swipeHandled.current) return;
+      const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+      const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+      const elapsed = Date.now() - touchStartTime.current;
+
+      // Vertical swipe-down close (mobile only)
+      if (deltaY > SWIPE_CLOSE_THRESHOLD && Math.abs(deltaY) > Math.abs(deltaX)) {
+        swipeHandled.current = true;
+        triggerSwipeClose();
+        return;
+      }
+      if (deltaY > 0 && elapsed > 0 && deltaY / elapsed > SWIPE_CLOSE_VELOCITY && Math.abs(deltaY) > Math.abs(deltaX)) {
+        swipeHandled.current = true;
+        triggerSwipeClose();
+        return;
+      }
+    },
+    [triggerSwipeClose]
+  );
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -250,22 +355,24 @@ const VideoPlayerModalGeneric: React.FC<VideoPlayerModalProps> = ({
   return (
     <div
       role="dialog"
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+      className={`fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm transition-transform duration-200 ease-out ${
+        isClosing ? "translate-y-full" : "translate-y-0"
+      }`}
+      style={{ touchAction: "none" }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
     >
       <div
         ref={containerRef}
         className="relative flex w-full max-w-5xl flex-col items-center justify-center overflow-hidden rounded-xl bg-black shadow-2xl"
-        onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
-        onClick={(e) => {
-          if (e.target === e.currentTarget) { handleClose(); }
-        }}
+        onMouseMove={handleMouseMove}
       >
         <video
           ref={videoRef}
           src={file.url}
           className="max-h-[85vh] w-full cursor-pointer bg-black object-contain"
-          onClick={togglePlay}
+          onClick={handleVideoTap}
           controls={false}
           playsInline
         />
@@ -273,8 +380,12 @@ const VideoPlayerModalGeneric: React.FC<VideoPlayerModalProps> = ({
         {/* Top bar with close button */}
         <div
           className={`absolute left-0 top-0 flex w-full items-center justify-between bg-gradient-to-b from-black/80 to-transparent p-4 transition-opacity duration-300 ${
-            showControls ? "opacity-100" : "opacity-0"
+            showControls ? "opacity-100" : "opacity-0 pointer-events-none"
           }`}
+          onMouseDown={handleControlPressStart}
+          onMouseUp={handleControlPressEnd}
+          onTouchStart={handleControlPressStart}
+          onTouchEnd={handleControlPressEnd}
         >
           <div className="flex-1 truncate pr-4 text-sm font-medium text-white shadow-black drop-shadow-md">
             {file.name}
@@ -292,8 +403,12 @@ const VideoPlayerModalGeneric: React.FC<VideoPlayerModalProps> = ({
         {/* Bottom controls */}
         <div
           className={`absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/90 via-black/60 to-transparent p-4 transition-opacity duration-300 ${
-            showControls ? "opacity-100" : "opacity-0"
+            showControls ? "opacity-100" : "opacity-0 pointer-events-none"
           }`}
+          onMouseDown={handleControlPressStart}
+          onMouseUp={handleControlPressEnd}
+          onTouchStart={handleControlPressStart}
+          onTouchEnd={handleControlPressEnd}
         >
           {/* Progress bar */}
           <div className="mb-4 flex items-center gap-3">

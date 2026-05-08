@@ -61,8 +61,6 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
   const [rotation, setRotation] = useState(0);
   const [isRotation, setisRotation] = useState(false);
 
-  const isSideways = rotation === 90 || rotation === 270;
-
   /* -------------------- swipe to seek -------------------- */
   const touchStartX = useRef<number | null>(null);
   const touchStartTime = useRef<number | null>(null);
@@ -464,7 +462,7 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
           autoPlay
           playsInline
           preload="auto"
-          className={`${isSideways ? "max-h-[100dvw] max-w-[100dvh]" : "max-h-dvh max-w-full"} object-contain`}
+          className={`w-full h-full object-contain`}
           style={{ transform: `rotate(${rotation}deg)` }}
         />
       </div>
