@@ -61,13 +61,21 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
 }) => {
   const [showUI, setShowUI] = useState(true);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
   const swipeHandled = useRef(false);
   const touchStartX = useRef(0);
   const thumbStripRef = useRef<HTMLDivElement>(null);
   const isScrollingStrip = useRef(false);
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isProgrammaticScroll = useRef(false);
 
   const handleStripScroll = useCallback(() => {
+    // Ignore scroll events triggered by our own scrollIntoView calls.
+    if (isProgrammaticScroll.current) {
+      isProgrammaticScroll.current = false;
+      return;
+    }
     isScrollingStrip.current = true;
     if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
     scrollTimerRef.current = setTimeout(() => {
@@ -103,10 +111,33 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
       setCurrentIndex(initialIndex);
       setShowUI(true);
       setImageLoaded(false);
+      setImageError(false);
     }
   }, [isOpen, initialIndex]);
 
   const currentFile = photoFiles[currentIndex] ?? initialFile;
+
+  // Guard against cached images where onLoad fires before React binds the handler.
+  // HTMLImageElement.complete is true when the image finished loading (success or error),
+  // regardless of whether anyone listened to the load event.
+  useEffect(() => {
+    if (imgRef.current?.complete) {
+      setImageLoaded(true);
+    }
+  }, [currentFile.url]);
+
+  // Timeout fallback: if image never loads and never errors, force-show after 10s
+  // so the user is not stuck with an infinite spinner.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setImageLoaded((prev) => {
+        if (!prev && !imageError) return true;
+        return prev;
+      });
+    }, 10_000);
+    return () => { clearTimeout(timer); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentFile.url]);
   const hasMultiple = photoFiles.length > 1;
   const isFirst = currentIndex === 0;
   const isLast = currentIndex === photoFiles.length - 1;
@@ -115,6 +146,7 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
   const goPrev = useCallback(() => {
     if (!isFirst) {
       setImageLoaded(false);
+      setImageError(false);
       setCurrentIndex((i) => i - 1);
     }
   }, [isFirst]);
@@ -122,6 +154,7 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
   const goNext = useCallback(() => {
     if (!isLast) {
       setImageLoaded(false);
+      setImageError(false);
       setCurrentIndex((i) => i + 1);
     }
   }, [isLast]);
@@ -131,6 +164,7 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
       if (isScrollingStrip.current) return;
       if (index >= 0 && index < photoFiles.length) {
         setImageLoaded(false);
+        setImageError(false);
         setCurrentIndex(index);
       }
     },
@@ -138,14 +172,13 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
   );
 
   // Scroll active thumbnail to center when currentIndex changes.
-  // Only suppress when user is actively dragging the strip — otherwise
-  // always center (prev/next buttons, keyboard, tap).
   useEffect(() => {
     if (isScrollingStrip.current) return;
     const strip = thumbStripRef.current;
     if (!strip) return;
     const btn = strip.children[currentIndex] as HTMLElement | undefined;
     if (btn) {
+      isProgrammaticScroll.current = true;
       btn.scrollIntoView({ behavior: "auto", block: "nearest", inline: "center" });
     }
   }, [currentIndex, showUI]);
@@ -306,13 +339,21 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
         onTouchEnd={handleTouchEnd}
       >
         {/* Loading spinner — pointer-events-none so clicks pass through to close/prev/next */}
-        {!imageLoaded && (
+        {!imageLoaded && !imageError && (
           <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
             <Loader2 className="w-12 h-12 text-white/70 animate-spin" />
           </div>
         )}
 
+        {/* Error message */}
+        {imageError && (
+          <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+            <span className="text-white/50 text-sm">Failed to load image</span>
+          </div>
+        )}
+
         <img
+          ref={imgRef}
           key={currentFile.url}
           src={currentFile.url}
           alt={currentFile.name}
@@ -322,6 +363,7 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
           onClick={handleImageClick}
           draggable={false}
           onLoad={() => { setImageLoaded(true); }}
+          onError={() => { setImageError(true); }}
         />
       </div>
 
