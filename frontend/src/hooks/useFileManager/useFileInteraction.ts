@@ -7,6 +7,7 @@ interface UseFileInteractionProps {
   onFileContextMenu: (fileInfo: FileInterface, index: number) => void;
   selectedItems: Set<string>;
   isTouchDevice: boolean;
+  onLongPressPreview?: (file: FileInterface, index: number) => void;
 }
 
 export function useFileInteraction({
@@ -15,6 +16,7 @@ export function useFileInteraction({
   onFileContextMenu,
   selectedItems,
   isTouchDevice,
+  onLongPressPreview,
 }: UseFileInteractionProps) {
   const touchTimer = useRef<number | null>(null);
   const [transitioningFolder, setTransitioningFolder] = useState<string | null>(null);
@@ -25,14 +27,25 @@ export function useFileInteraction({
     }
     // Set a timer for 500ms to trigger right-click (context menu) behavior
     touchTimer.current = window.setTimeout(() => {
-      // Trigger the selection of the item, so context menu actions apply to it
+      // In selection mode: show long-press preview instead of resetting selection
+      if (selectedItems.size > 0 && onLongPressPreview) {
+        onLongPressPreview(file, index);
+        // Prevent the tap from triggering a normal click when preview closes
+        const el = document.getElementById(`file-item-${index}`);
+        if (el) {
+          el.setAttribute('data-long-pressed', 'true');
+          window.setTimeout(() => {
+            el.removeAttribute('data-long-pressed');
+          }, 300);
+        }
+        return;
+      }
+
+      // Not in selection mode: trigger context menu (existing behaviour)
       onFileContextMenu(file, index);
       
-      // Dispatch a context menu event on the element to open the Radix ContextMenu
       const el = document.getElementById(`file-item-${index}`);
       if (el) {
-        // Prevent default tap behavior after a long press
-        // This stops the tap from triggering a normal click
         el.setAttribute('data-long-pressed', 'true');
         window.setTimeout(() => {
           el.removeAttribute('data-long-pressed');
@@ -50,7 +63,7 @@ export function useFileInteraction({
         }));
       }
     }, 500);
-  }, [onFileContextMenu]);
+  }, [onFileContextMenu, selectedItems.size, onLongPressPreview]);
 
   const handleTouchEnd = useCallback(() => {
     if (touchTimer.current) {

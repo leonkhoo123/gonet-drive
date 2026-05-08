@@ -1,4 +1,5 @@
 import { Folder, UploadCloud, ArrowUp, ArrowDown, LayoutGrid, List } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { ItemsResponse, FileInterface } from "@/api/api-file";
 import {
@@ -24,6 +25,7 @@ import { useFileInteraction } from "@/hooks/useFileManager/useFileInteraction";
 import { FileListItem } from "./FileListItem";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { usePreferences } from "@/context/PreferencesContext";
+import { LongPressPreviewModal } from "@/components/custom/LongPressPreviewModal";
 
 interface HomeFileListProps {
   isLoading: boolean;
@@ -149,6 +151,19 @@ export default function HomeFileList({
 
   const isRecycleBin = currentPath === '/.cloud_delete' || currentPath.startsWith('/.cloud_delete/');
 
+  // Long-press preview state (mobile selection mode)
+  const [previewFile, setPreviewFile] = useState<FileInterface | null>(null);
+
+  const handleLongPressPreview = useCallback((file: FileInterface, _index: number) => {
+    if (file.media_type === "photo" || file.media_type === "video") {
+      setPreviewFile(file);
+    } else {
+      toast.info(`Cannot preview this file type`, {
+        description: `Long-press preview is only available for photos and videos.`,
+      });
+    }
+  }, []);
+
   const {
     isDragging,
     handleDragEnter,
@@ -171,6 +186,7 @@ export default function HomeFileList({
     onFileContextMenu,
     selectedItems,
     isTouchDevice,
+    onLongPressPreview: handleLongPressPreview,
   });
 
   useEffect(() => {
@@ -509,6 +525,12 @@ export default function HomeFileList({
           </ContextMenuContent>
         </ContextMenu>
       )}
+
+      {/* Long-press preview overlay (mobile selection mode) */}
+      <LongPressPreviewModal
+        file={previewFile}
+        onClose={() => { setPreviewFile(null); }}
+      />
     </div>
   );
 }
