@@ -18,7 +18,7 @@ import {
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import { Clipboard, Info } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useFileDragAndDrop } from "@/hooks/useFileManager/useFileDragAndDrop";
 import { useFileInteraction } from "@/hooks/useFileManager/useFileInteraction";
 import { ShareFileListItem } from "./ShareFileListItem";
@@ -93,10 +93,11 @@ interface ShareFileListProps {
   onCreateFolder: () => void;
   clipboardItems: string[];
   clipboardItemsCount: number;
-  clipboardOperation: 'cut' | 'copy' | null; 
+  clipboardOperation: 'cut' | 'copy' | null;
   clipboardSourceDir?: string;
   currentPath: string;
   onUploadDrop: (files: File[], targetPath: string) => void;
+  onBack: () => void;
   sortField?: 'name' | 'size' | 'modified' | null;
   setSortField?: (field: 'name' | 'size' | 'modified' | null) => void;
   sortOrder?: 'asc' | 'desc';
@@ -128,6 +129,7 @@ export default function ShareFileList({
   clipboardSourceDir,
   currentPath,
   onUploadDrop,
+  onBack,
   sortField,
   setSortField,
   sortOrder,
@@ -138,6 +140,10 @@ export default function ShareFileList({
   const [openDropdownName, setOpenDropdownName] = useState<string | null>(null);
   const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
   const { viewMode, setViewMode } = usePreferences();
+  // Swipe-to-go-back state
+  const [swipeDir, setSwipeDir] = useState<'left' | 'right' | null>(null);
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
 
   const isRecycleBin = currentPath === '/.cloud_delete' || currentPath.startsWith('/.cloud_delete/');
 
@@ -181,9 +187,40 @@ export default function ShareFileList({
     }
   }, [currentPath]);
 
+  // Swipe-to-go-back: touch handlers on the scroll container
+  const MIN_SWIPE_DISTANCE = 80;
+  const handleSwipeStart = useCallback((e: React.TouchEvent) => {
+    if (selectedItems.size > 0) return;
+    if (e.touches.length !== 1) return;
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    setSwipeDir(null);
+  }, [selectedItems.size]);
+  const handleSwipeMove = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    const dx = e.touches[0].clientX - touchStartX.current;
+    const dy = e.touches[0].clientY - touchStartY.current;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 45) {
+      setSwipeDir(dx > 0 ? 'right' : 'left');
+    }
+  }, []);
+  const handleSwipeEnd = useCallback((e: React.TouchEvent) => {
+    const endX = e.changedTouches[0].clientX;
+    const dx = touchStartX.current > 0 ? endX - touchStartX.current : 0;
+    if (swipeDir === 'right' && dx > MIN_SWIPE_DISTANCE && currentPath !== '/') {
+      onBack();
+    }
+    setSwipeDir(null);
+    touchStartX.current = 0;
+    touchStartY.current = 0;
+  }, [swipeDir, currentPath, onBack]);
+
   const fileListContainer = (
     <div 
       ref={scrollContainerRef}
+      onTouchStart={handleSwipeStart}
+      onTouchMove={handleSwipeMove}
+      onTouchEnd={handleSwipeEnd}
       className="flex-1 min-h-0 relative overflow-y-scroll overscroll-y-none p-0 md:p-3 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar scrollbar-thumb-black/20 dark:scrollbar-thumb-white/20 scrollbar-track-transparent"
     >
       {/* Loading Overlay */}
@@ -198,7 +235,7 @@ export default function ShareFileList({
       {/* Content Layer */}
       <div 
         className={`min-h-full ${
-          isLoading && !items ? 'hidden' : 'animate-in fade-in duration-200'
+          isLoading && !items ? 'hidden' : swipeDir === 'right' ? 'animate-slide-out-right' : 'animate-in fade-in duration-200'
         }`}
       >
         {error ? (

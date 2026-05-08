@@ -268,6 +268,7 @@ export default function HomePage() {
             clipboardSourceDir={clipboardItems.sourceDir}
             currentPath={currentPath}
             onUploadDrop={(files, path) => { void handleUploadFiles(files, path); }}
+            onBack={handleBack}
             sortField={sortField}
             setSortField={setSortField}
             sortOrder={sortOrder}

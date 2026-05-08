@@ -343,6 +343,7 @@ export default function ShareHomePage() {
             clipboardOperation={clipboardItems.operation}
             currentPath={currentPath}
             onUploadDrop={(files: File[], path: string) => { void handleUploadFiles(files, path); }}
+            onBack={handleBack}
             sortField={sortField}
             setSortField={setSortField}
             sortOrder={sortOrder}
