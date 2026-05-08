@@ -192,12 +192,12 @@ export default function HomeFileList({
   // Swipe-to-go-back: touch handlers on the scroll container
   const MIN_SWIPE_DISTANCE = 80;
   const handleSwipeStart = useCallback((e: React.TouchEvent) => {
-    if (selectedItems.size > 0) return;
+    if (selectedItems.size > 0 || currentPath === '/') return;
     if (e.touches.length !== 1) return;
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     setSwipeDir(null);
-  }, [selectedItems.size]);
+  }, [selectedItems.size, currentPath]);
   const handleSwipeMove = useCallback((e: React.TouchEvent) => {
     if (e.touches.length !== 1) return;
     const dx = e.touches[0].clientX - touchStartX.current;
