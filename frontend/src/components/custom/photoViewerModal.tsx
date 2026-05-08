@@ -335,6 +335,8 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
       }`}
       style={{ touchAction: "none" }}
       onClick={handleBackdropClick}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
     >
       {/* Top Bar */}
       <div
@@ -379,6 +381,10 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
           <button
             onClick={(e) => {
               e.stopPropagation();
+              if (swipeHandled.current) {
+                swipeHandled.current = false;
+                return;
+              }
               triggerHitFlash("left");
               setTimeout(() => { goPrev(); }, 120);
             }}
@@ -397,6 +403,10 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
           <button
             onClick={(e) => {
               e.stopPropagation();
+              if (swipeHandled.current) {
+                swipeHandled.current = false;
+                return;
+              }
               triggerHitFlash("right");
               setTimeout(() => { goNext(); }, 120);
             }}
@@ -441,8 +451,6 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
       {/* Image Container — fills entire modal, overlays sit on top */}
       <div
         className="w-full h-full flex items-center justify-center relative"
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
       >
         {/* Loading spinner — pointer-events-none so clicks pass through to close/prev/next */}
         {!imageLoaded && !imageError && (
