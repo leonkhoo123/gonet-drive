@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { X, Volume2, VolumeX } from "lucide-react";
+import { X, Volume2, VolumeX, Loader2 } from "lucide-react";
 import type { FileInterface } from "@/api/api-file";
 
 interface LongPressPreviewModalProps {
@@ -25,6 +25,9 @@ export const LongPressPreviewModal: React.FC<LongPressPreviewModalProps> = ({
   const [imgError, setImgError] = useState(false);
   const [vidError, setVidError] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  // Two-layer loading: thumbnail first, then original
+  const [originalReady, setOriginalReady] = useState(false);
+  const [thumbError, setThumbError] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const closeAnimRef = useRef(false);
   const touchStartY = useRef(0);
@@ -36,7 +39,31 @@ export const LongPressPreviewModal: React.FC<LongPressPreviewModalProps> = ({
     setVidError(false);
     setMuted(true);
     setIsClosing(false);
+    setOriginalReady(false);
+    setThumbError(false);
     closeAnimRef.current = false;
+  }, [file]);
+
+  // Preload original image via JS Image() – works for both fresh and cached images
+  useEffect(() => {
+    if (file?.media_type !== "photo") return;
+    let cancelled = false;
+    const img = new Image();
+    const onDone = () => { if (!cancelled) setOriginalReady(true); };
+    const onFail = () => { if (!cancelled) setImgError(true); };
+    img.onload = onDone;
+    img.onerror = onFail;
+    img.src = file.url;
+    // Cached images may have already loaded before onload was attached
+    if (img.complete) {
+      if (img.naturalWidth > 0) onDone();
+      else onFail();
+    }
+    return () => {
+      cancelled = true;
+      img.onload = null;
+      img.onerror = null;
+    };
   }, [file]);
 
   // Sync muted state with video element
@@ -168,13 +195,25 @@ export const LongPressPreviewModal: React.FC<LongPressPreviewModalProps> = ({
             </button>
           </div>
         ) : showImage ? (
-          <img
-            src={thumbUrl(file)}
-            alt={file.name}
-            className="w-[95vw] h-[95vh] object-contain rounded-lg"
-            draggable={false}
-            onError={() => { setImgError(true); }}
-          />
+          <div className="relative w-[95vw] h-[95vh]">
+            {/* Visible layer: starts as thumbnail, swaps to original when cached */}
+            <img
+              src={originalReady ? file.url : thumbUrl(file)}
+              alt={file.name}
+              className="w-full h-full object-contain rounded-lg"
+              draggable={false}
+              onError={() => {
+                if (!originalReady) setThumbError(true);
+                else setImgError(true);
+              }}
+            />
+            {/* Thumbnail error + original not ready */}
+            {thumbError && !originalReady && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Loader2 className="w-12 h-12 text-white/70 animate-spin" />
+              </div>
+            )}
+          </div>
         ) : (
           <span className="text-white/50 text-sm">Failed to load preview</span>
         )}
