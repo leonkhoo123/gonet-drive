@@ -4,6 +4,7 @@ import { type FileInterface, downloadFiles } from "@/api/api-file";
 import { useDialogHistory } from "@/hooks/useDialogHistory";
 
 const HIT_FLASH_DURATION = 300; // ms
+const CLOSE_ANIM_DURATION = 200; // ms
 
 interface PhotoViewerModalProps {
   initialFile: FileInterface | null;
@@ -13,6 +14,8 @@ interface PhotoViewerModalProps {
 }
 
 const SWIPE_THRESHOLD = 80; // px to trigger prev/next on swipe
+const SWIPE_CLOSE_THRESHOLD = 100; // px vertical to trigger close
+const SWIPE_CLOSE_VELOCITY = 0.5; // px/ms flick threshold
 
 const thumbUrl = (f: FileInterface) => f.url.replace("/photo/play/", "/photo/thumbnail/");
 
@@ -64,10 +67,15 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
   const [showUI, setShowUI] = useState(true);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [isClosing, setIsClosing] = useState(false); // swipe-down close animation state
+  const closeAnimRef = useRef(false); // prevent double-close during animation
   const imgRef = useRef<HTMLImageElement>(null);
   const swipeHandled = useRef(false);
   const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  const touchStartTime = useRef(0);
   const thumbStripRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const isScrollingStrip = useRef(false);
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isProgrammaticScroll = useRef(false);
@@ -126,6 +134,8 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
       setShowUI(true);
       setImageLoaded(false);
       setImageError(false);
+      setIsClosing(false);
+      closeAnimRef.current = false;
     }
   }, [isOpen, initialIndex]);
 
@@ -245,9 +255,21 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
 
   useDialogHistory(isOpen, onClose);
 
-  // ---- Touch swipe ----
+  // ---- Swipe-down close (mobile) ----
+  const triggerSwipeClose = useCallback(() => {
+    if (closeAnimRef.current) return;
+    closeAnimRef.current = true;
+    setIsClosing(true);
+    setTimeout(() => {
+      onClose();
+    }, CLOSE_ANIM_DURATION);
+  }, [onClose]);
+
+  // ---- Touch swipe (horizontal: prev/next; vertical-down: close on mobile) ----
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    touchStartTime.current = Date.now();
     swipeHandled.current = false;
   }, []);
 
@@ -255,6 +277,24 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
     (e: React.TouchEvent) => {
       if (swipeHandled.current) return;
       const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+      const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+      const elapsed = Date.now() - touchStartTime.current;
+
+      // Vertical swipe-down close (mobile only)
+      if (deltaY > SWIPE_CLOSE_THRESHOLD && Math.abs(deltaY) > Math.abs(deltaX)) {
+        // Distance threshold met
+        swipeHandled.current = true;
+        triggerSwipeClose();
+        return;
+      }
+      if (deltaY > 0 && elapsed > 0 && deltaY / elapsed > SWIPE_CLOSE_VELOCITY && Math.abs(deltaY) > Math.abs(deltaX)) {
+        // Velocity threshold met (flick)
+        swipeHandled.current = true;
+        triggerSwipeClose();
+        return;
+      }
+
+      // Horizontal swipe prev/next
       if (Math.abs(deltaX) > SWIPE_THRESHOLD) {
         swipeHandled.current = true;
         if (deltaX > 0) {
@@ -264,8 +304,16 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
         }
       }
     },
-    [goPrev, goNext]
+    [goPrev, goNext, triggerSwipeClose]
   );
+
+  // ---- Backdrop click: desktop only (md+) ----
+  const handleBackdropClick = useCallback(() => {
+    // On mobile (< md), backdrop click does nothing; close via swipe-down or X button
+    if (typeof window !== "undefined" && window.innerWidth >= 768) {
+      onClose();
+    }
+  }, [onClose]);
 
   // ---- Image click: instant UI toggle ----
   const handleImageClick = useCallback(
@@ -286,8 +334,11 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center select-none"
-      onClick={onClose}
+      ref={containerRef}
+      className={`fixed inset-0 z-[100] bg-black/90 flex items-center justify-center select-none transition-transform duration-200 ease-out ${
+        isClosing ? "translate-y-full" : "translate-y-0"
+      }`}
+      onClick={handleBackdropClick}
     >
       {/* Top Bar */}
       <div
