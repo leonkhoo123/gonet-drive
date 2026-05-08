@@ -94,7 +94,7 @@ func Load() *CloudConfig {
 			ShareJwtMaxAge:     getEnvDuration("SHARE_JWT_MAX_AGE", 7*24*time.Hour),
 		},
 		Defaults: AppDefaults{
-			ServiceName:     getEnv("DEFAULT_SERVICE_NAME", "My Cloud Server"),
+			ServiceName:     getEnv("DEFAULT_SERVICE_NAME", "GoNet Drive"),
 			UploadChunkSize: getEnv("DEFAULT_UPLOAD_CHUNK_SIZE", "5"),
 			StorageLimit:    getEnv("DEFAULT_STORAGE_LIMIT", "20480"),
 		},

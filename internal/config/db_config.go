@@ -17,7 +17,7 @@ import (
 )
 
 type DatabaseConfig struct {
-	TitleName       string `json:"title_name"`
+	ServiceName     string `json:"service_name"`
 	UploadChunkSize int64  `json:"upload_chunk_size"`
 	StorageLimit    int64  `json:"storage_limit"`
 }
@@ -98,7 +98,7 @@ func InitDB(workDir string) {
 		storageLimit, _ := strconv.ParseInt(AppConfig.Defaults.StorageLimit, 10, 64)
 
 		AppCloudConfig = &DatabaseConfig{
-			TitleName:       AppConfig.Defaults.ServiceName,
+			ServiceName:     AppConfig.Defaults.ServiceName,
 			UploadChunkSize: uploadChunkSize * 1024 * 1024,
 			StorageLimit:    storageLimit * 1024 * 1024,
 		}
@@ -159,7 +159,7 @@ func GetCloudConfig() (*DatabaseConfig, error) {
 
 	// Default config
 	c := DatabaseConfig{
-		TitleName:       AppConfig.Defaults.ServiceName,
+		ServiceName:     AppConfig.Defaults.ServiceName,
 		UploadChunkSize: uploadChunkSize * 1024 * 1024, // Convert MB to bytes
 		StorageLimit:    storageLimit * 1024 * 1024,    // Convert MB to bytes
 	}
@@ -178,7 +178,7 @@ func GetCloudConfig() (*DatabaseConfig, error) {
 
 		switch name {
 		case "service_name":
-			c.TitleName = valStr
+			c.ServiceName = valStr
 		case "upload_chunk_size", "storage_limit":
 			var size int64
 			fmt.Sscanf(valStr, "%d", &size)

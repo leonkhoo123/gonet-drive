@@ -25,8 +25,8 @@ func PublicConfigRoutes(router *gin.RouterGroup) {
 func getManifest(c *gin.Context) {
 	cloudConfig := config.AppCloudConfig
 	serviceName := "GoNet Drive"
-	if cloudConfig != nil && cloudConfig.TitleName != "" {
-		serviceName = cloudConfig.TitleName
+	if cloudConfig != nil && cloudConfig.ServiceName != "" {
+		serviceName = cloudConfig.ServiceName
 	}
 
 	c.Header("Content-Type", "application/manifest+json")

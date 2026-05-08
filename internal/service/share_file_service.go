@@ -632,9 +632,9 @@ func ShareDownloadFiles(c *gin.Context, cfg *config.CloudConfig) {
 	}
 
 	// Case 2: Multiple files or a single directory, stream as a zip archive
-	serverName := "Share_Download"
-	if config.AppCloudConfig != nil && config.AppCloudConfig.TitleName != "" {
-		serverName = config.AppCloudConfig.TitleName
+	serverName := "GoNet_Drive"
+	if config.AppCloudConfig != nil && config.AppCloudConfig.ServiceName != "" {
+		serverName = config.AppCloudConfig.ServiceName
 	}
 	serverName = strings.ReplaceAll(serverName, " ", "_")
 	var cleanServerName strings.Builder

@@ -239,7 +239,7 @@ export default function ShareHomePage() {
           <div className="h-14 border-b flex items-center justify-between px-4 bg-background shrink-0 z-10">
             <div className="flex items-center gap-2">
               <img src={`${getConfig().apiBaseUrl}/config/logo`} alt="Logo" className="w-8 h-8 object-contain" />
-              <h1 className="text-lg font-bold text-foreground tracking-tight">{healthData?.service_name ?? "Shared Drive"}</h1>
+              <h1 className="text-lg font-bold text-foreground tracking-tight">{healthData?.service_name ?? "GoNet Drive"}</h1>
             </div>
             <div className="flex items-center gap-2">
               <div className="flex flex-col gap-1 items-end">

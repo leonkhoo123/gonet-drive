@@ -154,7 +154,7 @@ export default function HomeSidebar({ isOpen, onClose, isWsConnected, isHealthCo
               onClick={() => { handleNavigate("/home"); }}
             >
               <img src={`${getConfig().apiBaseUrl}/config/logo`} alt="Logo" className="w-10 h-10 object-contain" />
-              <h1 className="text-xl font-bold text-foreground tracking-tight">{titleName ?? "Cloud Drive"}</h1>
+              <h1 className="text-xl font-bold text-foreground tracking-tight">{titleName ?? "GoNet Drive"}</h1>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="icon" className="lg:hidden h-12 w-12 text-muted-foreground hover:text-foreground shrink-0" onClick={onClose}>

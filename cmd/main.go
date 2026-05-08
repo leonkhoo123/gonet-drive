@@ -51,7 +51,7 @@ func main() {
 		}
 		c.JSON(http.StatusOK, gin.H{
 			"status":            "OK",
-			"service_name":      cloudConfig.TitleName,
+			"service_name":      cloudConfig.ServiceName,
 			"upload_chunk_size": cloudConfig.UploadChunkSize,
 			"video_mode":        config.AppConfig.Server.VideoMode,
 		})
