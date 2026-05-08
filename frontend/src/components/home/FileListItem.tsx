@@ -32,7 +32,7 @@ interface FileListItemProps {
   setOpenDropdownName: (name: string | null) => void;
   handleItemClick: (file: FileInterface, index: number, e: React.MouseEvent) => void;
   handleItemDoubleClick: (file: FileInterface) => void;
-  handleTouchStart: (file: FileInterface, index: number, e: React.TouchEvent) => void;
+  handleTouchStart: (file: FileInterface, index: number) => void;
   handleTouchEnd: () => void;
   handleTouchMove: () => void;
   onRename: (fileName?: string) => void;
@@ -91,10 +91,9 @@ export const FileListItem = memo(function FileListItem({
   const fileContent = viewMode === 'grid' ? (
     <div id={`file-item-${index}`} className="group h-full w-full">
       <div
-        data-file-index={index}
         onClick={(e) => { handleItemClick(file, index, e); }}
         onDoubleClick={() => { handleItemDoubleClick(file); }}
-        onTouchStart={(e) => { handleTouchStart(file, index, e); }}
+        onTouchStart={() => { handleTouchStart(file, index); }}
         onTouchEnd={handleTouchEnd}
         onTouchMove={handleTouchMove}
         onTouchCancel={handleTouchEnd}
@@ -208,12 +207,11 @@ export const FileListItem = memo(function FileListItem({
   ) : (
     <div id={`file-item-${index}`} className="group">
       <div
-        data-file-index={index}
         onClick={(e) => {
           handleItemClick(file, index, e);
         }}
         onDoubleClick={() => { handleItemDoubleClick(file); }}
-        onTouchStart={(e) => { handleTouchStart(file, index, e); }}
+        onTouchStart={() => { handleTouchStart(file, index); }}
         onTouchEnd={handleTouchEnd}
         onTouchMove={handleTouchMove}
         onTouchCancel={handleTouchEnd}

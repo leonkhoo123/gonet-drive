@@ -54,9 +54,7 @@ export function useFileManager({ uploadChunkSize, baseRoute = "/home" }: { uploa
     handleSelectAll,
     handleFileClick,
     handleFileContextMenu,
-    handleFileDoubleClick,
-    handleDragSelectStart,
-    handleDragSelectItem,
+    handleFileDoubleClick
   } = useFileSelection(items, currentPath, setSelectedVideo, setSelectedPhoto, setSelectedMusic, setSelectedDocument, setSelectedPdf, baseRoute);
 
   // 4. File Actions (copy, cut, paste, delete, rename, properties, folder)
@@ -211,7 +209,5 @@ export function useFileManager({ uploadChunkSize, baseRoute = "/home" }: { uploa
     sortOrder,
     setSortOrder,
     handleSortChange,
-    handleDragSelectStart,
-    handleDragSelectItem,
   };
 }

@@ -102,8 +102,6 @@ export default function ShareHomePage() {
     handleFileClick,
     handleFileContextMenu,
     handleFileDoubleClick,
-    handleDragSelectStart,
-    handleDragSelectItem,
     handlePlayerClose,
     handleRefresh,
     handleProperties,
@@ -332,8 +330,6 @@ export default function ShareHomePage() {
             onFileClick={handleFileClick}
             onFileContextMenu={handleFileContextMenu}
             onFileDoubleClick={handleFileDoubleClick}
-            onDragSelectStart={handleDragSelectStart}
-            onDragSelectItem={handleDragSelectItem}
             onCut={handleCut}
             onCopy={handleCopy}
             onRename={handleRename}
