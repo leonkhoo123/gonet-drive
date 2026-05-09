@@ -18,6 +18,7 @@ interface ShareBreadcrumbProps {
   onRefresh?: () => void;
   onDownload?: () => void;
   onCreateFolder?: () => void;
+  authority?: string;
 }
 
 export default function ShareBreadcrumb({
@@ -29,6 +30,7 @@ export default function ShareBreadcrumb({
   onRefresh,
   onDownload,
   onCreateFolder,
+  authority,
 }: ShareBreadcrumbProps) {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -125,10 +127,12 @@ export default function ShareBreadcrumb({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem onClick={() => onCreateFolder?.()}>
-                <FolderPlus className="mr-2 h-4 w-4" />
-                Create Folder
-              </DropdownMenuItem>
+              {authority === 'modify' && (
+                <DropdownMenuItem onClick={() => onCreateFolder?.()}>
+                  <FolderPlus className="mr-2 h-4 w-4" />
+                  Create Folder
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={() => onDownload?.()} disabled={isFolderEmpty || currentPath.split("/").filter(Boolean).pop() === '.cloud_delete'}>
                 <Download className="mr-2 h-4 w-4" />
                 Download All

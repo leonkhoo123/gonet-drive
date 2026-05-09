@@ -153,9 +153,7 @@ export default function HomeSidebar({ isOpen, onClose, isWsConnected, isHealthCo
               className="flex items-center gap-2 cursor-pointer"
               onClick={() => { handleNavigate("/home"); }}
             >
-              <div className="inline-flex items-center justify-center h-10 w-10 rounded-2xl bg-primary/10 ring-1 ring-primary/20 shrink-0">
-                <Logo className="w-6 h-6 object-contain" />
-              </div>
+              <Logo className="w-8 h-8 object-contain shrink-0" />
               <h1 className="text-xl font-bold text-foreground tracking-tight">{titleName ?? "GoNet Drive"}</h1>
             </div>
             <div className="flex items-center gap-2">

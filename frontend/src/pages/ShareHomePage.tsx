@@ -237,9 +237,7 @@ export default function ShareHomePage() {
           {/* Top Title Bar */}
           <div className="h-14 border-b flex items-center justify-between px-4 bg-gradient-to-r from-background via-primary/[0.02] to-background shrink-0 z-10">
             <div className="flex items-center gap-2">
-              <div className="inline-flex items-center justify-center h-8 w-8 rounded-xl bg-primary/10 ring-1 ring-primary/20 shrink-0">
-                <Logo className="w-5 h-5 object-contain" />
-              </div>
+              <Logo className="w-7 h-7 object-contain shrink-0" />
               <h1 className="text-lg font-bold text-foreground tracking-tight">{healthData?.service_name ?? "GoNet Drive"}</h1>
             </div>
             <div className="flex items-center gap-2">
@@ -283,6 +281,7 @@ export default function ShareHomePage() {
                 onRefresh={() => { void handleRefresh(); }}
                 onDownload={() => { handleDownload(); }}
                 onCreateFolder={handleCreateFolder}
+                authority={authority}
               />
             )}
           </div>
@@ -295,6 +294,7 @@ export default function ShareHomePage() {
               onProperties={(name?: string, isCurrentDir?: boolean) => { void handleProperties(name, isCurrentDir); }}
               onRefresh={() => { void handleRefresh(); }}
               onCreateFolder={handleCreateFolder}
+              authority={authority}
             />
           </div>
 
