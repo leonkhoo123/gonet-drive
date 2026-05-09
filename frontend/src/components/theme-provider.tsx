@@ -31,12 +31,24 @@ export function ThemeProvider({
   useEffect(() => {
     const root = window.document.documentElement
     const meta = document.querySelector('meta[name="theme-color"]')
+    const iosMeta = document.querySelector(
+      'meta[name="apple-mobile-web-app-status-bar-style"]',
+    )
 
     const applyTheme = (resolvedTheme: "light" | "dark") => {
       root.classList.remove("light", "dark")
       root.classList.add(resolvedTheme)
       if (meta) {
-        meta.setAttribute("content", resolvedTheme === "dark" ? "#0a0a0a" : "#ffffff")
+        meta.setAttribute(
+          "content",
+          resolvedTheme === "dark" ? "#0a0a0a" : "#ffffff",
+        )
+      }
+      if (iosMeta) {
+        iosMeta.setAttribute(
+          "content",
+          resolvedTheme === "dark" ? "black-translucent" : "default",
+        )
       }
     }
 

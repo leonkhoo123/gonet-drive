@@ -4,29 +4,34 @@ const DARK_COLOR = "#000000"
 
 export function useForceDarkStatusBar(isActive: boolean) {
   const restoreValueRef = useRef<string>("#ffffff")
+  const restoreIosStyleRef = useRef<string>("black-translucent")
 
   useEffect(() => {
     if (!isActive) return
 
-    const meta = document.querySelector('meta[name="theme-color"]')
-    if (!meta) return
+    const themeMeta = document.querySelector('meta[name="theme-color"]')
+    const iosMeta = document.querySelector(
+      'meta[name="apple-mobile-web-app-status-bar-style"]',
+    )
 
-    restoreValueRef.current = meta.getAttribute("content") ?? "#ffffff"
-    meta.setAttribute("content", DARK_COLOR)
+    if (themeMeta) {
+      restoreValueRef.current = themeMeta.getAttribute("content") ?? "#ffffff"
+      themeMeta.setAttribute("content", DARK_COLOR)
+    }
 
-    const observer = new MutationObserver(() => {
-      const current = meta.getAttribute("content")
-      if (current && current !== DARK_COLOR) {
-        restoreValueRef.current = current
-        meta.setAttribute("content", DARK_COLOR)
-      }
-    })
-
-    observer.observe(meta, { attributes: true, attributeFilter: ["content"] })
+    if (iosMeta) {
+      restoreIosStyleRef.current =
+        iosMeta.getAttribute("content") ?? "black-translucent"
+      iosMeta.setAttribute("content", "black")
+    }
 
     return () => {
-      observer.disconnect()
-      meta.setAttribute("content", restoreValueRef.current)
+      if (themeMeta) {
+        themeMeta.setAttribute("content", restoreValueRef.current)
+      }
+      if (iosMeta) {
+        iosMeta.setAttribute("content", restoreIosStyleRef.current)
+      }
     }
   }, [isActive])
 }

@@ -17,7 +17,10 @@
       (function() {
         var theme = localStorage.getItem('vite-ui-theme');
         var isDark = theme === 'dark' || ((!theme || theme === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches);
-        document.querySelector('meta[name="theme-color"]').setAttribute('content', isDark ? '#0a0a0a' : '#ffffff');
+        var themeMeta = document.querySelector('meta[name="theme-color"]');
+        if (themeMeta) themeMeta.setAttribute('content', isDark ? '#0a0a0a' : '#ffffff');
+        var iosMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+        if (iosMeta) iosMeta.setAttribute('content', isDark ? 'black-translucent' : 'default');
       })();
     </script>
 
