@@ -228,7 +228,7 @@ const AdminPage = () => {
   const hasConfigChanges = JSON.stringify(configs) !== JSON.stringify(originalConfigs);
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
+    <div className="h-full bg-background text-foreground flex flex-col">
       <div className="h-16 md:h-14 border-b flex items-center px-4 md:px-6 shrink-0 gap-4 bg-card">
         <Button variant="ghost" size="icon" onClick={() => { void navigate(-1); }} className="rounded-full">
           <ArrowLeft className="h-5 w-5" />
@@ -241,7 +241,7 @@ const AdminPage = () => {
         </div>
       </div>
 
-      <div className="flex-1 p-4 md:p-8 space-y-6 max-w-6xl mx-auto w-full">
+      <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 max-w-6xl mx-auto w-full">
         <div className="flex space-x-2 border-b">
           <button
             className={`px-4 py-3 font-medium text-sm transition-colors border-b-2 flex items-center gap-2 ${
@@ -268,13 +268,13 @@ const AdminPage = () => {
         </div>
 
         {activeTab === 'configs' && (
-          <div className="space-y-6">
-            <Card className="flex flex-col border-border shadow-sm">
-              <CardHeader className="bg-muted/30 pb-4">
+          <div className="space-y-4">
+            <Card className="flex flex-col border-border shadow-sm py-3 md:py-6 gap-3 md:gap-6">
+              <CardHeader className="bg-muted/30 pb-3 px-4 md:px-6">
                 <CardTitle>Site Logo</CardTitle>
-                <CardDescription>Upload a custom logo for your cloud instance. Recommended 1:1 aspect ratio, PNG only.</CardDescription>
+                <CardDescription className="hidden sm:block">Upload a custom logo for your cloud instance. Recommended 1:1 aspect ratio, PNG only.</CardDescription>
               </CardHeader>
-              <CardContent className="pt-6 flex flex-col sm:flex-row items-start gap-6">
+              <CardContent className="pt-0 md:pt-6 px-4 md:px-6 flex flex-col sm:flex-row items-start gap-6">
                 <div className="bg-muted rounded-lg p-4 flex items-center justify-center border w-32 h-32 shrink-0">
                   <Logo src={logoUrl} className="max-w-full max-h-full object-contain" />
                 </div>
@@ -341,11 +341,11 @@ const AdminPage = () => {
               </CardContent>
             </Card>
 
-            <Card className="flex flex-col border-border shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between bg-muted/30 pb-4">
+            <Card className="flex flex-col border-border shadow-sm py-3 md:py-6 gap-3 md:gap-6">
+              <CardHeader className="flex flex-row items-center justify-between bg-muted/30 pb-3 px-4 md:px-6">
                 <div>
                   <CardTitle>System Configurations</CardTitle>
-                  <CardDescription>Manage global settings and features for your cloud instance.</CardDescription>
+                  <CardDescription className="hidden sm:block">Manage global settings and features for your cloud instance.</CardDescription>
                 </div>
                 <Button 
                   onClick={() => { void handleSaveConfigs(); }} 
@@ -356,69 +356,104 @@ const AdminPage = () => {
                   Save Changes
                 </Button>
               </CardHeader>
-              <CardContent className="pt-6">
+              <CardContent className="pt-0 md:pt-6 px-4 md:px-6">
                 {loadingConfigs && configs.length === 0 ? (
                   <div className="flex items-center justify-center p-12">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   </div>
-                ) : (
-                  <div className="rounded-md border overflow-hidden">
-                    <Table>
-                      <TableHeader className="bg-muted/50">
-                        <TableRow>
-                          <TableHead className="font-semibold">Configuration</TableHead>
-                          <TableHead className="font-semibold">Value</TableHead>
-                          <TableHead className="w-[120px] font-semibold text-center">Enabled</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {configs.map((config) => (
-                          <TableRow key={config.id} className="hover:bg-muted/30 transition-colors">
-                            <TableCell className="py-4">
-                              <div className="font-medium text-base">{config.config_name}</div>
-                              <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-                                <span className="bg-muted px-2 py-0.5 rounded-full font-mono">{config.config_type}</span>
-                                {config.config_unit && (
-                                  <span className="text-muted-foreground/80">Unit: {config.config_unit}</span>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell className="py-4">
-                              <Input
-                                value={config.config_value ?? ""}
-                                onChange={(e) => {
-                                  updateLocalConfig(config.id, "config_value", e.target.value);
-                                }}
-                                placeholder="Value"
-                                disabled={savingConfigs}
-                                className="focus-visible:ring-ring max-w-md"
-                              />
-                            </TableCell>
-                            <TableCell className="py-4">
-                              <div className="flex justify-center">
-                                <Switch
-                                  checked={config.is_enabled}
-                                  onCheckedChange={(checked) => {
-                                    updateLocalConfig(config.id, "is_enabled", checked);
-                                  }}
-                                  disabled={savingConfigs}
-                                  className="data-[state=checked]:bg-primary"
-                                />
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                        {configs.length === 0 && !loadingConfigs && (
-                          <TableRow>
-                            <TableCell colSpan={3} className="text-center py-12 text-muted-foreground">
-                              <Settings2 className="h-8 w-8 mx-auto mb-3 opacity-20" />
-                              No configurations found
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
+                ) : configs.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground rounded-md border">
+                    <Settings2 className="h-8 w-8 mx-auto mb-3 opacity-20" />
+                    No configurations found
                   </div>
+                ) : (
+                  <>
+                    <div className="hidden md:block rounded-md border overflow-hidden">
+                      <Table>
+                        <TableHeader className="bg-muted/50">
+                          <TableRow>
+                            <TableHead className="font-semibold">Configuration</TableHead>
+                            <TableHead className="font-semibold">Value</TableHead>
+                            <TableHead className="w-[120px] font-semibold text-center">Enabled</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {configs.map((config) => (
+                            <TableRow key={config.id} className="hover:bg-muted/30 transition-colors">
+                              <TableCell className="py-3">
+                                <div className="font-medium text-base">{config.config_name}</div>
+                                <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                                  <span className="bg-muted px-2 py-0.5 rounded-full font-mono">{config.config_type}</span>
+                                  {config.config_unit && (
+                                    <span className="text-muted-foreground/80">Unit: {config.config_unit}</span>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="py-3">
+                                <Input
+                                  value={config.config_value ?? ""}
+                                  onChange={(e) => {
+                                    updateLocalConfig(config.id, "config_value", e.target.value);
+                                  }}
+                                  placeholder="Value"
+                                  disabled={savingConfigs}
+                                  className="focus-visible:ring-ring max-w-md"
+                                />
+                              </TableCell>
+                              <TableCell className="py-3">
+                                <div className="flex justify-center">
+                                  <Switch
+                                    checked={config.is_enabled}
+                                    onCheckedChange={(checked) => {
+                                      updateLocalConfig(config.id, "is_enabled", checked);
+                                    }}
+                                    disabled={savingConfigs}
+                                    className="data-[state=checked]:bg-primary"
+                                  />
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    <div className="md:hidden space-y-2">
+                      {configs.map((config) => (
+                        <div key={config.id} className="rounded-md border p-3 space-y-2 bg-card">
+                          <div>
+                            <div className="font-medium text-base">{config.config_name}</div>
+                            <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                              <span className="bg-muted px-2 py-0.5 rounded-full font-mono">{config.config_type}</span>
+                              {config.config_unit && (
+                                <span className="text-muted-foreground/80">Unit: {config.config_unit}</span>
+                              )}
+                            </div>
+                          </div>
+                          <Input
+                            value={config.config_value ?? ""}
+                            onChange={(e) => {
+                              updateLocalConfig(config.id, "config_value", e.target.value);
+                            }}
+                            placeholder="Value"
+                            disabled={savingConfigs}
+                            className="focus-visible:ring-ring"
+                          />
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">Enabled</span>
+                            <Switch
+                              checked={config.is_enabled}
+                              onCheckedChange={(checked) => {
+                                updateLocalConfig(config.id, "is_enabled", checked);
+                              }}
+                              disabled={savingConfigs}
+                              className="data-[state=checked]:bg-primary"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -426,17 +461,17 @@ const AdminPage = () => {
         )}
 
         {activeTab === 'users' && (
-          <div className="space-y-6">
-            <Card className="border-border shadow-sm">
-              <CardHeader className="bg-muted/30 pb-4">
+          <div className="space-y-4">
+            <Card className="border-border shadow-sm py-3 md:py-6 gap-3 md:gap-6">
+              <CardHeader className="bg-muted/30 pb-3 px-4 md:px-6">
                 <CardTitle className="flex items-center gap-2">
                   <UserPlus className="h-5 w-5 text-primary" />
                   Create User
                 </CardTitle>
-                <CardDescription>Add a new user to your cloud instance.</CardDescription>
+                <CardDescription className="hidden sm:block">Add a new user to your cloud instance.</CardDescription>
               </CardHeader>
-              <CardContent className="pt-6">
-                <form onSubmit={(e) => { void handleCreateUser(e); }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-end">
+              <CardContent className="pt-0 md:pt-6 px-4 md:px-6">
+                <form onSubmit={(e) => { void handleCreateUser(e); }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
                   <div className="space-y-2">
                     <Label htmlFor="username">Username</Label>
                     <Input 
@@ -523,125 +558,214 @@ const AdminPage = () => {
               </CardContent>
             </Card>
 
-            <Card className="border-border shadow-sm">
-              <CardHeader className="bg-muted/30 pb-4">
+            <Card className="border-border shadow-sm py-3 md:py-6 gap-3 md:gap-6">
+              <CardHeader className="bg-muted/30 pb-3 px-4 md:px-6">
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5 text-primary" />
                   User List
                 </CardTitle>
-                <CardDescription>Manage existing users and their access.</CardDescription>
+                <CardDescription className="hidden sm:block">Manage existing users and their access.</CardDescription>
               </CardHeader>
-              <CardContent className="pt-6">
-                <div className="rounded-md border overflow-x-auto">
-                  <Table>
-                    <TableHeader className="bg-muted/50">
-                      <TableRow>
-                        <TableHead className="font-semibold">Username</TableHead>
-                        <TableHead className="font-semibold">Role</TableHead>
-                        <TableHead className="font-semibold">Security</TableHead>
-                        <TableHead className="font-semibold text-right">Quota</TableHead>
-                        <TableHead className="font-semibold text-center">Status</TableHead>
-                        <TableHead className="font-semibold text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {users.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                            <Users className="h-8 w-8 mx-auto mb-3 opacity-20" />
-                            No users found
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        users.map(u => (
-                          <TableRow key={u.id} className="hover:bg-muted/30 transition-colors">
-                            <TableCell className="font-medium">
-                              <div className="flex items-center gap-2">
-                                <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-xs">
-                                  {u.username.substring(0, 2).toUpperCase()}
+              <CardContent className="pt-0 md:pt-6 px-4 md:px-6">
+                {users.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground rounded-md border">
+                    <Users className="h-8 w-8 mx-auto mb-3 opacity-20" />
+                    No users found
+                  </div>
+                ) : (
+                  <>
+                    <div className="hidden md:block rounded-md border overflow-x-auto">
+                      <Table>
+                        <TableHeader className="bg-muted/50">
+                          <TableRow>
+                            <TableHead className="font-semibold">Username</TableHead>
+                            <TableHead className="font-semibold">Role</TableHead>
+                            <TableHead className="font-semibold">Security</TableHead>
+                            <TableHead className="font-semibold text-right">Quota</TableHead>
+                            <TableHead className="font-semibold text-center">Status</TableHead>
+                            <TableHead className="font-semibold text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {users.map(u => (
+                            <TableRow key={u.id} className="hover:bg-muted/30 transition-colors">
+                              <TableCell className="font-medium">
+                                <div className="flex items-center gap-2">
+                                  <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-xs">
+                                    {u.username.substring(0, 2).toUpperCase()}
+                                  </div>
+                                  {u.username}
+                                  {u.username === currentUsername && (
+                                    <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full ml-2">
+                                      You
+                                    </span>
+                                  )}
                                 </div>
-                                {u.username}
+                              </TableCell>
+                              <TableCell>
+                                <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                                  u.is_super_admin || u.role === 'superadmin' 
+                                    ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' 
+                                    : u.role === 'admin' 
+                                      ? 'bg-primary/10 text-primary'
+                                      : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                                }`}>
+                                  {u.is_super_admin ? 'Super Admin' : u.role.charAt(0).toUpperCase() + u.role.slice(1)}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex flex-col gap-1 text-xs">
+                                  <div className="flex items-center gap-1.5">
+                                    {u.mfa_enabled ? (
+                                      <ShieldCheck className="h-3.5 w-3.5 text-green-500" />
+                                    ) : (
+                                      <ShieldAlert className="h-3.5 w-3.5 text-amber-500" />
+                                    )}
+                                    <span className={u.mfa_enabled ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}>
+                                      MFA {u.mfa_enabled ? 'Enabled' : 'Disabled'}
+                                    </span>
+                                  </div>
+                                  <div className="text-muted-foreground flex items-center gap-1.5 pl-5">
+                                    {u.mfa_mandatory ? 'Required' : 'Optional'}
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-sm">
+                                {u.storage_quota.toLocaleString()}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {u.locked_until ? (
+                                  <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600 bg-red-100 dark:bg-red-900/30 dark:text-red-400 px-2.5 py-1 rounded-full">
+                                    <ShieldAlert className="h-3 w-3" />
+                                    Locked
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 bg-green-100 dark:bg-green-900/30 dark:text-green-400 px-2.5 py-1 rounded-full">
+                                    <ShieldCheck className="h-3 w-3" />
+                                    Active
+                                  </span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-2">
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => { void handleRevoke(u.id); }}
+                                    disabled={u.username === currentUsername || u.is_super_admin || (u.role === 'admin' && !isSuperAdmin) || (u.role === 'superadmin' && !isSuperAdmin)}
+                                    className="h-8 text-xs px-2.5"
+                                    title="Revoke all active sessions for this user"
+                                  >
+                                    <KeyRound className="h-3.5 w-3.5 mr-1" />
+                                    Revoke
+                                  </Button>
+                                  <Button 
+                                    variant="destructive" 
+                                    size="sm" 
+                                    onClick={() => { void handleDelete(u.id); }}
+                                    disabled={u.username === currentUsername || u.is_super_admin || (u.role === 'admin' && !isSuperAdmin) || (u.role === 'superadmin' && !isSuperAdmin)}
+                                    className="h-8 text-xs px-2.5"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    <div className="md:hidden space-y-2">
+                      {users.map(u => (
+                        <div key={u.id} className="rounded-md border p-3 space-y-2 bg-card">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-xs shrink-0">
+                                {u.username.substring(0, 2).toUpperCase()}
+                              </div>
+                              <div className="min-w-0">
+                                <span className="font-medium truncate block">{u.username}</span>
                                 {u.username === currentUsername && (
-                                  <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full ml-2">
+                                  <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full inline-block mt-0.5">
                                     You
                                   </span>
                                 )}
                               </div>
-                            </TableCell>
-                            <TableCell>
-                              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-                                u.is_super_admin || u.role === 'superadmin' 
-                                  ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' 
-                                  : u.role === 'admin' 
-                                    ? 'bg-primary/10 text-primary'
-                                    : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
-                              }`}>
-                                {u.is_super_admin ? 'Super Admin' : u.role.charAt(0).toUpperCase() + u.role.slice(1)}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-col gap-1 text-xs">
-                                <div className="flex items-center gap-1.5">
-                                  {u.mfa_enabled ? (
-                                    <ShieldCheck className="h-3.5 w-3.5 text-green-500" />
-                                  ) : (
-                                    <ShieldAlert className="h-3.5 w-3.5 text-amber-500" />
-                                  )}
-                                  <span className={u.mfa_enabled ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}>
-                                    MFA {u.mfa_enabled ? 'Enabled' : 'Disabled'}
-                                  </span>
-                                </div>
-                                <div className="text-muted-foreground flex items-center gap-1.5 pl-5">
-                                  {u.mfa_mandatory ? 'Required' : 'Optional'}
-                                </div>
+                            </div>
+                            <span className={`text-xs px-2.5 py-1 rounded-full font-medium shrink-0 ${
+                              u.is_super_admin || u.role === 'superadmin' 
+                                ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' 
+                                : u.role === 'admin' 
+                                  ? 'bg-primary/10 text-primary'
+                                  : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                            }`}>
+                              {u.is_super_admin ? 'Super Admin' : u.role.charAt(0).toUpperCase() + u.role.slice(1)}
+                            </span>
+                          </div>
+                          
+                          <div className="grid grid-cols-3 gap-1.5 text-sm">
+                            <div>
+                              <span className="text-xs text-muted-foreground block">MFA</span>
+                              <div className="flex items-center gap-1 mt-0.5">
+                                {u.mfa_enabled ? (
+                                  <ShieldCheck className="h-3.5 w-3.5 text-green-500" />
+                                ) : (
+                                  <ShieldAlert className="h-3.5 w-3.5 text-amber-500" />
+                                )}
+                                <span className={`text-xs ${u.mfa_enabled ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                                  {u.mfa_enabled ? 'On' : 'Off'}
+                                </span>
                               </div>
-                            </TableCell>
-                            <TableCell className="text-right font-mono text-sm">
-                              {u.storage_quota.toLocaleString()}
-                            </TableCell>
-                            <TableCell className="text-center">
+                              <span className="text-[10px] text-muted-foreground">{u.mfa_mandatory ? 'Required' : 'Optional'}</span>
+                            </div>
+                            <div>
+                              <span className="text-xs text-muted-foreground block">Quota</span>
+                              <span className="font-mono text-sm">{u.storage_quota.toLocaleString()}</span>
+                            </div>
+                            <div>
+                              <span className="text-xs text-muted-foreground block">Status</span>
                               {u.locked_until ? (
-                                <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600 bg-red-100 dark:bg-red-900/30 dark:text-red-400 px-2.5 py-1 rounded-full">
+                                <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600 mt-0.5">
                                   <ShieldAlert className="h-3 w-3" />
                                   Locked
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 bg-green-100 dark:bg-green-900/30 dark:text-green-400 px-2.5 py-1 rounded-full">
+                                <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 mt-0.5">
                                   <ShieldCheck className="h-3 w-3" />
                                   Active
                                 </span>
                               )}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  onClick={() => { void handleRevoke(u.id); }}
-                                  disabled={u.username === currentUsername || u.is_super_admin || (u.role === 'admin' && !isSuperAdmin) || (u.role === 'superadmin' && !isSuperAdmin)}
-                                  className="h-8 text-xs px-2.5"
-                                  title="Revoke all active sessions for this user"
-                                >
-                                  <KeyRound className="h-3.5 w-3.5 mr-1" />
-                                  Revoke
-                                </Button>
-                                <Button 
-                                  variant="destructive" 
-                                  size="sm" 
-                                  onClick={() => { void handleDelete(u.id); }}
-                                  disabled={u.username === currentUsername || u.is_super_admin || (u.role === 'admin' && !isSuperAdmin) || (u.role === 'superadmin' && !isSuperAdmin)}
-                                  className="h-8 text-xs px-2.5"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex gap-2 pt-1.5 border-t border-border">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => { void handleRevoke(u.id); }}
+                              disabled={u.username === currentUsername || u.is_super_admin || (u.role === 'admin' && !isSuperAdmin) || (u.role === 'superadmin' && !isSuperAdmin)}
+                              className="h-8 text-xs px-2.5 flex-1"
+                            >
+                              <KeyRound className="h-3.5 w-3.5 mr-1" />
+                              Revoke
+                            </Button>
+                            <Button 
+                              variant="destructive" 
+                              size="sm" 
+                              onClick={() => { void handleDelete(u.id); }}
+                              disabled={u.username === currentUsername || u.is_super_admin || (u.role === 'admin' && !isSuperAdmin) || (u.role === 'superadmin' && !isSuperAdmin)}
+                              className="h-8 text-xs px-2.5 flex-1"
+                            >
+                              <Trash2 className="h-3.5 w-3.5 mr-1" />
+                              Delete
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>
