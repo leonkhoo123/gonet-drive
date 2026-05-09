@@ -6,19 +6,38 @@ interface VerificationScreenProps {
   subtitle?: string;
 }
 
+let hasAnimated = false;
+let cachedServerName = '';
+let cachedServerNameLoaded = false;
+
 export function VerificationScreen({
   subtitle = "Verifying your session...",
 }: VerificationScreenProps) {
-  const [serverName, setServerName] = useState('GoNet Drive');
+  const [serverName, setServerName] = useState(
+    cachedServerNameLoaded ? cachedServerName : 'GoNet Drive'
+  );
+  const [shouldAnimate] = useState(() => {
+    if (hasAnimated) return false;
+    hasAnimated = true;
+    return true;
+  });
 
   useEffect(() => {
+    if (cachedServerNameLoaded) return;
     void fetch('/api/health')
       .then(res => res.json() as Promise<{ service_name?: string }>)
       .then(data => {
-        if (data.service_name) setServerName(data.service_name);
+        const name = data.service_name ?? 'GoNet Drive';
+        cachedServerName = name;
+        cachedServerNameLoaded = true;
+        setServerName(name);
       })
-      .catch(() => { /* server name fallback is already set */ });
+      .catch(() => { cachedServerNameLoaded = true; });
   }, []);
+
+  const logoAnim = shouldAnimate ? 'animate-in fade-in zoom-in duration-500' : '';
+  const titleAnim = shouldAnimate ? 'animate-in fade-in slide-in-from-bottom-2 duration-500' : '';
+  const subtitleAnim = shouldAnimate ? 'animate-in fade-in slide-in-from-bottom-4 duration-700' : '';
 
   return (
     <div className="flex min-h-dvh bg-gradient-to-br from-primary/5 via-background to-primary/10">
@@ -30,15 +49,15 @@ export function VerificationScreen({
 
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-4">
         <div className="text-center max-w-md">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-primary/10 ring-1 ring-primary/20 mb-8 animate-in fade-in zoom-in duration-500">
+          <div className={`inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-primary/10 ring-1 ring-primary/20 mb-8 ${logoAnim}`}>
             <Logo className="w-12 h-12 object-contain" />
           </div>
 
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+          <h1 className={`text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-6 ${titleAnim}`}>
             {serverName}
           </h1>
 
-          <div className="flex items-center justify-center gap-3 text-muted-foreground animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className={`flex items-center justify-center gap-3 text-muted-foreground ${subtitleAnim}`}>
             <Loader2 className="h-5 w-5 animate-spin text-primary" />
             <span className="text-lg">{subtitle}</span>
           </div>

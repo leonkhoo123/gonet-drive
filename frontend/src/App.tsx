@@ -1,8 +1,8 @@
 import './App.css'
 import { ThemeProvider } from './components/theme-provider'
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useNavigate } from "react-router-dom";
 import { SonnerToastCustom } from './components/custom/soonerToast';
-import { useEffect, lazy, Suspense } from 'react';
+import { useEffect, lazy, Suspense, useRef } from 'react';
 import { wsClient } from './api/wsClient';
 import { OperationProgressProvider } from './context/OperationProgressContext';
 import { PreferencesProvider } from './context/PreferencesContext';
@@ -26,6 +26,20 @@ function AppLoadingFallback() {
 }
 
 function App() {
+  const navigate = useNavigate();
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
+
+  useEffect(() => {
+    const handleAuthUnauthorized = () => {
+      if (window.location.pathname !== '/login') {
+        void navigateRef.current('/login', { replace: true });
+      }
+    };
+    window.addEventListener('auth:unauthorized', handleAuthUnauthorized);
+    return () => { window.removeEventListener('auth:unauthorized', handleAuthUnauthorized); };
+  }, []);
+
   useEffect(() => {
     wsClient.connect();
   }, []);

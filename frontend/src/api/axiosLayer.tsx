@@ -83,11 +83,7 @@ instance.interceptors.response.use(
         return await instance(originalRequest);
       } catch (err: unknown) {
         processQueue(err, null);
-        // Dispatch custom event to trigger logout or redirect
         window.dispatchEvent(new Event('auth:unauthorized'));
-        if (!window.location.pathname.includes('/login')) {
-           window.location.href = '/login';
-        }
         return await Promise.reject(err instanceof Error ? err : new Error(String(err)));
       } finally {
         isRefreshing = false;
