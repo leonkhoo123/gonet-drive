@@ -134,7 +134,7 @@ export default function ManageSharesPage() {
         />
 
         <div className="flex-1 flex flex-col min-w-0 bg-background overflow-hidden">
-          <header className="h-16 md:h-14 border-b flex items-center px-2 md:px-6 shrink-0 gap-2">
+          <header className="h-16 md:h-14 border-b flex items-center px-2 md:px-6 shrink-0 gap-2 bg-gradient-to-r from-background via-primary/[0.02] to-background">
             <Button variant="ghost" size="icon" onClick={() => { void navigate("/home"); }} className="lg:hidden h-10 w-10 shrink-0 text-muted-foreground hover:text-foreground">
               <ArrowLeft className="h-5 w-5" />
             </Button>

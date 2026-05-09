@@ -29,7 +29,7 @@ export default function MobileSelectionToolbar({
   if (selectedItemsSize === 0) return null;
 
   return (
-    <div className="md:hidden h-16 flex items-center justify-between px-2 border-b bg-background shrink-0 overflow-x-auto">
+    <div className="md:hidden h-16 flex items-center justify-between px-2 border-b bg-gradient-to-r from-background via-primary/[0.02] to-background shrink-0 overflow-x-auto">
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="sm" onClick={onCancel} className="h-12 px-2" title="Cancel Selection">
           <ArrowLeft className="h-8 w-8 mr-2" />

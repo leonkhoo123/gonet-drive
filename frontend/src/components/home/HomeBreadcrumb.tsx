@@ -138,7 +138,7 @@ export default function HomeBreadcrumb({
   };
 
   return (
-    <div className="h-16 md:h-14 border-b flex items-center justify-between px-2 md:px-6 bg-background shrink-0 gap-2">
+    <div className="h-16 md:h-14 border-b flex items-center justify-between px-2 md:px-6 bg-gradient-to-r from-background via-primary/[0.02] to-background shrink-0 gap-2">
       <div className="flex items-center gap-2 overflow-hidden">
         {onToggleSidebar && (
           <Button

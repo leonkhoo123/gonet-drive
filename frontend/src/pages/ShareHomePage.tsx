@@ -235,9 +235,11 @@ export default function ShareHomePage() {
           handleClearSelection();
         }}>
           {/* Top Title Bar */}
-          <div className="h-14 border-b flex items-center justify-between px-4 bg-background shrink-0 z-10">
+          <div className="h-14 border-b flex items-center justify-between px-4 bg-gradient-to-r from-background via-primary/[0.02] to-background shrink-0 z-10">
             <div className="flex items-center gap-2">
-              <Logo className="w-8 h-8 object-contain" />
+              <div className="inline-flex items-center justify-center h-8 w-8 rounded-xl bg-primary/10 ring-1 ring-primary/20 shrink-0">
+                <Logo className="w-5 h-5 object-contain" />
+              </div>
               <h1 className="text-lg font-bold text-foreground tracking-tight">{healthData?.service_name ?? "GoNet Drive"}</h1>
             </div>
             <div className="flex items-center gap-2">

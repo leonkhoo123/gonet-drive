@@ -34,7 +34,7 @@ export default function ShareBreadcrumb({
   const { id } = useParams<{ id: string }>();
 
   return (
-    <div className="h-14 border-b flex items-center justify-between px-2 md:px-6 bg-background shrink-0 gap-2">
+    <div className="h-14 border-b flex items-center justify-between px-2 md:px-6 bg-gradient-to-r from-background via-primary/[0.02] to-background shrink-0 gap-2">
       <div className="flex items-center gap-2 overflow-hidden">
         <div className="flex items-center text-sm text-muted-foreground overflow-hidden whitespace-nowrap">
           <Button

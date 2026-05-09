@@ -1,62 +1,58 @@
-import { CircleCheck, CircleX } from 'lucide-react';
+import { CircleCheck, CircleX, Info, TriangleAlert } from 'lucide-react';
 import { Toaster, type ToasterProps } from 'sonner';
 import { useTheme } from '@/components/theme-provider';
 
-// --- 1. Custom Icon Wrappers for Color ---
-
-// Success Icon styled with 'text-primary' from your shadcn/ui theme
 const SuccessIcon = () => (
-    <div className="text-green-500 flex items-center justify-center mr-4">
-        <CircleCheck size={24} />
+    <div className="text-primary flex items-center justify-center">
+        <CircleCheck size={22} />
     </div>
 );
 
-// Error Icon styled with a standard Tailwind red color
 const ErrorIcon = () => (
-    <div className="text-red-500 flex items-center justify-center mr-4">
-        <CircleX size={24} />
+    <div className="text-destructive flex items-center justify-center">
+        <CircleX size={22} />
     </div>
 );
 
-// --- 2. The Custom Toaster Component ---
+const InfoIcon = () => (
+    <div className="text-primary flex items-center justify-center">
+        <Info size={22} />
+    </div>
+);
 
-// Note: We use ToasterProps if you want to pass additional props from App.tsx
+const WarningIcon = () => (
+    <div className="text-amber-500 flex items-center justify-center">
+        <TriangleAlert size={22} />
+    </div>
+);
+
 export const SonnerToastCustom = (props: ToasterProps) => {
   const { theme } = useTheme();
 
   return (
     <Toaster 
-      // 1. Positioning and Offset
       position="bottom-center" 
-      offset={100} // Pushes the toast bar 30px up from the bottom edge
+      offset={100}
       duration={2500}
-      
-      // Follow the application theme
       theme={theme as ToasterProps['theme']}
-
-      // 2. Custom Icons for Coloring
       icons={{
         success: <SuccessIcon />,
         error: <ErrorIcon />,
+        info: <InfoIcon />,
+        warning: <WarningIcon />,
       }}
-      
-      // 3. Global Toast Styling
       toastOptions={{
-        // Common styles for all toast cards (makes them wider, larger padding/font)
-        className: 'p-4 rounded-lg shadow-xl w-80 text-lg flex items-center',
+        className: 'p-4 rounded-xl shadow-lg ring-1 ring-border/50 w-80 text-base flex items-center bg-gradient-to-r from-background via-background to-primary/[0.02]',
         classNames: {
-          toast: 'group toast p-4 rounded-lg shadow-xl w-80 text-lg flex items-center',
-          // Additional margin for the icon and content as a fallback
+          toast: 'group toast p-4 rounded-xl shadow-lg ring-1 ring-border/50 w-80 text-base flex items-center bg-gradient-to-r from-background via-background to-primary/[0.02]',
           icon: 'mr-4',
-          content: 'ml-2',
+          content: 'ml-1',
         },
         style: { 
-            gap: '16px', // Ensures a strict gap between flex items
+            gap: '16px',
             padding: '16px'
         },
       }}
-      
-      // 4. Spread any additional props passed from the parent (like theme, invert, etc.)
       {...props}
     />
   );

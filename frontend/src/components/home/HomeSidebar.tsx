@@ -88,7 +88,7 @@ function StorageIndicator({
         <Cloud className="h-4 w-4" />
         <span>Storage</span>
       </div>
-      <Progress value={percentage} className="h-2 mb-2 bg-muted/50" indicatorClassName={percentage > 90 ? "bg-red-500" : "bg-primary"} />
+      <Progress value={percentage} className="h-2 mb-2 bg-muted/50" indicatorClassName={percentage > 90 ? "bg-gradient-to-r from-red-500 to-red-400" : "bg-gradient-to-r from-primary to-primary/80"} />
       <div className="flex justify-between items-end">
         <div className="flex flex-col gap-1 text-xs text-muted-foreground">
           <div><span className="font-medium text-foreground">{usedFormatted}</span> of <span className="font-medium text-foreground">{limitFormatted}</span> used</div>
@@ -140,7 +140,7 @@ export default function HomeSidebar({ isOpen, onClose, isWsConnected, isHealthCo
       <aside 
         className={`
           fixed lg:relative z-30 h-full
-          bg-muted/10 flex flex-col flex-shrink-0
+          bg-gradient-to-b from-primary/[0.03] via-muted/10 to-muted/10 flex flex-col flex-shrink-0
           transition-all duration-300 ease-in-out overflow-hidden
           ${isOpen 
             ? "translate-x-0 w-72 border-r" 
@@ -153,7 +153,9 @@ export default function HomeSidebar({ isOpen, onClose, isWsConnected, isHealthCo
               className="flex items-center gap-2 cursor-pointer"
               onClick={() => { handleNavigate("/home"); }}
             >
-              <Logo className="w-10 h-10 object-contain" />
+              <div className="inline-flex items-center justify-center h-10 w-10 rounded-2xl bg-primary/10 ring-1 ring-primary/20 shrink-0">
+                <Logo className="w-6 h-6 object-contain" />
+              </div>
               <h1 className="text-xl font-bold text-foreground tracking-tight">{titleName ?? "GoNet Drive"}</h1>
             </div>
             <div className="flex items-center gap-2">
@@ -167,7 +169,7 @@ export default function HomeSidebar({ isOpen, onClose, isWsConnected, isHealthCo
             <div 
               className={`flex items-center gap-3 text-base md:text-sm px-3 py-3 md:py-2 rounded-md transition-colors cursor-pointer
                 ${isActive("/.cloud_delete") 
-                  ? "bg-primary/10 text-primary" 
+                  ? "bg-primary/10 text-primary shadow-[inset_0_0_0_1px_rgba(84,104,255,0.12)]" 
                   : "text-foreground hover:bg-muted/50"
                 }`}
               onClick={() => { handleNavigate("/home/recycle_bin"); }}
@@ -179,7 +181,7 @@ export default function HomeSidebar({ isOpen, onClose, isWsConnected, isHealthCo
             <div 
               className={`flex items-center gap-3 text-base md:text-sm px-3 py-3 md:py-2 rounded-md transition-colors cursor-pointer
                 ${isActive("/manage-shares") 
-                  ? "bg-primary/10 text-primary" 
+                  ? "bg-primary/10 text-primary shadow-[inset_0_0_0_1px_rgba(84,104,255,0.12)]" 
                   : "text-foreground hover:bg-muted/50"
                 }`}
               onClick={() => { handleNavigate("/manage-shares"); }}
