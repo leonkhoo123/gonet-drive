@@ -506,6 +506,8 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
           className={`absolute bottom-0 left-0 right-0 z-20 pt-3 pb-4 ${uiHidden}`}
           style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom, 8px))" }}
           onClick={(e) => { e.stopPropagation(); }}
+          onTouchStart={(e) => { e.stopPropagation(); }}
+          onTouchEnd={(e) => { e.stopPropagation(); }}
         >
           <div
             ref={thumbStripRef}
