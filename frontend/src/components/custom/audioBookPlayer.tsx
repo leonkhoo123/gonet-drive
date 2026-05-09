@@ -122,20 +122,6 @@ export function AudioBookPlayer({ file, onClose, forcePause }: AudioBookPlayerPr
     return () => { document.removeEventListener("visibilitychange", handleVisibilityChange); };
   }, [allowBackground, saveProgress]);
 
-  // Set media session metadata
-  useEffect(() => {
-    if ('mediaSession' in navigator && currentFile) {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: currentFile.name.startsWith("ab_") ? currentFile.name.slice(3) : currentFile.name,
-        artist: 'Audio Book',
-      });
-      navigator.mediaSession.setActionHandler('play', () => { setIsPlaying(true); });
-      navigator.mediaSession.setActionHandler('pause', () => { setIsPlaying(false); });
-      navigator.mediaSession.setActionHandler('seekbackward', handlePrev);
-      navigator.mediaSession.setActionHandler('seekforward', handleNext);
-    }
-  }, [currentFile, handleNext, handlePrev]);
-
   // Auto-play when file changes
   useEffect(() => {
     if (currentFile && audioRef.current) {
@@ -197,6 +183,19 @@ export function AudioBookPlayer({ file, onClose, forcePause }: AudioBookPlayerPr
       setCurrentTime(newTime);
     }
   }, []);
+
+  useEffect(() => {
+    if ('mediaSession' in navigator && currentFile) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: currentFile.name.startsWith("ab_") ? currentFile.name.slice(3) : currentFile.name,
+        artist: 'Audio Book',
+      });
+      navigator.mediaSession.setActionHandler('play', () => { setIsPlaying(true); });
+      navigator.mediaSession.setActionHandler('pause', () => { setIsPlaying(false); });
+      navigator.mediaSession.setActionHandler('seekbackward', handlePrev);
+      navigator.mediaSession.setActionHandler('seekforward', handleNext);
+    }
+  }, [currentFile, handleNext, handlePrev]);
 
   const togglePlay = () => { setIsPlaying(!isPlaying); };
 

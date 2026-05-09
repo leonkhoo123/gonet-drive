@@ -66,6 +66,7 @@ const VideoPlayerModalGeneric: React.FC<VideoPlayerModalProps> = ({
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
+  const [playbackRate, setPlaybackRate] = useState<number>(1);
 
   useForceDarkStatusBar(isOpen);
   const [isInteracting, setIsInteracting] = useState(false);
