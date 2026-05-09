@@ -9,6 +9,7 @@ import VersionTag from "@/components/custom/versionTag";
 import OtpInput from 'react-otp-input';
 import { useTheme } from "@/components/theme-provider";
 import { Logo } from "@/components/Logo";
+import { ShareModeToggle } from "@/components/share/ShareModeToggle";
 
 interface ApiError {
   response?: {
@@ -141,6 +142,11 @@ export default function ShareVerifyPage() {
 
       {/* Right Panel — Form */}
       <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 md:p-12 relative">
+        {/* Theme Toggle */}
+        <div className="absolute top-4 right-4 z-10">
+          <ShareModeToggle />
+        </div>
+
         {/* Mobile gradient orbs */}
         <div className="lg:hidden absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute -top-20 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl translate-x-1/3" />

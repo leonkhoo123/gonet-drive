@@ -13,8 +13,9 @@ import VersionTag from '@/components/custom/versionTag';
 import OtpInput from 'react-otp-input';
 import { QRCodeSVG } from 'qrcode.react';
 import axios from 'axios';
-import { Eye, EyeOff, ArrowRight, Shield, Fingerprint, User, Lock, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, Shield, Fingerprint, User, Lock, Loader2, Sun, Moon } from 'lucide-react';
 import { Logo } from '@/components/Logo';
+import { useTheme } from '@/components/theme-provider';
 
 type Step = 'login' | 'mfa' | 'mfaSetup';
 
@@ -36,6 +37,17 @@ const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState<Step>('login');
   const [animating, setAnimating] = useState(false);
+  const [isSystemDark, setIsSystemDark] = useState(
+    () => window.matchMedia("(prefers-color-scheme: dark)").matches
+  );
+  const { theme, setTheme } = useTheme();
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const handler = (e: MediaQueryListEvent) => { setIsSystemDark(e.matches); };
+    mq.addEventListener("change", handler);
+    return () => { mq.removeEventListener("change", handler); };
+  }, []);
 
   const passwordRef = useRef<HTMLInputElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -212,6 +224,29 @@ const LoginPage: React.FC = () => {
 
       {/* Right Panel — Form */}
       <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 md:p-12 relative">
+        {/* Theme Toggle */}
+        <div className="absolute top-4 right-4 z-10">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            onClick={() => {
+              if (theme === "system") {
+                setTheme(isSystemDark ? "light" : "dark");
+              } else {
+                setTheme(theme === "dark" ? "light" : "dark");
+              }
+            }}
+            title="Toggle theme"
+          >
+            {(theme === "dark" || (theme === "system" && isSystemDark)) ? (
+              <Moon className="h-[1.2rem] w-[1.2rem]" />
+            ) : (
+              <Sun className="h-[1.2rem] w-[1.2rem]" />
+            )}
+          </Button>
+        </div>
+
         {/* Mobile-only gradient orbs behind content */}
         <div className="lg:hidden absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute -top-20 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl translate-x-1/3" />
