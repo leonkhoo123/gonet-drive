@@ -116,9 +116,9 @@ export const LongPressPreviewModal: React.FC<LongPressPreviewModalProps> = ({
     (e: React.MouseEvent | React.TouchEvent) => {
       e.stopPropagation();
       e.preventDefault();
-      onClose();
+      triggerSwipeClose();
     },
-    [onClose]
+    [triggerSwipeClose]
   );
 
   const toggleMute = useCallback(
@@ -139,8 +139,8 @@ export const LongPressPreviewModal: React.FC<LongPressPreviewModalProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 z-[90] bg-black/90 flex flex-col items-center justify-center select-none transition-transform duration-200 ease-out ${
-        isClosing ? "translate-y-full" : "translate-y-0"
+      className={`fixed inset-0 z-[90] bg-black/90 flex flex-col items-center justify-center select-none animate-fade-in transition-opacity duration-200 ease-out ${
+        isClosing ? "opacity-0" : "opacity-100"
       }`}
       style={{ touchAction: "none" }}
       onContextMenu={(e) => {
@@ -164,7 +164,7 @@ export const LongPressPreviewModal: React.FC<LongPressPreviewModalProps> = ({
       {/* Media container — tap anywhere closes preview */}
       <div
         className="flex-1 w-full flex items-center justify-center"
-        onClick={(e) => { e.stopPropagation(); onClose(); }}
+        onClick={(e) => { e.stopPropagation(); triggerSwipeClose(); }}
       >
         {showVideo ? (
           <div className="relative w-[95vw] h-[95vh]">

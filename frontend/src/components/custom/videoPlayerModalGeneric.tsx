@@ -232,13 +232,6 @@ const VideoPlayerModalGeneric: React.FC<VideoPlayerModalProps> = ({
     }
   }, [handleVolumeChange]);
 
-  const handleClose = useCallback(() => {
-    if (videoRef.current) {
-      videoRef.current.pause();
-    }
-    onClose(false, file.path, false, "", 0);
-  }, [file.path, onClose]);
-
   /* =====================================================
      SWIPE-DOWN CLOSE (MOBILE)
      ===================================================== */
@@ -248,9 +241,16 @@ const VideoPlayerModalGeneric: React.FC<VideoPlayerModalProps> = ({
     closeAnimRef.current = true;
     setIsClosing(true);
     setTimeout(() => {
-      handleClose();
+      onClose(false, file.path, false, "", 0);
     }, CLOSE_ANIM_DURATION);
-  }, [handleClose]);
+  }, [file.path, onClose]);
+
+  const handleClose = useCallback(() => {
+    if (videoRef.current) {
+      videoRef.current.pause();
+    }
+    triggerSwipeClose();
+  }, [triggerSwipeClose]);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
@@ -358,8 +358,8 @@ const VideoPlayerModalGeneric: React.FC<VideoPlayerModalProps> = ({
   return (
     <div
       role="dialog"
-      className={`fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm transition-transform duration-200 ease-out ${
-        isClosing ? "translate-y-full" : "translate-y-0"
+      className={`fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm animate-fade-in transition-all duration-200 ease-out ${
+        isClosing ? "translate-y-full opacity-0" : "translate-y-0 opacity-100"
       }`}
       style={{ touchAction: "none" }}
       onTouchStart={handleTouchStart}

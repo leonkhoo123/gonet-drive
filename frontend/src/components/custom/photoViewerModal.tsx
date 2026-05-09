@@ -234,6 +234,16 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
     }
   }, [currentIndex, showUI]);
 
+  // ---- Swipe-down close (mobile) ----
+  const triggerSwipeClose = useCallback(() => {
+    if (closeAnimRef.current) return;
+    closeAnimRef.current = true;
+    setIsClosing(true);
+    setTimeout(() => {
+      onClose();
+    }, CLOSE_ANIM_DURATION);
+  }, [onClose]);
+
   // ---- Keyboard ----
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -241,7 +251,7 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
       if (e.key === "Escape") {
         e.stopPropagation();
         e.preventDefault();
-        onClose();
+        triggerSwipeClose();
         return;
       }
       if (e.key === "ArrowLeft") {
@@ -256,7 +266,7 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
         goNext();
       }
     },
-    [isOpen, onClose, goPrev, goNext]
+    [isOpen, triggerSwipeClose, goPrev, goNext]
   );
 
   useEffect(() => {
@@ -267,16 +277,6 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
   }, [handleKeyDown]);
 
   useDialogHistory(isOpen, onClose);
-
-  // ---- Swipe-down close (mobile) ----
-  const triggerSwipeClose = useCallback(() => {
-    if (closeAnimRef.current) return;
-    closeAnimRef.current = true;
-    setIsClosing(true);
-    setTimeout(() => {
-      onClose();
-    }, CLOSE_ANIM_DURATION);
-  }, [onClose]);
 
   // ---- Touch swipe (horizontal: prev/next; vertical-down: close on mobile) ----
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -324,9 +324,9 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
   const handleBackdropClick = useCallback(() => {
     // On mobile (< md), backdrop click does nothing; close via swipe-down or X button
     if (typeof window !== "undefined" && window.innerWidth >= 768) {
-      onClose();
+      triggerSwipeClose();
     }
-  }, [onClose]);
+  }, [triggerSwipeClose]);
 
   // ---- Image click: instant UI toggle ----
   const handleImageClick = useCallback(
@@ -348,8 +348,8 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
   return (
     <div
       ref={containerRef}
-      className={`fixed inset-0 z-[100] bg-black/90 flex items-center justify-center select-none transition-transform duration-200 ease-out ${
-        isClosing ? "translate-y-full" : "translate-y-0"
+      className={`fixed inset-0 z-[100] bg-black/90 flex items-center justify-center select-none animate-fade-in transition-all duration-200 ease-out ${
+        isClosing ? "translate-y-full opacity-0" : "translate-y-0 opacity-100"
       }`}
       style={{ touchAction: "none" }}
       onClick={handleBackdropClick}
@@ -382,7 +382,7 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onClose();
+              triggerSwipeClose();
             }}
             className="p-2 hover:bg-white/20 rounded-full transition-colors"
             title="Close"
