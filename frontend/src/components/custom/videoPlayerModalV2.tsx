@@ -14,6 +14,7 @@ import {
 import type { FileInterface } from "@/api/api-file";
 
 import { useDialogHistory } from "@/hooks/useDialogHistory";
+import { useForceDarkStatusBar } from "@/hooks/useForceDarkStatusBar";
 
 interface VideoPlayerModalProps {
   file: FileInterface;
@@ -59,6 +60,8 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
   /* -------------------- rotation -------------------- */
   const [rotation, setRotation] = useState(0);
   const [isRotation, setisRotation] = useState(false);
+
+  useForceDarkStatusBar(isOpen);
 
   /* -------------------- swipe to seek -------------------- */
   const touchStartX = useRef<number | null>(null);

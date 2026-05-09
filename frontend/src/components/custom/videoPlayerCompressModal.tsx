@@ -13,6 +13,7 @@ import {
 import type { FileInterface } from "@/api/api-file";
 
 import { useDialogHistory } from "@/hooks/useDialogHistory";
+import { useForceDarkStatusBar } from "@/hooks/useForceDarkStatusBar";
 
 interface VideoPlayerCompressModalProps {
   file: FileInterface;
@@ -43,6 +44,8 @@ const VideoPlayerCompressModal: React.FC<VideoPlayerCompressModalProps> = ({
   const [tempName, setTempName] = useState<string>("");
   const [bufferedProgress, setBufferedProgress] = useState(0); // %
   const [error, setError] = useState<string | null>(null);
+
+  useForceDarkStatusBar(isOpen);
 
   const formatTime = (time: number): string => {
     const minutes = Math.floor(time / 60);

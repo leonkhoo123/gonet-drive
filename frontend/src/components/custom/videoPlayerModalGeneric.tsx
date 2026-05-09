@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { FileInterface } from "@/api/api-file";
+import { useForceDarkStatusBar } from "@/hooks/useForceDarkStatusBar";
 
 const SWIPE_CLOSE_THRESHOLD = 100; // px vertical to trigger close
 const SWIPE_CLOSE_VELOCITY = 0.5; // px/ms flick threshold
@@ -63,9 +64,10 @@ const VideoPlayerModalGeneric: React.FC<VideoPlayerModalProps> = ({
   const [currentTime, setCurrentTime] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
-  const [playbackRate, setPlaybackRate] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
+
+  useForceDarkStatusBar(isOpen);
   const [isInteracting, setIsInteracting] = useState(false);
   const isInteractingRef = useRef(false);
 

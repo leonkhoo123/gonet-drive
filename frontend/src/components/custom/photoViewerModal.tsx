@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from "react"
 import { X, Download, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { type FileInterface, downloadFiles } from "@/api/api-file";
 import { useDialogHistory } from "@/hooks/useDialogHistory";
+import { useForceDarkStatusBar } from "@/hooks/useForceDarkStatusBar";
 
 const HIT_FLASH_DURATION = 300; // ms
 const CLOSE_ANIM_DURATION = 200; // ms
@@ -83,6 +84,8 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
   const isProgrammaticScroll = useRef(false);
   const [flashSide, setFlashSide] = useState<"left" | "right" | null>(null);
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useForceDarkStatusBar(isOpen);
 
   const handleStripScroll = useCallback(() => {
     // Ignore scroll events triggered by our own scrollIntoView calls.

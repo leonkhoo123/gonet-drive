@@ -14,6 +14,7 @@ import {
 import type { FileInterface } from "@/api/api-file";
 
 import { useDialogHistory } from "@/hooks/useDialogHistory";
+import { useForceDarkStatusBar } from "@/hooks/useForceDarkStatusBar";
 
 interface VideoPlayerModalProps {
   file: FileInterface;
@@ -42,6 +43,8 @@ const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const [isRotation, setisRotation] = useState<boolean>(false); //degree 
   const [showControls, setShowControls] = useState(true);
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useForceDarkStatusBar(isOpen);
 
   const controlTimeout = 2500;
 
