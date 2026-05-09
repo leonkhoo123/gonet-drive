@@ -250,12 +250,12 @@ export default function HomeBreadcrumb({
                 </DropdownMenuItem>
               )}
 
-              <DropdownMenuItem onClick={handleReload}>
+              <DropdownMenuItem onClick={() => { void handleReload(); }}>
                 <RefreshCcw className="mr-2 h-4 w-4" />
                 <span>Reload App</span>
               </DropdownMenuItem>
 
-              <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600 focus:bg-red-100 dark:focus:bg-red-900/30">
+              <DropdownMenuItem onClick={() => { void handleLogout(); }} className="text-red-600 focus:text-red-600 focus:bg-red-100 dark:focus:bg-red-900/30">
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log Out</span>
               </DropdownMenuItem>

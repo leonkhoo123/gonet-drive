@@ -31,7 +31,7 @@ export function useFileInteraction({
       if (selectedItems.size > 0 && onLongPressPreview) {
         onLongPressPreview(file, index);
         // Prevent the tap from triggering a normal click when preview closes
-        const el = document.getElementById(`file-item-${index}`);
+        const el = document.getElementById(`file-item-${String(index)}`);
         if (el) {
           el.setAttribute('data-long-pressed', 'true');
           window.setTimeout(() => {
@@ -44,7 +44,7 @@ export function useFileInteraction({
       // Not in selection mode: trigger context menu (existing behaviour)
       onFileContextMenu(file, index);
       
-      const el = document.getElementById(`file-item-${index}`);
+      const el = document.getElementById(`file-item-${String(index)}`);
       if (el) {
         el.setAttribute('data-long-pressed', 'true');
         window.setTimeout(() => {

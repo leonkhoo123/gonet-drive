@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/rules-of-hooks */
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -84,8 +83,7 @@ const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const formatTime = (time: number): string => {
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
-    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+    return `${String(minutes)}:${seconds.toString().padStart(2, "0")}`;
   };
 
   useEffect(() => {
@@ -199,7 +197,7 @@ const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     setShowRenameModal(true);
   };
 
-  const handleRenameCancel = () => { setShowRenameModal(false); };
+  const handleRenameCancel = useCallback(() => { setShowRenameModal(false); }, []);
 
   const handleRenameSave = useCallback(() => {
     let finalName = tempName.trim();
@@ -227,15 +225,10 @@ const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     setShowRenameModal(false);
   };
 
-  if (!isOpen) return null;
-
-  {/* keyboard listener */ }
   const handleDismiss = useCallback((): void => {
     if (showRenameModal) {
-      // Logic for canceling rename
       handleRenameCancel();
     } else {
-      // Logic for closing the file/modal
       onClose(false, file.path, false, newName, 0);
     }
   }, [showRenameModal, file.path, newName, handleRenameCancel, onClose]);
@@ -293,7 +286,6 @@ const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
       case 'Escape':
         actionDescription = 'handleDismiss';
-        // handleDismiss();
         window.history.back();
         break;
       default:
@@ -321,6 +313,8 @@ const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
     };
   }, [handleKeyPress]);
 
+  if (!isOpen) return null;
+
   return (
     <div className="fixed inset-0 z-[100] bg-black select-none"
       onMouseDown={handleInteractionStart}
@@ -340,8 +334,7 @@ const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
         object-contain
         transition-transform duration-300
       `}
-          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-          style={{ transform: `rotate(${rotation}deg)` }}
+          style={{ transform: `rotate(${String(rotation)}deg)` }}
         />
       </div>
 
@@ -380,16 +373,13 @@ const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
         {/* 💡 1. Buffered Progress (White) */}
         <div
           className="h-2 bg-white/20 absolute top-0 left-0 transition-all"
-          // You will need a state variable, e.g., 'bufferedProgress', to set this width
-          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-          style={{ width: `${bufferedProgress}%` }}
+          style={{ width: `${String(bufferedProgress)}%` }}
         />
 
         {/* ✅ 2. Main Current Time Progress (Blue) */}
         <div
           className="h-2 bg-primary transition-all absolute top-0 left-0"
-          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-          style={{ width: `${progress}%` }}
+          style={{ width: `${String(progress)}%` }}
         />
       </div>
 

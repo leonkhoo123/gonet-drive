@@ -79,8 +79,7 @@ export function AudioBookPlayer({ file, onClose, forcePause }: AudioBookPlayerPr
       setIsPlaying(false);
       if (audioRef.current) audioRef.current.pause();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [file]);
+  }, [file, currentFile, saveProgress]);
 
   useEffect(() => {
     if (forcePause) setIsPlaying(false);
@@ -135,8 +134,7 @@ export function AudioBookPlayer({ file, onClose, forcePause }: AudioBookPlayerPr
       navigator.mediaSession.setActionHandler('seekbackward', handlePrev);
       navigator.mediaSession.setActionHandler('seekforward', handleNext);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentFile]);
+  }, [currentFile, handleNext, handlePrev]);
 
   // Auto-play when file changes
   useEffect(() => {
@@ -144,8 +142,7 @@ export function AudioBookPlayer({ file, onClose, forcePause }: AudioBookPlayerPr
       audioRef.current.currentTime = currentFile.progress_time || 0;
       setIsPlaying(true);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentFile?.url]);
+  }, [currentFile]);
 
   const handleTimeSubmit = () => {
     const parts = timeInput.split(':').map(Number);

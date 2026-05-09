@@ -81,7 +81,7 @@ export default function ShareVerifyPage() {
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!id || !pin || pin.length !== 6) return;
+    if (!id || pin.length !== 6) return;
 
     setVerifyingPin(true);
     setErrorMsg("");

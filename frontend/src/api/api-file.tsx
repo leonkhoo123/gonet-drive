@@ -33,7 +33,7 @@ export interface HealthResponse {
   service_name?: string;
   upload_chunk_size?: number;
   video_mode?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export const checkHealth = async (): Promise<HealthResponse | null> => {
@@ -52,7 +52,7 @@ export const fetchDirList = async (path = "/", showHidden = false, sort?: string
   // Clean up path formatting (avoid duplicate slashes)
   const cleanPath = path.trim() === "" ? "/" : path;
 
-  const params: Record<string, any> = { path: cleanPath, showHidden };
+  const params: Record<string, unknown> = { path: cleanPath, showHidden };
   if (sort) params.sort = sort;
   if (order) params.order = order;
 
@@ -65,74 +65,68 @@ export const fetchDirList = async (path = "/", showHidden = false, sort?: string
   return rs.data as ItemsResponse;
 };
 
-export const copyFiles = async (sources: string[], destDir: string, opId: string = generateOpId()) => {
+export const copyFiles = async (sources: string[], destDir: string, opId: string = generateOpId()): Promise<void> => {
   const endpoint = isShareMode ? "/share/file/copy" : "/user/files/copy";
-  const rs = await axiosLayer.post(endpoint, {
+  await axiosLayer.post(endpoint, {
     sources,
     destDir,
     opId
   }, {
     headers: { "Accept": "application/json" },
   });
-  return rs.data;
 };
 
-export const moveFiles = async (sources: string[], destDir: string, opId: string = generateOpId()) => {
+export const moveFiles = async (sources: string[], destDir: string, opId: string = generateOpId()): Promise<void> => {
   const endpoint = isShareMode ? "/share/file/move" : "/user/files/move";
-  const rs = await axiosLayer.post(endpoint, {
+  await axiosLayer.post(endpoint, {
     sources,
     destDir,
     opId
   }, {
     headers: { "Accept": "application/json" },
   });
-  return rs.data;
 };
 
-export const deleteFiles = async (sources: string[], opId: string = generateOpId()) => {
+export const deleteFiles = async (sources: string[], opId: string = generateOpId()): Promise<void> => {
   const endpoint = isShareMode ? "/share/file/delete" : "/user/files/delete";
-  const rs = await axiosLayer.post(endpoint, {
+  await axiosLayer.post(endpoint, {
     sources,
     opId
   }, {
     headers: { "Accept": "application/json" },
   });
-  return rs.data;
 };
 
-export const deletePermanentFiles = async (sources: string[], opId: string = generateOpId()) => {
+export const deletePermanentFiles = async (sources: string[], opId: string = generateOpId()): Promise<void> => {
   const endpoint = isShareMode ? "/share/file/delete-permanent" : "/user/files/delete-permanent";
-  const rs = await axiosLayer.post(endpoint, {
+  await axiosLayer.post(endpoint, {
     sources,
     opId
   }, {
     headers: { "Accept": "application/json" },
   });
-  return rs.data;
 };
 
-export const renameFile = async (source: string, newName: string, opId: string = generateOpId()) => {
+export const renameFile = async (source: string, newName: string, opId: string = generateOpId()): Promise<void> => {
   const endpoint = isShareMode ? "/share/file/rename" : "/user/files/rename";
-  const rs = await axiosLayer.post(endpoint, {
+  await axiosLayer.post(endpoint, {
     source,
     newName,
     opId
   }, {
     headers: { "Accept": "application/json" },
   });
-  return rs.data;
 };
 
-export const createFolder = async (path: string, folderName: string, opId: string = generateOpId()) => {
+export const createFolder = async (path: string, folderName: string, opId: string = generateOpId()): Promise<void> => {
   const endpoint = isShareMode ? "/share/file/create-folder" : "/user/files/create-folder";
-  const rs = await axiosLayer.post(endpoint, {
+  await axiosLayer.post(endpoint, {
     dir: path,
     folderName,
     opId
   }, {
     headers: { "Accept": "application/json" },
   });
-  return rs.data;
 };
 
 export interface FileDetail {
@@ -206,14 +200,13 @@ export const getFileProperties = async (sources: string[]): Promise<PropertiesRe
   return rs.data as PropertiesResponse;
 };
 
-export const cancelOperation = async (opId: string, cancel = true) => {
-  const rs = await axiosLayer.post("/user/files/cancel", {
+export const cancelOperation = async (opId: string, cancel = true): Promise<void> => {
+  await axiosLayer.post("/user/files/cancel", {
     opId,
     cancel
   }, {
     headers: { "Accept": "application/json" },
   });
-  return rs.data;
 };
 
 import * as CRC32 from 'crc-32';
@@ -293,8 +286,7 @@ export const uploadFile = async (
   onProgress?: (progressEvent: UploadProgressEvent) => void,
   opId?: string,
   chunkSize?: number
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-): Promise<any> => {
+): Promise<unknown> => {
   let CHUNK_SIZE = chunkSize && chunkSize > 0 ? chunkSize : 5 * 1024 * 1024; // Use provided size or default to 5MB
   let totalChunks = Math.ceil(file.size / CHUNK_SIZE) || 1; // at least 1 chunk for empty files
 
@@ -397,8 +389,7 @@ export const uploadFile = async (
       });
 
       loadedBytes += chunkBlob.size;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      lastResponse = rs.data;
+      lastResponse = rs.data as unknown;
     }
   } catch (error: unknown) {
     if (axios.isCancel(error) || (error instanceof Error && error.message === "Upload cancelled")) {

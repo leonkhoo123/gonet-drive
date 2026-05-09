@@ -153,7 +153,7 @@ export default function TextViewerModal({ file, isOpen, onClose }: TextViewerMod
           responseType: 'text',
         });
         setContent(response.data as string);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Failed to fetch document:", err);
         setError("Failed to load document content. The file might be too large or inaccessible.");
       } finally {

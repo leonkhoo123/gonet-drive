@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, use, useEffect, useState, type ReactNode } from 'react';
 import { wsClient, type OperationMessage } from '../api/wsClient';
 
 interface OperationProgressContextType {
@@ -30,23 +30,22 @@ export function OperationProgressProvider({ children }: { children: ReactNode })
 
     const clearCompleted = () => {
         setOperations(prev => {
-            const next = { ...prev };
-            for (const key in next) {
-                if (next[key].opStatus === 'completed' || next[key].opStatus === 'error' || next[key].opStatus === 'aborted') {
-                    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-                    delete next[key];
+            const result: Record<string, OperationMessage> = {};
+            for (const key in prev) {
+                const op = prev[key];
+                if (op.opStatus !== 'completed' && op.opStatus !== 'error' && op.opStatus !== 'aborted') {
+                    result[key] = op;
                 }
             }
-            return next;
+            return result;
         });
     };
 
     const dismissOperation = (opId: string) => {
         setOperations(prev => {
-            const next = { ...prev };
-            // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-            delete next[opId];
-            return next;
+            return Object.fromEntries(
+                Object.entries(prev).filter(([key]) => key !== opId)
+            ) as Record<string, OperationMessage>;
         });
     };
 
@@ -60,14 +59,14 @@ export function OperationProgressProvider({ children }: { children: ReactNode })
     };
 
     return (
-        <OperationProgressContext.Provider value={{ operations, clearCompleted, dismissOperation, addOrUpdateOperation }}>
+        <OperationProgressContext value={{ operations, clearCompleted, dismissOperation, addOrUpdateOperation }}>
             {children}
-        </OperationProgressContext.Provider>
+        </OperationProgressContext>
     );
 }
 
 export function useOperationProgress() {
-    const context = useContext(OperationProgressContext);
+    const context = use(OperationProgressContext);
     if (!context) {
         throw new Error('useOperationProgress must be used within an OperationProgressProvider');
     }

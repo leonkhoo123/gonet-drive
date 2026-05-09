@@ -2,20 +2,19 @@ import axiosLayer from './axiosLayer';   // axios instance WITHOUT token
 import { generateOpId } from "../utils/id";
 
 
-export const postDisqualified = async (filePath: string, opId: string = generateOpId()) => {
-  const rs = await axiosLayer.post(
+export const postDisqualified = async (filePath: string, opId: string = generateOpId()): Promise<void> => {
+  await axiosLayer.post(
     "/user/video/disqualified",
     { path: filePath, opId }, // request body
     {
       headers: { "Content-Type": "application/json" },
     }
   );
-  return rs.data;
 };
 
-export const renameFileMoveToDone = async (filePath: string, name: string, angle: number, opId: string = generateOpId()) => {
+export const renameFileMoveToDone = async (filePath: string, name: string, angle: number, opId: string = generateOpId()): Promise<void> => {
 
-  const rs = await axiosLayer.post(
+  await axiosLayer.post(
     "/user/video/rename-done",
     {
       path: filePath,
@@ -25,6 +24,5 @@ export const renameFileMoveToDone = async (filePath: string, name: string, angle
     },
     { headers: { "Content-Type": "application/json" } }
   );
-  return rs.data;
 };
 

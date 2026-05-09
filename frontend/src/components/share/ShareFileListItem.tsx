@@ -89,7 +89,7 @@ export function ShareFileListItem({
   const [imgErrorUrl, setImgErrorUrl] = useState<string | null>(null);
 
   const fileContent = viewMode === 'grid' ? (
-    <div id={`file-item-${index}`} className="group h-full w-full">
+    <div id={`file-item-${String(index)}`} className="group h-full w-full">
       <div
         onClick={(e) => { handleItemClick(file, index, e); }}
         onDoubleClick={() => { handleItemDoubleClick(file); }}
@@ -200,7 +200,7 @@ export function ShareFileListItem({
       </div>
     </div>
   ) : (
-    <div id={`file-item-${index}`} className="group">
+    <div id={`file-item-${String(index)}`} className="group">
       <div
         onClick={(e) => {
           handleItemClick(file, index, e);

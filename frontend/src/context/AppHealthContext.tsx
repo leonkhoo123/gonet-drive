@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, use, useState, useEffect, type ReactNode } from 'react';
 import { checkHealth, type HealthResponse } from "@/api/api-file";
 import { wsClient } from "@/api/wsClient";
 
@@ -49,14 +49,14 @@ export function AppHealthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AppHealthContext.Provider value={{ healthData, isWsConnected, isHealthConnected, refreshHealth: performHealthCheck }}>
+    <AppHealthContext value={{ healthData, isWsConnected, isHealthConnected, refreshHealth: performHealthCheck }}>
       {children}
-    </AppHealthContext.Provider>
+    </AppHealthContext>
   );
 }
 
 export function useAppHealthContext() {
-  const context = useContext(AppHealthContext);
+  const context = use(AppHealthContext);
   if (context === undefined) {
     throw new Error('useAppHealthContext must be used within an AppHealthProvider');
   }

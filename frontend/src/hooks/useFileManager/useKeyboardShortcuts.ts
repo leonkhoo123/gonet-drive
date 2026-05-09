@@ -114,7 +114,7 @@ export function useKeyboardShortcuts({
 
         // Scroll into view
         setTimeout(() => {
-          const element = document.getElementById(`file-item-${nextIndex}`);
+          const element = document.getElementById(`file-item-${String(nextIndex)}`);
           if (element) {
             element.scrollIntoView({ block: "nearest", behavior: "smooth" });
           }

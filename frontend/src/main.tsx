@@ -5,20 +5,17 @@ import React from 'react'
 import { BrowserRouter } from 'react-router-dom'
 import { loadConfig } from './config.ts'
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-console.log("Page with profile: ",import.meta.env.VITE_PROFILE)
+console.log("Page with profile: ", import.meta.env.VITE_PROFILE)
 if (import.meta.env.VITE_PROFILE !== "prod") {
-  // eslint-disable-next-line @typescript-eslint/no-floating-promises
-  import('eruda').then(({ default: eruda }) => { eruda.init(); });
+  void import('eruda').then(({ default: eruda }) => { eruda.init(); });
 }
 
 
 
-// eslint-disable-next-line @typescript-eslint/no-floating-promises
-loadConfig().then(() => {
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  createRoot(document.getElementById('root')!).render(
+void loadConfig().then(() => {
+  const rootElement = document.getElementById('root');
+  if (!rootElement) throw new Error('Root element not found');
+  createRoot(rootElement).render(
     <React.StrictMode>
       {/* Wrap the App component with BrowserRouter */}
       <BrowserRouter>

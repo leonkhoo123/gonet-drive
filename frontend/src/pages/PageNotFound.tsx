@@ -27,7 +27,7 @@ const NotFoundPage: React.FC = () => {
         
         {/* Button to go back one page in history */}
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => { void navigate(-1); }}
           className="px-6 py-3 border border-border text-sm font-medium rounded-md text-foreground bg-background hover:bg-accent hover:text-accent-foreground transition duration-150"
         >
           &larr; Go Back

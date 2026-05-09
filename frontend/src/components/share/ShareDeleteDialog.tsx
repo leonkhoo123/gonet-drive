@@ -32,8 +32,8 @@ export default function ShareDeleteDialog({
           <DialogTitle>Delete Items</DialogTitle>
           <DialogDescription>
             {currentPath.startsWith("/.cloud_delete") 
-              ? `Are you sure you want to permanently delete ${itemsToDeleteSize} item(s)? This action cannot be undone.`
-              : `Are you sure you want to delete ${itemsToDeleteSize} item(s)?`}
+              ? `Are you sure you want to permanently delete ${String(itemsToDeleteSize)} item(s)? This action cannot be undone.`
+              : `Are you sure you want to delete ${String(itemsToDeleteSize)} item(s)?`}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="mt-4 flex gap-2 sm:justify-end">

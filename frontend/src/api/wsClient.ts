@@ -119,7 +119,7 @@ class WebSocketClient {
         };
 
         this.socket.onclose = () => {
-            console.log(`[WebSocket] Disconnected. Reconnecting in ${this.reconnectTimeout / 1000}s...`);
+            console.log(`[WebSocket] Disconnected. Reconnecting in ${String(this.reconnectTimeout / 1000)}s...`);
             this.updateStatus(false);
             this.isReconnecting = true;
             
@@ -137,7 +137,7 @@ class WebSocketClient {
         };
     }
 
-    public send(data: any) {
+    public send(data: unknown) {
         if (this.socket && this.socket.readyState === WebSocket.OPEN) {
             this.socket.send(JSON.stringify(data));
         } else {

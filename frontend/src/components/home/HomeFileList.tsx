@@ -154,7 +154,7 @@ export default function HomeFileList({
   // Long-press preview state (mobile selection mode)
   const [previewFile, setPreviewFile] = useState<FileInterface | null>(null);
 
-  const handleLongPressPreview = useCallback((file: FileInterface, _index: number) => {
+  const handleLongPressPreview = useCallback((file: FileInterface) => {
     if (file.media_type === "photo" || file.media_type === "video") {
       setPreviewFile(file);
     } else {
@@ -333,7 +333,7 @@ export default function HomeFileList({
               ) : (
                 <div
                   style={{
-                    height: `${rowVirtualizer.getTotalSize()}px`,
+                    height: `${String(rowVirtualizer.getTotalSize())}px`,
                     width: '100%',
                     position: 'relative',
                   }}
@@ -356,7 +356,7 @@ export default function HomeFileList({
                           top: 0,
                           left: 0,
                           width: '100%',
-                          transform: `translateY(${virtualRow.start}px)`,
+                          transform: `translateY(${String(virtualRow.start)}px)`,
                         }}
                         className="pb-1"
                       >

@@ -47,7 +47,7 @@ const VideoPlayerCompressModal: React.FC<VideoPlayerCompressModalProps> = ({
   const formatTime = (time: number): string => {
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+    return `${String(minutes)}:${seconds.toString().padStart(2, "0")}`;
   };
 
   // Load compressed stream
@@ -62,10 +62,9 @@ const VideoPlayerCompressModal: React.FC<VideoPlayerCompressModalProps> = ({
         const compressedUrl = file.url.replace('/api/user/video/play/file', '/api/user/video/play/compress/file');
         console.log("compressurl",compressedUrl);
         video.src = compressedUrl;
-        // eslint-disable-next-line @typescript-eslint/use-unknown-in-catch-callback-variable
-        video.play().catch((err) => {
+        video.play().catch((playErr: unknown) => {
           setIsPlaying(false);
-          console.error("Playback start error:", err);
+          console.error("Playback start error:", playErr);
         });
         setError(null);
       } catch (err) {
@@ -244,12 +243,12 @@ const VideoPlayerCompressModal: React.FC<VideoPlayerCompressModalProps> = ({
         {/* Buffered */}
         <div
           className="h-2 bg-white/20 absolute top-0 left-0 transition-all"
-          style={{ width: `${bufferedProgress}%` }}
+          style={{ width: `${String(bufferedProgress)}%` }}
         />
         {/* Played */}
         <div
           className="h-2 bg-primary transition-all absolute top-0 left-0"
-          style={{ width: `${progress}%` }}
+          style={{ width: `${String(progress)}%` }}
         />
       </div>
 

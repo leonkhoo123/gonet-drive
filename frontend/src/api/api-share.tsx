@@ -71,12 +71,12 @@ export const getShares = async (): Promise<ShareItem[]> => {
   return rs.data.shares;
 };
 
-export const toggleShareBlock = async (id: string): Promise<any> => {
+export const toggleShareBlock = async (id: string): Promise<unknown> => {
   const rs = await axiosLayer.put(`/user/share/${id}/toggle-block`);
-  return rs.data;
+  return rs.data as unknown;
 };
 
-export const deleteShare = async (id: string): Promise<any> => {
+export const deleteShare = async (id: string): Promise<unknown> => {
   const rs = await axiosLayer.delete(`/user/share/${id}`);
-  return rs.data;
+  return rs.data as unknown;
 };

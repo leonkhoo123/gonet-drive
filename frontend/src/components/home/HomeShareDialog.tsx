@@ -66,7 +66,7 @@ export default function HomeShareDialog({
     } catch (error: unknown) {
       console.error("Failed to create share:", error);
       const err = error as AxiosError<{ error: string }>;
-      toast.error(err.response?.data?.error ?? "Failed to create share");
+      toast.error(err.response?.data.error ?? "Failed to create share");
     } finally {
       setLoading(false);
     }
@@ -98,7 +98,7 @@ export default function HomeShareDialog({
         <DialogHeader>
           <DialogTitle>{successData ? "Share Created" : "Share Item"}</DialogTitle>
           <DialogDescription>
-            {successData ? "Your item is now successfully shared." : `Share ${itemName}`}
+            {successData ? "Your item is now successfully shared." : `Share ${itemName ?? ''}`}
           </DialogDescription>
         </DialogHeader>
 
@@ -128,7 +128,7 @@ export default function HomeShareDialog({
                 <Button 
                   size="icon" 
                   variant="outline" 
-                  onClick={handleCopy}
+                  onClick={() => { void handleCopy(); }}
                   title="Copy Share Info"
                   className="absolute top-2 right-2 h-8 w-8 shrink-0"
                 >
@@ -193,7 +193,7 @@ export default function HomeShareDialog({
               <Button variant="outline" onClick={() => { onOpenChange(false); }} disabled={loading}>
                 Cancel
               </Button>
-              <Button onClick={handleShare} disabled={loading || !itemPath}>
+              <Button onClick={() => { void handleShare(); }} disabled={loading || !itemPath}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Create Share
               </Button>

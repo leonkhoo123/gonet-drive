@@ -82,7 +82,7 @@ export default function ShareToolbar({
         type="file" 
         className="hidden" 
         ref={folderInputRef} 
-        {...{ webkitdirectory: "", directory: "" } as any} 
+        {...{ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>} 
         onChange={handleFileChange} 
       />
 

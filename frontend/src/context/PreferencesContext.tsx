@@ -1,4 +1,4 @@
-import { createContext, useState, useContext, useEffect } from 'react';
+import { createContext, useState, use, useEffect } from 'react';
 import type { ReactNode } from 'react';
 
 interface PreferencesContextType {
@@ -13,8 +13,7 @@ const PreferencesContext = createContext<PreferencesContextType | undefined>(und
 export function PreferencesProvider({ children }: { children: ReactNode }) {
   const [showHidden, setShowHidden] = useState<boolean>(() => {
     const saved = localStorage.getItem('preferences_showHidden');
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const parsed = saved ? JSON.parse(saved) : false;
+    const parsed: unknown = saved ? JSON.parse(saved) as unknown : false;
     return Boolean(parsed);
   });
 
@@ -32,14 +31,14 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   }, [viewMode]);
 
   return (
-    <PreferencesContext.Provider value={{ showHidden, setShowHidden, viewMode, setViewMode }}>
+    <PreferencesContext value={{ showHidden, setShowHidden, viewMode, setViewMode }}>
       {children}
-    </PreferencesContext.Provider>
+    </PreferencesContext>
   );
 }
 
 export function usePreferences() {
-  const context = useContext(PreferencesContext);
+  const context = use(PreferencesContext);
   if (context === undefined) {
     throw new Error('usePreferences must be used within a PreferencesProvider');
   }

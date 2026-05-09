@@ -303,13 +303,13 @@ export default function HomePage() {
             <VideoPlayerModalV2
               file={selectedVideo}
               isOpen={!!selectedVideo}
-              onClose={handlePlayerClose}
+              onClose={(...args: [boolean, string, boolean, string, number]) => { void handlePlayerClose(...args); }}
             />
           ) : (
             <VideoPlayerModalGeneric
               file={selectedVideo}
               isOpen={!!selectedVideo}
-              onClose={handlePlayerClose}
+              onClose={(...args: [boolean, string, boolean, string, number]) => { void handlePlayerClose(...args); }}
             />
           )}
         </Suspense>

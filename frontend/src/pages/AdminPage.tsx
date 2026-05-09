@@ -140,7 +140,7 @@ const AdminPage = () => {
       const data = await getConfigs();
       setConfigs(data);
       setOriginalConfigs(JSON.parse(JSON.stringify(data)) as ConfigItem[]);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "Failed to fetch configurations");
     } finally {
       setLoadingConfigs(false);
@@ -172,12 +172,12 @@ const AdminPage = () => {
 
       if (updates.length > 0) {
         await Promise.all(updates);
-        toast.success(`Successfully updated ${updates.length} configuration(s)`);
+        toast.success(`Successfully updated ${String(updates.length)} configuration(s)`);
         await fetchConfigs();
       } else {
         toast.info("No changes to save");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "Failed to update configurations");
     } finally {
       setSavingConfigs(false);
@@ -205,7 +205,7 @@ const AdminPage = () => {
       });
       
       toast.success('Logo updated successfully');
-      setLogoUrl(`${getConfig().apiBaseUrl}/config/logo?t=${Date.now()}`);
+      setLogoUrl(`${getConfig().apiBaseUrl}/config/logo?t=${String(Date.now())}`);
       setSelectedFile(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -230,7 +230,7 @@ const AdminPage = () => {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <div className="h-16 md:h-14 border-b flex items-center px-4 md:px-6 shrink-0 gap-4 bg-card">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full">
+        <Button variant="ghost" size="icon" onClick={() => { void navigate(-1); }} className="rounded-full">
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div>
@@ -436,7 +436,7 @@ const AdminPage = () => {
                 <CardDescription>Add a new user to your cloud instance.</CardDescription>
               </CardHeader>
               <CardContent className="pt-6">
-                <form onSubmit={handleCreateUser} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-end">
+                <form onSubmit={(e) => { void handleCreateUser(e); }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-end">
                   <div className="space-y-2">
                     <Label htmlFor="username">Username</Label>
                     <Input 

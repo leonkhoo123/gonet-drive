@@ -40,7 +40,7 @@ export default function ShareBreadcrumb({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => { void navigate(`/share/${id}/home${window.location.search}`); }}
+            onClick={() => { void navigate(`/share/${id ?? ''}/home${window.location.search}`); }}
             className="p-1 h-auto bg-transparent hover:bg-transparent hover:underline text-foreground shrink-0 hidden md:inline-flex items-center gap-1 font-semibold"
           >
             {isSingleFile ? (
@@ -61,7 +61,7 @@ export default function ShareBreadcrumb({
                     onClick={() => {
                       const targetPath = "/" + arr.slice(0, idx + 1).join("/");
                       // Route navigation preserving search params
-                      void navigate(`/share/${id}/home${encodePathToUrl(targetPath)}${window.location.search}`);
+                      void navigate(`/share/${id ?? ''}/home${encodePathToUrl(targetPath)}${window.location.search}`);
                     }}
                     className={`hover:underline hover:text-foreground transition-colors ${isHidden ? 'opacity-60' : ''}`}
                   >
@@ -80,7 +80,7 @@ export default function ShareBreadcrumb({
                   const parts = currentPath.split("/").filter(Boolean);
                   parts.pop();
                   const targetPath = parts.length > 0 ? "/" + parts.join("/") : "";
-                  void navigate(`/share/${id}/home${encodePathToUrl(targetPath)}${window.location.search}`);
+                  void navigate(`/share/${id ?? ''}/home${encodePathToUrl(targetPath)}${window.location.search}`);
                 }}
                 className="mr-1 h-12 w-12 md:h-8 md:w-8 text-muted-foreground hover:text-foreground shrink-0"
               >

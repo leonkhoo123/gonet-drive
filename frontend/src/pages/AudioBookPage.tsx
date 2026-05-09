@@ -17,8 +17,8 @@ function formatDuration(seconds: number): string {
   
   // Build the string parts based on whether hours, minutes, and seconds are present.
   const parts = [];
-  if (h > 0) parts.push(`${h} hr`);
-  if (m > 0 || h > 0) parts.push(`${m} min`);
+  if (h > 0) parts.push(`${String(h)} hr`);
+  if (m > 0 || h > 0) parts.push(`${String(m)} min`);
   
   return parts.join(' ');
 }
@@ -196,7 +196,7 @@ export default function AudioBookPage() {
                         {!isDir && percent > 0 && (
                           <div 
                             className="absolute left-0 top-0 bottom-0 bg-primary/10 dark:bg-primary/20 pointer-events-none transition-all md:hidden"
-                            style={{ width: `${percent}%` }}
+                            style={{ width: `${String(percent)}%` }}
                           />
                         )}
 
@@ -251,7 +251,7 @@ export default function AudioBookPage() {
                                 <div className="h-1.5 w-16 bg-muted rounded-full overflow-hidden shrink-0">
                                   <div 
                                     className="h-full bg-primary rounded-full transition-all"
-                                    style={{ width: `${percent}%` }}
+                                    style={{ width: `${String(percent)}%` }}
                                   />
                                 </div>
                               </div>

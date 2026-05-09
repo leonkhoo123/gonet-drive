@@ -123,9 +123,7 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
       (f) => f.path === initialFile.path || f.name === initialFile.name
     );
     return idx >= 0 ? idx : 0;
-    // Only recompute when initialFile changes (modal opens)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialFile, isOpen]);
+  }, [initialFile, isOpen, photoFiles]);
 
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
 
@@ -175,8 +173,7 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
       });
     }, 10_000);
     return () => { clearTimeout(timer); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentFile.url]);
+  }, [currentFile.url, imageError]);
   const hasMultiple = photoFiles.length > 1;
   const isFirst = currentIndex === 0;
   const isLast = currentIndex === photoFiles.length - 1;

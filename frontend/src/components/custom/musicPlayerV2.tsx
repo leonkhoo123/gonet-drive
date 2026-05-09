@@ -87,7 +87,7 @@ export function MusicPlayerV2({ file, playlist = [], onSelectMusic, onClose, for
         audioRef.current.pause();
       }
     }
-  }, [file]);
+  }, [file, currentFile]);
 
   // Pause music if forcePause becomes true
   useEffect(() => {
@@ -108,26 +108,18 @@ export function MusicPlayerV2({ file, playlist = [], onSelectMusic, onClose, for
     
     if (isFileInPlaylist) {
       if (!isInternalChange.current && (currentFile.url !== lastFileUrl || newPlaylistKey !== lastPlaylistKey)) {
-        // User clicked from outside the player (e.g., file list) or folder changed
-        // Keep the playlist as is so the queue order remains exactly the same as the folder.
-        // We will just scroll to the active item in the queue.
         setActivePlaylist([...playlist]);
         setLastPlaylistKey(newPlaylistKey);
         setLastFileUrl(currentFile.url);
       } else if (isInternalChange.current) {
-        // Just reset the flag, don't override user's queue or shuffle
         isInternalChange.current = false;
         setLastFileUrl(currentFile.url);
         setLastPlaylistKey(newPlaylistKey);
-        // We can just keep the current activePlaylist since they clicked inside the queue
       } else if (newPlaylistKey !== lastPlaylistKey) {
-        // If the folder actually changed while we weren't internally changing tracks
-        // (e.g., a file was added/removed, or we navigated to a new folder but currentFile didn't change)
         setLastPlaylistKey(newPlaylistKey);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentFile?.url, playlist]);
+  }, [currentFile, playlist, lastFileUrl, lastPlaylistKey]);
 
   // Play/pause logic
   useEffect(() => {
@@ -164,7 +156,7 @@ export function MusicPlayerV2({ file, playlist = [], onSelectMusic, onClose, for
         onSelectMusic(activePlaylist[nextIndex]);
       }
     }
-  }, [currentFile?.name, onSelectMusic, activePlaylist]);
+  }, [currentFile, onSelectMusic, activePlaylist]);
 
   const handlePrev = useCallback(() => {
     if (activePlaylist.length > 0 && onSelectMusic && currentFile) {
@@ -175,7 +167,7 @@ export function MusicPlayerV2({ file, playlist = [], onSelectMusic, onClose, for
         onSelectMusic(activePlaylist[prevIndex]);
       }
     }
-  }, [currentFile?.name, onSelectMusic, activePlaylist]);
+  }, [currentFile, onSelectMusic, activePlaylist]);
 
   // Set media session metadata for lock screen integration
   useEffect(() => {
@@ -195,7 +187,7 @@ export function MusicPlayerV2({ file, playlist = [], onSelectMusic, onClose, for
         navigator.mediaSession.setActionHandler('nexttrack', null);
       }
     }
-  }, [currentFile?.name, activePlaylist, onSelectMusic, handleNext, handlePrev]);
+  }, [currentFile, activePlaylist, onSelectMusic, handleNext, handlePrev]);
 
   // Auto-play when file changes
   useEffect(() => {
@@ -203,7 +195,7 @@ export function MusicPlayerV2({ file, playlist = [], onSelectMusic, onClose, for
       setIsPlaying(true);
       setCurrentTime(0);
     }
-  }, [currentFile?.url]);
+  }, [currentFile]);
 
   const togglePlay = () => { setIsPlaying(!isPlaying); };
 

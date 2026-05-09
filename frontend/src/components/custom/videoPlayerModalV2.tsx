@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/rules-of-hooks */
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -443,7 +442,7 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
   if (!isOpen) return null;
 
   const formatTime = (t: number) =>
-    `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
+    `${String(Math.floor(t / 60))}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
 
 
   return (
@@ -463,7 +462,7 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
           playsInline
           preload="auto"
           className={`w-full h-full object-contain`}
-          style={{ transform: `rotate(${rotation}deg)` }}
+          style={{ transform: `rotate(${String(rotation)}deg)` }}
         />
       </div>
 
@@ -515,11 +514,11 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
       >
         <div
           className="absolute h-full bg-gray-500 pointer-events-none"
-          style={{ width: `${bufferedProgress}%` }}
+          style={{ width: `${String(bufferedProgress)}%` }}
         />
         <div
           className="absolute h-full bg-white/70 pointer-events-none"
-          style={{ width: `${progress}%` }}
+          style={{ width: `${String(progress)}%` }}
         />
         
         {/* Invisible range input for native dragging/scrubbing */}

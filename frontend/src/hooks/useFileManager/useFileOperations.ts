@@ -59,7 +59,7 @@ export function useFileOperations({
     setClipboardItems({ items: sources, operation: 'cut', sourceDir: currentPath });
 
     if (window.innerWidth >= 768) {
-      toast.success(`${selectedItems.size} item(s) ready to move`);
+      toast.success(`${String(selectedItems.size)} item(s) ready to move`);
     } else {
       setSelectedItems(new Set());
     }
@@ -76,7 +76,7 @@ export function useFileOperations({
     setClipboardItems({ items: sources, operation: 'copy', sourceDir: currentPath });
 
     if (window.innerWidth >= 768) {
-      toast.success(`${selectedItems.size} item(s) added to clipboard`);
+      toast.success(`${String(selectedItems.size)} item(s) added to clipboard`);
     } else {
       setSelectedItems(new Set());
     }

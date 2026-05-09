@@ -18,6 +18,6 @@ export const updateConfig = async (
   id: number,
   data: { config_value?: string | null; is_enabled?: boolean; is_deleted?: boolean }
 ): Promise<ConfigItem> => {
-  const response = await axios.put<ConfigItem>(`/user/config/${id}`, data);
+  const response = await axios.put<ConfigItem>(`/user/config/${String(id)}`, data);
   return response.data;
 };

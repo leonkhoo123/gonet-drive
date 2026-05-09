@@ -135,11 +135,11 @@ export default function ManageSharesPage() {
 
         <div className="flex-1 flex flex-col min-w-0 bg-background overflow-hidden">
           <header className="h-16 md:h-14 border-b flex items-center px-2 md:px-6 shrink-0 gap-2">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/home")} className="lg:hidden h-10 w-10 shrink-0 text-muted-foreground hover:text-foreground">
+            <Button variant="ghost" size="icon" onClick={() => { void navigate("/home"); }} className="lg:hidden h-10 w-10 shrink-0 text-muted-foreground hover:text-foreground">
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="hidden lg:block">
-              <Button variant="ghost" size="icon" onClick={() => navigate("/home")} className="h-8 w-8 text-muted-foreground hover:text-foreground shrink-0">
+              <Button variant="ghost" size="icon" onClick={() => { void navigate("/home"); }} className="h-8 w-8 text-muted-foreground hover:text-foreground shrink-0">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </div>
@@ -274,7 +274,7 @@ export default function ManageSharesPage() {
                                       variant="outline"
                                       size="sm"
                                       className={`h-8 ${share.blocked ? 'text-green-600 hover:text-green-700' : 'text-orange-600 hover:text-orange-700'}`}
-                                      onClick={() => handleToggleBlock(share.id, share.blocked)}
+                                      onClick={() => { void handleToggleBlock(share.id, share.blocked); }}
                                     >
                                       {share.blocked ? "Unblock" : "Block"}
                                     </Button>

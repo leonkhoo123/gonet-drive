@@ -27,12 +27,10 @@ export function useFileDragAndDrop(
     }
   }, [isDragging, isRecycleBin]);
 
-  const traverseFileTree = async (item: any, path: string, files: File[]): Promise<void> => {
+  const traverseFileTree = async (item: FileSystemEntry, path: string, files: File[]): Promise<void> => {
     return new Promise((resolve) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       if (item.isFile) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-        item.file((file: File) => {
+        (item as FileSystemFileEntry).file((file) => {
           // Attach custom path for folder structures on drop
           if (path) {
             Object.defineProperty(file, 'customPath', {
@@ -43,17 +41,15 @@ export function useFileDragAndDrop(
           files.push(file);
           resolve();
         });
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       } else if (item.isDirectory) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
-        const dirReader = item.createReader();
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-        dirReader.readEntries(async (entries: any[]) => {
-          for (const entry of entries) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/restrict-plus-operands
-            await traverseFileTree(entry, path + item.name + "/", files);
-          }
-          resolve();
+        const dirReader = (item as FileSystemDirectoryEntry).createReader();
+        dirReader.readEntries((entries: FileSystemEntry[]) => {
+          void (async () => {
+            for (const entry of entries) {
+              await traverseFileTree(entry, path + item.name + "/", files);
+            }
+            resolve();
+          })();
         });
       } else {
         resolve();
@@ -70,9 +66,8 @@ export function useFileDragAndDrop(
       const items = e.dataTransfer.items;
       const files: File[] = [];
 
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-      if (items) {
-        const entries = [];
+      if (items.length > 0) {
+        const entries: FileSystemEntry[] = [];
         for (const item of Array.from(items)) {
           const entry = item.webkitGetAsEntry();
           if (entry) {
@@ -93,7 +88,7 @@ export function useFileDragAndDrop(
         onUploadDrop(files, currentPath);
       }
     })();
-  }, [currentPath, onUploadDrop, isRecycleBin]);
+  }, [currentPath, onUploadDrop, isRecycleBin, traverseFileTree]);
 
   return {
     isDragging,

@@ -55,15 +55,13 @@ export function useFileSystem(baseRoute = "/home") {
         }
         setIsLoading(false);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (currentFetchId === fetchIdRef.current) {
+        const error = err as { message?: string; response?: { status?: number } };
         console.error("MyErr: ", err);
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        console.error("err.message: ", err.message);
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        console.error(" err.response.status: ", err?.response?.status);
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        if (err?.response?.status === 401) {
+        console.error("err.message: ", error.message);
+        console.error(" err.response.status: ", error.response?.status);
+        if (error.response?.status === 401) {
           if (!baseRoute.includes("/share")) void navigate("/login");
         }
         setError(true);
@@ -73,9 +71,6 @@ export function useFileSystem(baseRoute = "/home") {
   }, [currentPath, showHidden, sortField, sortOrder, navigate, baseRoute]);
 
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    if (!location) return;
-
     const loadFiles = async () => {
       const currentFetchId = ++fetchIdRef.current;
       setIsLoading(true);
@@ -104,15 +99,13 @@ export function useFileSystem(baseRoute = "/home") {
           }
           setIsLoading(false);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (currentFetchId === fetchIdRef.current) {
+          const error = err as { message?: string; response?: { status?: number } };
           console.error("MyErr: ", err);
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-          console.error("err.message: ", err.message);
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-          console.error(" err.response.status: ", err?.response?.status);
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-          if (err?.response?.status === 401) {
+          console.error("err.message: ", error.message);
+          console.error(" err.response.status: ", error.response?.status);
+          if (error.response?.status === 401) {
             if (!baseRoute.includes("/share")) void navigate("/login");
           }
           setError(true);

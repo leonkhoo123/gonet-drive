@@ -134,15 +134,14 @@ export default function ShareHomePage() {
     setIsRenameDialogOpen,
     confirmRename,
     itemToRename,
-  } = useFileManager({ baseRoute: `/share/${id}/home`, uploadChunkSize: healthData?.upload_chunk_size });
+  } = useFileManager({ baseRoute: `/share/${id ?? ''}/home`, uploadChunkSize: healthData?.upload_chunk_size });
 
   // Hook up the refresh trigger to actually call handleRefresh
   useEffect(() => {
     if (refreshTrigger > 0) {
       void handleRefresh();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshTrigger]);
+  }, [refreshTrigger, handleRefresh]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -384,7 +383,7 @@ export default function ShareHomePage() {
               type="file" 
               className="hidden" 
               ref={folderInputRef} 
-              {...{ webkitdirectory: "", directory: "" } as any} 
+              {...{ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>} 
               onChange={handleFileChange} 
             />
             <DropdownMenu>
@@ -419,7 +418,7 @@ export default function ShareHomePage() {
         <VideoPlayerModalGeneric
           file={selectedVideo}
           isOpen={!!selectedVideo}
-          onClose={handlePlayerClose}
+          onClose={(...args: [boolean, string, boolean, string, number]) => { void handlePlayerClose(...args); }}
         />
       )}
       

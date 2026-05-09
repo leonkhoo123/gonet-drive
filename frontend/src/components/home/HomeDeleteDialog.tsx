@@ -32,8 +32,8 @@ export default function HomeDeleteDialog({
           <DialogTitle>Delete Items</DialogTitle>
           <DialogDescription>
             {currentPath.startsWith("/.cloud_delete") 
-              ? `Are you sure you want to permanently delete ${itemsToDeleteSize} item(s)? This action cannot be undone.`
-              : `Are you sure you want to move ${itemsToDeleteSize} item(s) to the recycle bin?`}
+              ? `Are you sure you want to permanently delete ${String(itemsToDeleteSize)} item(s)? This action cannot be undone.`
+              : `Are you sure you want to move ${String(itemsToDeleteSize)} item(s) to the recycle bin?`}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="mt-4 flex gap-2 sm:justify-end">

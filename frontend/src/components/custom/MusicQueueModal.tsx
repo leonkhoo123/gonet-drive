@@ -62,8 +62,7 @@ const SortableItem = ({
       if (typeof activeRef === 'function') {
         activeRef(node);
       } else {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-        (activeRef as any).current = node;
+        activeRef.current = node;
       }
     }
   };
