@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Folder, BookAudio, ArrowLeft, RefreshCcw, PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getAudioBookFileList } from "@/api/api-audiobook";
@@ -34,11 +34,7 @@ export default function AudioBookPage() {
   // Player State
   const [currentBook, setCurrentBook] = useState<AudioBookItem | null>(null);
 
-  useEffect(() => {
-    void fetchData();
-  }, [currentPath]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const data = await getAudioBookFileList(currentPath);
@@ -48,7 +44,11 @@ export default function AudioBookPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPath]);
+
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData, currentPath]);
 
   const handleItemClick = (item: AudioBookItem) => {
     if (item.mediaType === "dir") {
@@ -98,8 +98,9 @@ export default function AudioBookPage() {
                   </button>
                 </span>
                 {currentPath !== "/.audio_book" && currentPath !== "/" && currentPath.split("/").filter(Boolean).slice(1).map((part, idx, arr) => {
+                  const keyPath = "/.audio_book/" + arr.slice(0, idx + 1).join("/");
                   return (
-                    <span key={idx} className="flex items-center shrink-0">
+                    <span key={keyPath} className="flex items-center shrink-0">
                       <span className="mx-1 text-muted-foreground/50">/</span>
                       <button
                         onClick={() => {

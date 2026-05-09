@@ -180,23 +180,23 @@ export function AudioBookPlayer({ file, onClose, forcePause }: AudioBookPlayerPr
     setIsTimeModalOpen(true);
   };
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     if (audioRef.current) {
       let newTime = audioRef.current.currentTime + 3;
       if (newTime > duration) newTime = duration;
       audioRef.current.currentTime = newTime;
       setCurrentTime(newTime);
     }
-  };
+  }, [duration]);
 
-  const handlePrev = () => {
+  const handlePrev = useCallback(() => {
     if (audioRef.current) {
       let newTime = audioRef.current.currentTime - 5;
       if (newTime < 0) newTime = 0;
       audioRef.current.currentTime = newTime;
       setCurrentTime(newTime);
     }
-  };
+  }, []);
 
   const togglePlay = () => { setIsPlaying(!isPlaying); };
 

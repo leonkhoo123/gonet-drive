@@ -123,7 +123,7 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
       (f) => f.path === initialFile.path || f.name === initialFile.name
     );
     return idx >= 0 ? idx : 0;
-  }, [initialFile, isOpen, photoFiles]);
+  }, [initialFile, photoFiles]);
 
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
 

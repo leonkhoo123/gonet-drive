@@ -19,7 +19,7 @@ import {
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import { Clipboard, Info } from "lucide-react";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useFileDragAndDrop } from "@/hooks/useFileManager/useFileDragAndDrop";
 import { useFileInteraction } from "@/hooks/useFileManager/useFileInteraction";
 import { ShareFileListItem } from "./ShareFileListItem";
@@ -29,13 +29,14 @@ import { LongPressPreviewModal } from "@/components/custom/LongPressPreviewModal
 
 const FileListSkeleton = ({ viewMode }: { viewMode: 'list' | 'grid' }) => {
   const fadeOpacities = ['', 'opacity-70', 'opacity-40', 'opacity-20'];
+  const skeletonKeys = useMemo(() => Array.from({ length: 8 }, () => crypto.randomUUID()), []);
 
   if (viewMode === 'grid') {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4 p-4 pb-0">
         {Array.from({ length: 8 }).map((_, i) => (
           <div
-            key={i}
+            key={skeletonKeys[i]}
             className={`flex flex-col items-center p-3 rounded-lg border border-transparent ${i >= 5 ? fadeOpacities[i - 5] : ''}`}
           >
             <Skeleton className="w-full aspect-square rounded-md mb-3" />
@@ -52,7 +53,7 @@ const FileListSkeleton = ({ viewMode }: { viewMode: 'list' | 'grid' }) => {
     <div className="w-full flex flex-col pt-1">
       {Array.from({ length: 8 }).map((_, i) => (
         <div
-          key={i}
+          key={skeletonKeys[i]}
           className={`flex items-center pl-4 pr-1 md:pl-1 md:pr-3 py-2 md:py-3 min-h-[64px] md:min-h-[44px] mb-1 ${i >= 5 ? fadeOpacities[i - 5] : ''}`}
         >
           <div className="flex-1 flex items-center space-x-3 min-w-0 pr-2 md:pr-4">

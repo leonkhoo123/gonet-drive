@@ -54,8 +54,9 @@ export default function ShareBreadcrumb({
           <div className="hidden md:flex items-center">
             {currentPath.split("/").filter(Boolean).map((part, idx, arr) => {
               const isHidden = part.startsWith('.');
+              const keyPath = "/" + arr.slice(0, idx + 1).join("/");
               return (
-                <span key={idx} className="flex items-center shrink-0">
+                <span key={keyPath} className="flex items-center shrink-0">
                   <span className="mx-1 text-muted-foreground/50">/</span>
                   <button
                     onClick={() => {

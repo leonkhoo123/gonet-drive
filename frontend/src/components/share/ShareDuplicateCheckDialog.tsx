@@ -98,8 +98,8 @@ export default function ShareDuplicateCheckDialog({
 
             {/* Scrollable list of duplicates */}
             <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden border rounded-md p-2 space-y-3 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar scrollbar-thumb-black/20 dark:scrollbar-thumb-white/20 scrollbar-track-transparent">
-              {duplicates.map((filePair, index) => (
-                <div key={index} className="flex flex-col md:flex-row items-stretch p-2 rounded-md bg-secondary/80 dark:bg-secondary/40 border border-border gap-2 w-full">
+              {duplicates.map((filePair) => (
+                <div key={`${filePair.source.name}-${filePair.target.name}`} className="flex flex-col md:flex-row items-stretch p-2 rounded-md bg-secondary/80 dark:bg-secondary/40 border border-border gap-2 w-full">
                   <div className="w-full md:flex-1 min-w-0 flex flex-col justify-center">
                     <FileDetailView label="Source (New)" detail={filePair.source} />
                   </div>

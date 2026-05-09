@@ -77,7 +77,7 @@ export default function PdfViewerModal({ file, isOpen, onClose }: PdfViewerModal
         URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [isOpen, file]);
+  }, [isOpen, file, isTooLarge]);
 
   // Reset state when file changes
   useEffect(() => {

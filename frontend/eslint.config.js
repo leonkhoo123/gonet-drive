@@ -42,7 +42,7 @@ export default tseslint.config(
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
       '@typescript-eslint/no-explicit-any': 'warn',
-      'react-refresh/only-export-components': 'warn',
+      'react-refresh/only-export-components': ['warn', { allowExportNames: ['useTheme', 'useAppHealthContext', 'useOperationProgress', 'usePreferences'] }],
       '@typescript-eslint/no-misused-promises' : 'warn',
       "@typescript-eslint/restrict-template-expressions": "warn"
        

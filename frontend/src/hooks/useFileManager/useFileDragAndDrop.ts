@@ -27,7 +27,7 @@ export function useFileDragAndDrop(
     }
   }, [isDragging, isRecycleBin]);
 
-  const traverseFileTree = async (item: FileSystemEntry, path: string, files: File[]): Promise<void> => {
+  const traverseFileTree = useCallback(async (item: FileSystemEntry, path: string, files: File[]): Promise<void> => {
     return new Promise((resolve) => {
       if (item.isFile) {
         (item as FileSystemFileEntry).file((file) => {
@@ -55,7 +55,7 @@ export function useFileDragAndDrop(
         resolve();
       }
     });
-  };
+  }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();

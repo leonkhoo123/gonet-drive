@@ -63,7 +63,7 @@ const AdminPage = () => {
   
   // Logo state
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [logoUrl, setLogoUrl] = useState(`${getConfig().apiBaseUrl}/config/logo`);
+  const [logoUrl, setLogoUrl] = useState(() => `${getConfig().apiBaseUrl}/config/logo`);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 

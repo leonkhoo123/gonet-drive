@@ -74,7 +74,7 @@ const VideoPlayerCompressModal: React.FC<VideoPlayerCompressModalProps> = ({
     }, 100);
 
     return () => { clearTimeout(timer); };
-  }, [isOpen, file.path]);
+  }, [isOpen, file.url]);
 
   // Attach video event listeners
   useEffect(() => {
