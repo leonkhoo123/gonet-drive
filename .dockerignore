@@ -10,3 +10,10 @@ frontend/dist
 .dockerignore
 *.md
 **/.env
+# Binaries (large, not needed in build context)
+main
+server
+# Runtime data
+db/
+# Docs
+docs/

@@ -1,21 +1,20 @@
+# syntax=docker/dockerfile:1
 # ====== 1. Frontend Build Stage ======
 FROM node:20-alpine AS frontend-builder
 
 WORKDIR /app
 
-# Copy frontend package manifests
+# Copy package manifests first for layer caching
 COPY frontend/package.json frontend/package-lock.json* ./
 
-# Install dependencies
-RUN npm ci || npm install
+# Cache npm downloads across builds
+RUN --mount=type=cache,target=/root/.npm npm ci
 
-# Copy the rest of the frontend source
+# Copy frontend source last (changes most often)
 COPY frontend/ ./
 
-# Set Vite profile for production build
 ENV VITE_PROFILE=prod
 
-# Build the Vite React app
 RUN npm run build
 
 # ====== 2. Backend Build Stage ======
@@ -25,34 +24,34 @@ RUN apk add --no-cache git gcc musl-dev
 
 WORKDIR /app
 
-# Copy go.mod and go.sum first for layer caching
+# Copy go manifests first for layer caching
 COPY go.mod go.sum ./
-RUN go mod download
 
-# Copy all source files
+# Cache Go modules
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
+
+# Copy source last
 COPY . .
 
-# Copy the built frontend static files from the previous stage into the embedded directory
-# Create ui/dist just in case it doesn't exist to avoid missing directory errors
+# Ensure embed directory exists before copying frontend dist
 RUN mkdir -p ui/dist
 COPY --from=frontend-builder /app/dist ./ui/dist/
 
-# Build binary
-RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o server ./cmd/main.go
+# Build with BuildKit cache for Go build cache + modules, strip debug info
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
+    go build -ldflags="-s -w" -trimpath -o server ./cmd/main.go
 
 # ====== 3. Runtime stage ======
 FROM alpine:latest
 
-# Install ffmpeg + certs for HTTPS calls
 RUN apk add --no-cache ffmpeg ca-certificates
 
 WORKDIR /root/
 
-# Copy built binary from builder
 COPY --from=backend-builder /app/server .
 
-# Expose your Gin port
 EXPOSE 8080
 
-# Run the app
 CMD ["./server"]
