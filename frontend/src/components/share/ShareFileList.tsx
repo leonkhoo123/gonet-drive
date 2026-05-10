@@ -214,13 +214,14 @@ export default function ShareFileList({
     setSwipeDir(null);
   }, [selectedItems.size, currentPath]);
   const handleSwipeMove = useCallback((e: React.TouchEvent) => {
+    if (selectedItems.size > 0 || currentPath === '/') return;
     if (e.touches.length !== 1) return;
     const dx = e.touches[0].clientX - touchStartX.current;
     const dy = e.touches[0].clientY - touchStartY.current;
     if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 45) {
       setSwipeDir(dx > 0 ? 'right' : 'left');
     }
-  }, []);
+  }, [selectedItems.size, currentPath]);
   const handleSwipeEnd = useCallback((e: React.TouchEvent) => {
     const endX = e.changedTouches[0].clientX;
     const dx = touchStartX.current > 0 ? endX - touchStartX.current : 0;
