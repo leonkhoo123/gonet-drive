@@ -463,14 +463,14 @@ const AdminPage = () => {
         {activeTab === 'users' && (
           <div className="space-y-4">
             <Card className="border-border shadow-sm py-3 md:py-6 gap-3 md:gap-6">
-              <CardHeader className="bg-muted/30 pb-3 px-4 md:px-6">
+              <CardHeader className="pb-3 px-4 md:px-6">
                 <CardTitle className="flex items-center gap-2">
                   <UserPlus className="h-5 w-5 text-primary" />
                   Create User
                 </CardTitle>
-                <CardDescription className="hidden sm:block">Create accounts for friends and family without sharing your admin password. Revoke access anytime.</CardDescription>
+                <CardDescription>Create accounts for friends and family without sharing your admin password. Revoke access anytime.</CardDescription>
               </CardHeader>
-              <CardContent className="pt-0 md:pt-6 px-4 md:px-6">
+              <CardContent className="pt-0 px-4 md:px-6">
                 <form onSubmit={(e) => { void handleCreateUser(e); }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
                   <div className="space-y-2">
                     <Label htmlFor="username">Username</Label>
