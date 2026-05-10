@@ -274,13 +274,13 @@ const AdminPage = () => {
                 <CardTitle>Site Logo</CardTitle>
                 <CardDescription className="hidden sm:block">Upload a custom logo for your cloud instance. Recommended 1:1 aspect ratio, PNG only.</CardDescription>
               </CardHeader>
-              <CardContent className="pt-0 md:pt-6 px-4 md:px-6 flex flex-col sm:flex-row items-start gap-6">
+              <CardContent className="pt-0 md:pt-6 px-4 md:px-6 flex flex-row flex-wrap items-center gap-4 sm:gap-6">
                 <div className="bg-muted rounded-lg p-4 flex items-center justify-center border w-32 h-32 shrink-0">
                   <Logo src={logoUrl} className="max-w-full max-h-full object-contain" />
                 </div>
                 <div className="space-y-4 flex-1">
                   <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                    <Label className="text-sm font-medium whitespace-nowrap">Choose file to upload :</Label>
+                    <Label className="text-sm font-medium">Choose file to upload :</Label>
                     <input
                       type="file"
                       accept="image/png"
@@ -468,7 +468,7 @@ const AdminPage = () => {
                   <UserPlus className="h-5 w-5 text-primary" />
                   Create User
                 </CardTitle>
-                <CardDescription className="hidden sm:block">Add a new user to your cloud instance.</CardDescription>
+                <CardDescription className="hidden sm:block">Create accounts for friends and family without sharing your admin password. Revoke access anytime.</CardDescription>
               </CardHeader>
               <CardContent className="pt-0 md:pt-6 px-4 md:px-6">
                 <form onSubmit={(e) => { void handleCreateUser(e); }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
