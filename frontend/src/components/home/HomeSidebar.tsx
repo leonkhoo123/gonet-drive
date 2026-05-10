@@ -1,5 +1,5 @@
 import { useRef, useEffect } from "react";
-import { X, Trash2, Cloud, BookAudio, Share2 } from "lucide-react";
+import { X, Trash2, Cloud, BookAudio, Share2, House } from "lucide-react";
 import { type StorageUsageResponse } from "@/api/api-file";
 import { formatBytes } from "@/utils/utils";
 import { Progress } from "@/components/ui/progress";
@@ -164,6 +164,18 @@ export default function HomeSidebar({ isOpen, onClose, isWsConnected, isHealthCo
           </div>
           <StorageIndicator usage={storageUsage} isWsConnected={isWsConnected} isHealthConnected={isHealthConnected} />
           <div className="p-3 flex-1 overflow-auto space-y-1 pb-16">
+            <div 
+              className={`flex items-center gap-3 text-base md:text-sm px-3 py-3 md:py-2 rounded-md transition-colors cursor-pointer
+                ${isActive("/") 
+                  ? "bg-primary/10 text-primary shadow-[inset_0_0_0_1px_rgba(84,104,255,0.12)]" 
+                  : "text-foreground hover:bg-muted/50"
+                }`}
+              onClick={() => { handleNavigate("/home"); }}
+            >
+              <House className={`h-5 w-5 md:h-4 md:w-4 shrink-0 ${isActive("/") ? "text-primary" : "text-gray-500"}`} />
+              <span className="truncate">Home</span>
+            </div>
+
             <div 
               className={`flex items-center gap-3 text-base md:text-sm px-3 py-3 md:py-2 rounded-md transition-colors cursor-pointer
                 ${isActive("/.cloud_delete") 

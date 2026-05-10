@@ -53,9 +53,12 @@ function App() {
             <Suspense fallback={<AppLoadingFallback />}>
               <Routes>
                 <Route element={<IndexPage />} path="/" />
-                <Route element={<AuthGate />} path="/home">
-                  <Route index element={<HomePage />} />
-                  <Route path="*" element={<HomePage />} />
+                <Route element={<AuthGate />}>
+                  <Route path="/home">
+                    <Route index element={<HomePage />} />
+                    <Route path="*" element={<HomePage />} />
+                  </Route>
+                  <Route path="/manage-shares" element={<ManageSharesPage />} />
                 </Route>
                 
                 <Route element={<ShareVerifyPage />} path="/share/:id" />
@@ -65,7 +68,6 @@ function App() {
                 <Route element={<LoginPage />} path="/login" />
                 <Route element={<AdminPage />} path="/admin" />
                 <Route element={<AudioBookPage />} path="/audio-book" />
-                <Route element={<ManageSharesPage />} path="/manage-shares" />
 
 
 
