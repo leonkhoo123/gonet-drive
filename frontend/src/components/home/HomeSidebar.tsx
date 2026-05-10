@@ -114,9 +114,13 @@ export default function HomeSidebar({ isOpen, onClose, isWsConnected, isHealthCo
   const location = useLocation();
 
   const handleNavigate = (path: string) => {
-    void navigate(path);
     if (window.innerWidth < 1024) {
       onClose();
+      setTimeout(() => {
+        void navigate(path);
+      }, 300);
+    } else {
+      void navigate(path);
     }
   };
 
@@ -129,12 +133,11 @@ export default function HomeSidebar({ isOpen, onClose, isWsConnected, isHealthCo
   return (
     <>
       {/* Mobile Backdrop */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 z-20 bg-background/80 backdrop-blur-sm lg:hidden"
-          onClick={onClose}
-        />
-      )}
+      <div 
+        className={`fixed inset-0 bg-background/80 backdrop-blur-sm lg:hidden transition-opacity duration-300
+          ${isOpen ? "opacity-100 z-20" : "opacity-0 pointer-events-none z-0"}`}
+        onClick={onClose}
+      />
 
       {/* Sidebar/Drawer */}
       <aside 

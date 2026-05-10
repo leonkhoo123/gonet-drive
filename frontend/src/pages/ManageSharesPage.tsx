@@ -3,19 +3,65 @@ import { getShares, toggleShareBlock, deleteShare, isNeverExpires } from "@/api/
 import type { ShareItem } from "@/api/api-share";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Trash2, Ban, CheckCircle, Share2, ArrowLeft, Folder, FileText, ChevronDown, ChevronUp } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Trash2, Ban, CheckCircle, Share2, Menu, Folder, FileText, ChevronDown, ChevronUp } from "lucide-react";
 import DefaultLayout from "@/layouts/DefaultLayout";
 import HomeSidebar from "@/components/home/HomeSidebar";
 import ManageSharesDeleteDialog from "@/components/share/ManageSharesDeleteDialog";
 import { useAppHealth } from "@/hooks/useAppHealth";
 import { fetchDirList, type StorageUsageResponse } from "@/api/api-file";
+import { Skeleton } from "@/components/ui/skeleton";
+
+function ShareListSkeleton() {
+  const fadeOpacities = ['', '', 'opacity-70', 'opacity-40', 'opacity-20'];
+  const skeletonKeys = useMemo(() => Array.from({ length: 6 }, () => crypto.randomUUID()), []);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="hidden md:flex px-6 py-3 text-sm font-medium text-muted-foreground border-b bg-muted/30">
+        <div className="w-[140px]">Type</div>
+        <div className="flex-1">Path</div>
+        <div className="w-[80px] text-right">Links</div>
+        <div className="w-[40px]" />
+      </div>
+
+      <div className="flex flex-col space-y-2 md:space-y-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div
+            key={skeletonKeys[i]}
+            className={`border rounded-lg bg-card overflow-hidden shadow-sm ${i >= 3 ? fadeOpacities[i - 3] : ''}`}
+          >
+            <div className="px-4 py-4 md:px-6 md:py-3 flex items-center justify-between">
+              <div className="flex items-center flex-1 overflow-hidden gap-4">
+                <div className="w-[140px] shrink-0 hidden md:flex items-center gap-3">
+                  <Skeleton className="h-5 w-5 shrink-0 rounded" />
+                  <Skeleton className="h-4 w-14 rounded" />
+                </div>
+                <div className="flex items-center gap-3 flex-1 min-w-0 md:hidden">
+                  <Skeleton className="h-6 w-6 shrink-0 rounded" />
+                  <Skeleton className={`h-4 rounded flex-1 ${i % 2 === 0 ? 'max-w-[70%]' : 'max-w-[55%]'}`} />
+                </div>
+                <div className="hidden md:block flex-1 min-w-0">
+                  <Skeleton className={`h-4 rounded ${i % 3 === 0 ? 'w-[55%]' : i % 2 === 0 ? 'w-[70%]' : 'w-[45%]'}`} />
+                </div>
+                <div className="hidden md:flex w-[80px] justify-end pr-4">
+                  <Skeleton className="h-5 w-8 rounded-full" />
+                </div>
+              </div>
+              <div className="shrink-0 flex items-center justify-center h-8 w-8">
+                <Skeleton className="h-5 w-5 rounded" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function ManageSharesPage() {
   const [shares, setShares] = useState<ShareItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedPaths, setExpandedPaths] = useState<Record<string, boolean>>({});
-  const navigate = useNavigate();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 1024);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -135,15 +181,10 @@ export default function ManageSharesPage() {
 
         <div className="flex-1 flex flex-col min-w-0 bg-background overflow-hidden">
           <header className="h-16 md:h-14 border-b flex items-center px-2 md:px-6 shrink-0 gap-2 bg-gradient-to-r from-background via-primary/[0.02] to-background">
-            <Button variant="ghost" size="icon" onClick={() => { void navigate("/home"); }} className="lg:hidden h-10 w-10 shrink-0 text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="h-5 w-5" />
+            <Button variant="ghost" size="icon" onClick={() => { setIsSidebarOpen(!isSidebarOpen); }} className="mr-1 h-12 w-12 md:h-8 md:w-8 shrink-0">
+              <Menu className="h-8 w-8 md:h-5 md:w-5" />
             </Button>
-            <div className="hidden lg:block">
-              <Button variant="ghost" size="icon" onClick={() => { void navigate("/home"); }} className="h-8 w-8 text-muted-foreground hover:text-foreground shrink-0">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </div>
-            <div className="flex items-center gap-2 lg:ml-2">
+            <div className="flex items-center gap-2">
               <Share2 className="h-6 w-6 md:h-5 md:w-5 text-muted-foreground hidden md:block" />
               <h1 className="font-semibold text-foreground text-lg md:text-base">Manage Shares</h1>
             </div>
@@ -152,7 +193,7 @@ export default function ManageSharesPage() {
           <main className="flex-1 overflow-auto p-2 md:p-6 bg-background">
           <div className="w-full">
             {loading ? (
-              <div className="flex justify-center p-8 text-muted-foreground">Loading shares...</div>
+              <ShareListSkeleton />
             ) : shares.length === 0 ? (
               <div className="flex flex-col items-center justify-center p-12 text-muted-foreground border rounded-lg bg-card/50 mt-4 md:mt-0">
                 <Share2 className="h-12 w-12 mb-4 opacity-20" />
