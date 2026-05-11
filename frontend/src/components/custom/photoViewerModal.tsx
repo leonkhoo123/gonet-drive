@@ -328,19 +328,6 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
     }
   }, [triggerSwipeClose]);
 
-  // ---- Image click: instant UI toggle ----
-  const handleImageClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (swipeHandled.current) {
-        swipeHandled.current = false;
-        return;
-      }
-      e.stopPropagation();
-      setShowUI((prev) => !prev);
-    },
-    []
-  );
-
   if (!isOpen || !initialFile) return null;
 
   const uiHidden = showUI ? "" : "hidden";
@@ -469,6 +456,50 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
       {/* Image Container — fills entire modal, overlays sit on top */}
       <div
         className="w-full h-full flex items-center justify-center relative"
+        onClick={(e) => {
+          if (swipeHandled.current) {
+            swipeHandled.current = false;
+            return;
+          }
+          const img = imgRef.current;
+          if (!img) {
+            triggerSwipeClose();
+            return;
+          }
+          const rect = img.getBoundingClientRect();
+          const natW = img.naturalWidth;
+          const natH = img.naturalHeight;
+          if (natW === 0 || natH === 0) {
+            triggerSwipeClose();
+            return;
+          }
+          const containerRatio = rect.width / rect.height;
+          const imageRatio = natW / natH;
+          let renderedW: number;
+          let renderedH: number;
+          if (imageRatio > containerRatio) {
+            renderedW = rect.width;
+            renderedH = rect.width / imageRatio;
+          } else {
+            renderedH = rect.height;
+            renderedW = rect.height * imageRatio;
+          }
+          const offsetX = (rect.width - renderedW) / 2;
+          const offsetY = (rect.height - renderedH) / 2;
+          const clickX = e.clientX - rect.left;
+          const clickY = e.clientY - rect.top;
+          if (
+            clickX >= offsetX &&
+            clickX <= offsetX + renderedW &&
+            clickY >= offsetY &&
+            clickY <= offsetY + renderedH
+          ) {
+            e.stopPropagation();
+            setShowUI((prev) => !prev);
+          } else {
+            triggerSwipeClose();
+          }
+        }}
       >
         {/* Loading spinner — only when thumbnail failed and HD not ready */}
         {thumbError && !originalReady && !imageError && (
@@ -491,7 +522,6 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
           src={originalReady ? currentFile.url : thumbUrl(currentFile)}
           alt={currentFile.name}
           className="w-full h-full object-contain"
-          onClick={handleImageClick}
           draggable={false}
           onError={() => {
             if (!originalReady) setThumbError(true);

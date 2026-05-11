@@ -362,12 +362,14 @@ const VideoPlayerModalGeneric: React.FC<VideoPlayerModalProps> = ({
         isClosing ? "translate-y-full opacity-0" : "translate-y-0 opacity-100"
       }`}
       style={{ touchAction: "none" }}
+      onClick={handleClose}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
       <div
         ref={containerRef}
         className="relative flex w-full max-w-5xl flex-col items-center justify-center overflow-hidden rounded-xl bg-black shadow-2xl"
+        onClick={(e) => { e.stopPropagation(); }}
         onMouseLeave={handleMouseLeave}
         onMouseMove={handleMouseMove}
       >
