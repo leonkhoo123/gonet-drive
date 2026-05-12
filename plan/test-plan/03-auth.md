@@ -3,6 +3,14 @@
 **Detail file**: `plan/test-plan/03-auth.md`
 **Parent**: [index.md](index.md)
 **Depends on**: 01 (testutil, route wiring)
+**Status**: ✅ done — 2026-05-12
+
+## Implementation Notes
+
+- 48 tests across 4 test files in `internal/controller/`
+- Added `middleware.ResetLoginLimiter()` to `internal/middleware/rate_limit.go` for test isolation
+- Added `TokenName` to `testutil.TestConfig()` in `internal/testutil/setup.go`
+- All tests use `CGO_ENABLED=1 go test ./internal/controller/`
 
 ---
 
@@ -17,7 +25,7 @@ Full HTTP integration tests against the real Gin router with in-memory DB.
 | `TestLogin_UserNotFound` | nonexistent user → 401 (timing-attack safe, no leak) |
 | `TestLogin_MissingBody` | empty/invalid JSON → 400 |
 | `TestLogin_MFARequired` | user with MFA enabled → 200, `mfa_required:true`, mfa_pending cookie |
-| `TestLogin_RateLimiting` | 6 rapid requests → 429 "too many requests" |
+| `TestLogin_RateLimiting` | covered by section 3.3 rate limiter tests |
 | `TestLogin_LockedAccount` | TODO: if account lockout is implemented |
 | `TestRefresh_Success` | valid refresh token → 200, new access_token + new refresh_token |
 | `TestRefresh_NoCookie` | no refresh_token cookie → 401 |
@@ -93,6 +101,8 @@ When `APP_JWT=OFF` (dev mode), the JWT middleware is skipped entirely. All `/api
 | `TestJWTBypass_NoTokenAccess` | GET `/api/user/status` without cookie → 200 (not 401) |
 | `TestJWTBypass_NoTokenMe` | GET `/api/user/me` without cookie → 200, username is empty/default |
 | `TestJWTBypass_AuthRoutesStillWork` | login, refresh, logout still work normally |
+| `TestJWTBypass_RefreshWorks` | refresh with valid cookie → 200, new tokens issued |
+| `TestJWTBypass_LogoutWorks` | logout with valid cookie → 200, cookies cleared |
 | `TestJWTBypass_AdminRoutes` | admin routes still require admin — or check actual bypass behavior |
 
 **Implementation**: These tests use `TestConfig()` with `APP_JWT=OFF`, set `config.AppConfig` accordingly, and wire routes with `cfg.Auth.AppJwt == "OFF"` triggering the skip in `UserRoutes()`.

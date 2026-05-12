@@ -40,6 +40,7 @@ func TestConfig(t *testing.T) *config.CloudConfig {
 			JwtSecret:          "test-secret-key-for-testing-only",
 			AdminUser:          "admin",
 			AdminPass:          "admin123",
+			TokenName:          "file_server_token",
 			CookieAccessToken:  "access_token",
 			CookieRefreshToken: "refresh_token",
 			CookieMfaPending:   "mfa_pending",
