@@ -174,8 +174,7 @@ func TestRevokeSession_NotOwn(t *testing.T) {
 	testutil.CreateTestUser(t, db, "userB", "passB", "user")
 
 	accessCookieA := testutil.LoginAndGetCookie(t, router, "userA", "passA")
-
-	accessCookieB, _ := testutil.LoginAndGetCookies(t, router, "userB", "passB")
+	accessCookieB := testutil.LoginAndGetCookie(t, router, "userB", "passB")
 
 	sessionsRec := testutil.MakeAuthRequest(t, router, http.MethodGet, "/api/user/me/sessions", nil, accessCookieB)
 	require.Equal(t, http.StatusOK, sessionsRec.Code)
@@ -196,9 +195,17 @@ func TestRevokeSession_NotOwn(t *testing.T) {
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
-	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, http.StatusNotFound, rec.Code)
 
 	var resp map[string]interface{}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-	assert.Equal(t, true, resp["success"])
+	assert.Equal(t, "session not found", resp["error"])
+
+	statusRec := testutil.MakeAuthRequest(t, router, http.MethodGet, "/api/user/me/sessions", nil, accessCookieB)
+	assert.Equal(t, http.StatusOK, statusRec.Code)
+
+	var sessionsAfter []map[string]interface{}
+	require.NoError(t, json.Unmarshal(statusRec.Body.Bytes(), &sessionsAfter))
+	assert.GreaterOrEqual(t, len(sessionsAfter), 1)
+	assert.Equal(t, familyIDB, sessionsAfter[0]["family_id"])
 }

@@ -80,13 +80,18 @@ func (s *UserService) RevokeSession(c *gin.Context) {
 		return
 	}
 
-	middleware.RevokedSessionsCache.Set(familyID, true, 20*time.Minute)
-
-	err = s.TokenRepo.RevokeByUsernameAndFamilyID(username, familyID)
+	rowsAffected, err := s.TokenRepo.RevokeByUsernameAndFamilyID(username, familyID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
 		return
 	}
+
+	if rowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "session not found"})
+		return
+	}
+
+	middleware.RevokedSessionsCache.Set(familyID, true, 20*time.Minute)
 
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }

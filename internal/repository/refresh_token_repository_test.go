@@ -144,8 +144,9 @@ func TestTokenRepo_RevokeByUsernameAndFamilyID(t *testing.T) {
 	createTestToken(t, repo, "grace", "family-g1")
 	createTestToken(t, repo, "grace", "family-g2")
 
-	err := repo.RevokeByUsernameAndFamilyID("grace", "family-g1")
+	rowsAffected, err := repo.RevokeByUsernameAndFamilyID("grace", "family-g1")
 	require.NoError(t, err)
+	assert.Equal(t, int64(1), rowsAffected)
 
 	sessions, err := repo.GetActiveSessions("grace")
 	require.NoError(t, err)

@@ -12,7 +12,7 @@ type RefreshTokenRepository interface {
 	RevokeByID(id string) error
 	RevokeByFamilyID(familyID string) error
 	RevokeByUsername(username string) error
-	RevokeByUsernameAndFamilyID(username string, familyID string) error
+	RevokeByUsernameAndFamilyID(username string, familyID string) (int64, error)
 }
 
 type SQLiteRefreshTokenRepo struct {
@@ -83,7 +83,11 @@ func (r *SQLiteRefreshTokenRepo) RevokeByUsername(username string) error {
 	return err
 }
 
-func (r *SQLiteRefreshTokenRepo) RevokeByUsernameAndFamilyID(username string, familyID string) error {
-	_, err := r.DB.Exec("UPDATE refresh_tokens SET is_revoked = 1 WHERE username = ? AND family_id = ?", username, familyID)
-	return err
+func (r *SQLiteRefreshTokenRepo) RevokeByUsernameAndFamilyID(username string, familyID string) (int64, error) {
+	result, err := r.DB.Exec("UPDATE refresh_tokens SET is_revoked = 1 WHERE username = ? AND family_id = ?", username, familyID)
+	if err != nil {
+		return 0, err
+	}
+	rowsAffected, err := result.RowsAffected()
+	return rowsAffected, err
 }
