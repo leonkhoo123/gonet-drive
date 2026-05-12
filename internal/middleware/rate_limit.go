@@ -71,3 +71,8 @@ func ShareVerifyRateLimiter() gin.HandlerFunc {
 func ResetLoginLimiter() {
 	loginLimiter.ips.Flush()
 }
+
+// ResetShareVerifyLimiter flushes the share-verify IP-to-limiter cache, used for test isolation.
+func ResetShareVerifyLimiter() {
+	shareVerifyLimiter.ips.Flush()
+}

@@ -3,10 +3,11 @@
 **Detail file**: `plan/test-plan/06-sharing.md`
 **Parent**: [index.md](index.md)
 **Depends on**: 01, 03 (auth flow)
+**Status**: ✅ done — 2026-05-13
 
 ---
 
-## 6.1 `internal/controller/share_test.go`
+## 6.1 `internal/controller/share_test.go` ✅
 
 | Test | Description |
 |------|-------------|
@@ -28,7 +29,7 @@
 
 ---
 
-## 6.2 `internal/controller/share_verify_test.go`
+## 6.2 `internal/controller/share_verify_test.go` ✅
 
 | Test | Description |
 |------|-------------|
@@ -38,13 +39,14 @@
 | `TestVerifySharePIN_Expired` | expired share → 410 Gone |
 | `TestVerifySharePIN_NotFound` | nonexistent share ID → 404 |
 | `TestVerifySharePIN_RateLimit` | 6 rapid attempts → 429 |
+| `TestVerifySharePIN_NeverExpires` | never-expiring share (NeverExpires sentinel) → 200 |
 | `TestCheckSharePermission_ValidToken` | valid shareJwt cookie → 200 |
 | `TestCheckSharePermission_NoToken` | no token → 401 |
-| `TestCheckSharePermission_WrongShareID` | token for share A, check share B → 403 |
+| `TestCheckSharePermission_WrongShareID` | token for share A, check share B → 401 (cookie name mismatch) |
 
 ---
 
-## 6.3 `internal/controller/share_file_test.go`
+## 6.3 `internal/controller/share_file_test.go` ✅
 
 | Test | Description |
 |------|-------------|
