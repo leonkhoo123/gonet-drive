@@ -170,6 +170,11 @@ func (s *UserService) DeleteUser(c *gin.Context) {
 		return
 	}
 
+	if targetUser.Username == currentUsername {
+		c.JSON(http.StatusForbidden, gin.H{"error": "cannot delete yourself"})
+		return
+	}
+
 	if targetUser.Username == superAdminUser {
 		c.JSON(http.StatusForbidden, gin.H{"error": "cannot delete super admin"})
 		return

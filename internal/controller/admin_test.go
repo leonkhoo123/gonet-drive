@@ -253,12 +253,12 @@ func TestDeleteUser_CannotDeleteSelf(t *testing.T) {
 
 	assert.Equal(t, http.StatusForbidden, rec.Code)
 	resp := mustUnmarshal(t, rec.Body.Bytes())
-	assert.Equal(t, "only super admin can delete an admin", resp["error"])
+	assert.Equal(t, "cannot delete yourself", resp["error"])
 
 	var exists int
 	err := db.QueryRow("SELECT COUNT(*) FROM users WHERE id = ?", adminUser.ID).Scan(&exists)
 	require.NoError(t, err)
-	assert.Equal(t, 1, exists, "self-deletion guard works via admin protection — user still exists")
+	assert.Equal(t, 1, exists, "user should still exist after self-delete attempt")
 }
 
 func TestDeleteUser_CannotDeleteSuperAdmin(t *testing.T) {
