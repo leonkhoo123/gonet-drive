@@ -15,7 +15,7 @@ Pure unit tests, no DB or HTTP needed. Test every edge case.
 | `TestSanitizeRepoPath_Valid` | normal relative paths resolve correctly |
 | `TestSanitizeRepoPath_ParentTraversal` | `../etc/passwd`, `./..`, `foo/../../bar` all rejected |
 | `TestSanitizeRepoPath_AbsoluteWithinRoot` | absolute paths that happen to be inside root are fine |
-| `TestSanitizeRepoPath_AbsoluteOutsideRoot` | `/etc/passwd` rejected (rel can't resolve inside root) |
+| `TestSanitizeRepoPath_AbsoluteOutsideRoot` | `/etc/passwd` safely joined under root (resolves to `<root>/etc/passwd`) |
 | `TestSanitizeRepoPaths_BatchValid` | multiple valid paths |
 | `TestSanitizeRepoPaths_BatchWithTraversal` | one bad path invalidates the whole batch |
 | `TestSanitizeRepoPaths_EmptySlice` | empty input returns empty output |

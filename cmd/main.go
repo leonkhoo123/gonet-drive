@@ -76,15 +76,14 @@ func main() {
 	// Start sequential file operation worker
 	service.StartFileOperationWorker()
 
-	// Public user routes
-	controller.PublicUserRoutes(router, cfg, userService)
+	// Public routes
+	controller.SetupPublicAuthRoutes(router, cfg, userService)
+	controller.SetupPublicConfigRoutes(router)
+	controller.SetupPublicShareRoutes(router, sharingService)
+	controller.SetupShareFileRoutes(router, shareRepo)
 
-	// Public share routes
-	controller.PublicShareRoutes(router, sharingService)
-	controller.ShareFileRoutes(router, shareRepo)
-
-	// register authenticated routes
-	controller.UserRoutes(router, cfg, userService, sharingService, audiobookService, configRepo)
+	// Authenticated routes
+	controller.SetupAuthenticatedRoutes(router, cfg, userService, sharingService, audiobookService, configRepo)
 
 	distFS, err := fs.Sub(ui.ReactFiles, "dist")
 	if err != nil {

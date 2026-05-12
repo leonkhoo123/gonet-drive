@@ -21,9 +21,9 @@
 
 | # | Section | Status | File | Started | Done |
 |---|---------|--------|------|---------|------|
-| 00 | Test Framework Decision | *not started* | [00-framework.md](00-framework.md) | — | — |
-| 01 | Foundations (testutil, route wiring, testify) | *not started* | [01-foundations.md](01-foundations.md) | — | — |
-| 02 | Utility Unit Tests (sanitize, JWT, cookies, HTTP) | *not started* | [02-utility.md](02-utility.md) | — | — |
+| 00 | Test Framework Decision | ✅ done | [00-framework.md](00-framework.md) | 2026-05-12 | 2026-05-12 |
+| 01 | Foundations (testutil, route wiring, testify) | ✅ done | [01-foundations.md](01-foundations.md) | 2026-05-12 | 2026-05-12 |
+| 02 | Utility Unit Tests (sanitize, JWT, cookies, HTTP) | ✅ done | [02-utility.md](02-utility.md) | 2026-05-12 | 2026-05-12 |
 | 03 | Auth & Rate Limiting Integration Tests | *not started* | [03-auth.md](03-auth.md) | — | — |
 | 04 | User & Admin Management Tests | *not started* | [04-user-admin.md](04-user-admin.md) | — | — |
 | 05 | File Operations Tests | *not started* | [05-file-ops.md](05-file-ops.md) | — | — |
