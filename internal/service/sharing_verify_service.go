@@ -17,7 +17,19 @@ type VerifyShareRequest struct {
 	Pin string `json:"pin" binding:"required"`
 }
 
-// VerifySharePINEndpoint handles POST /api/share/verify
+// VerifySharePINEndpoint handles POST /api/share/verify.
+// @Summary      Verify Share PIN
+// @Description  Verify a share link ID and PIN. On success, a share JWT cookie is set for subsequent access.
+// @Tags         Share
+// @Accept       json
+// @Produce      json
+// @Param        body  body      VerifyShareRequest  true  "Share ID and PIN"
+// @Success      200   {object}  map[string]interface{}
+// @Failure      400   {object}  map[string]interface{}
+// @Failure      401   {object}  map[string]interface{}
+// @Failure      404   {object}  map[string]interface{}
+// @Failure      410   {object}  map[string]interface{}
+// @Router       /api/share/verify [post]
 func (s *SharingService) VerifySharePINEndpoint(c *gin.Context) {
 	var req VerifyShareRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -74,7 +86,16 @@ func (s *SharingService) VerifySharePINEndpoint(c *gin.Context) {
 	})
 }
 
-// CheckSharePermissionEndpoint handles GET /api/share/check-permission/:id
+// CheckSharePermissionEndpoint handles GET /api/share/check-permission/:id.
+// @Summary      Check Share Permission
+// @Description  Verify that a valid share JWT exists for the given share ID and the share is still active.
+// @Tags         Share
+// @Produce      json
+// @Param        id   path      string  true  "Share ID"
+// @Success      200  {object}  map[string]interface{}
+// @Failure      401  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Router       /api/share/check-permission/{id} [get]
 func (s *SharingService) CheckSharePermissionEndpoint(c *gin.Context) {
 	requestedShareID := c.Param("id")
 	if requestedShareID == "" {

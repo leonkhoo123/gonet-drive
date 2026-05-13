@@ -10,6 +10,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Logout clears authentication cookies and revokes the refresh token.
+// @Summary      Logout
+// @Description  Revoke the current session and clear all auth cookies.
+// @Tags         Auth
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Router       /api/logout [post]
 func (s *UserService) Logout(c *gin.Context, cfg *config.CloudConfig) {
 	// Revoke refresh token in DB if provided
 	if refreshToken, err := util.GetRefreshToken(c, cfg); err == nil {

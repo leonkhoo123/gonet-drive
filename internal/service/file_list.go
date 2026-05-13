@@ -16,6 +16,21 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// FileList lists files and directories at a given path.
+// @Summary      List Files
+// @Description  List files and directories at the specified path. Supports sorting by name, size, or modified time.
+// @Tags         Files
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        path       query     string  false  "Directory path (default: /)"
+// @Param        sort       query     string  false  "Sort by: name, size, modified (default: name)"
+// @Param        order      query     string  false  "Sort order: asc, desc (default: asc)"
+// @Param        showHidden query     string  false  "Show hidden files: true, false (default: false)"
+// @Success      200        {object}  map[string]interface{}
+// @Failure      403        {object}  map[string]interface{}
+// @Failure      404        {object}  map[string]interface{}
+// @Router       /api/user/files/file-list [get]
 func FileList(c *gin.Context, cfg *config.CloudConfig) {
 	relPath := c.Query("path") // e.g. /, /videos, /videos/travel/2024
 	fullPath, err := util.SanitizeRepoPath(cfg.Server.FileRoot, relPath)

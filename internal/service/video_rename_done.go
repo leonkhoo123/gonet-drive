@@ -13,6 +13,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// VideoRenameDone renames a video file and moves it to a 'done' folder, with optional rotation.
+// @Summary      Rename Video (Done)
+// @Description  Move a video file to the 'done' subdirectory with optional rotation.
+// @Tags         Media
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        body  body      object  true  "Request with path, newName, rotateAngle, opId"
+// @Success      200   {object}  map[string]interface{}
+// @Failure      400   {object}  map[string]interface{}
+// @Router       /api/user/video/rename-done [post]
 func VideoRenameDone(c *gin.Context, cfg *config.CloudConfig) {
 	var req struct {
 		Path        string `json:"path"`

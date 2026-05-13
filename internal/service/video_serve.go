@@ -20,7 +20,18 @@ import (
 
 var videoThumbnailGroup singleflight.Group
 
-// ServeVideo serves video files with HTTP range support
+// ServeVideo serves video files with HTTP range support.
+// @Summary      Serve Video
+// @Description  Stream a video file with HTTP range support.
+// @Tags         Media
+// @Produce      octet-stream
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        filepath  path  string  true  "Relative file path"
+// @Success      200  {file}  binary
+// @Failure      403  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Router       /api/user/video/play/file/{filepath} [get]
 func ServeVideo(c *gin.Context, cfg *config.CloudConfig) {
 	relPath := c.Param("filepath")
 	fullPath, err := util.SanitizeRepoPath(cfg.Server.FileRoot, relPath)
@@ -73,6 +84,18 @@ func ServeVideo(c *gin.Context, cfg *config.CloudConfig) {
 }
 
 // ServeVideoThumbnail serves a generated thumbnail for a video file
+// ServeVideoThumbnail generates and serves a video thumbnail.
+// @Summary      Video Thumbnail
+// @Description  Generate and serve a thumbnail image for a video file.
+// @Tags         Media
+// @Produce      image/jpeg
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        filepath  path  string  true  "Relative file path"
+// @Success      200  {file}  binary
+// @Failure      403  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Router       /api/user/video/thumbnail/file/{filepath} [get]
 func ServeVideoThumbnail(c *gin.Context, cfg *config.CloudConfig) {
 	relPath := c.Param("filepath")
 	fullPath, err := util.SanitizeRepoPath(cfg.Server.FileRoot, relPath)

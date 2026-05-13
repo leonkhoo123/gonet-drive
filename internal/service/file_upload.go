@@ -21,6 +21,26 @@ import (
 )
 
 // UploadChunk handles chunked file uploads from the frontend.
+// @Summary      Upload Chunk
+// @Description  Upload a chunk of a file. Supports resumable uploads with start/uploading/end/cancel status.
+// @Tags         Files
+// @Accept       multipart/form-data
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        identifier   formData  string  true   "Upload identifier"
+// @Param        status       formData  string  true   "Chunk status: start, uploading, end, cancel"
+// @Param        filename     formData  string  true   "Target filename"
+// @Param        destination  formData  string  true   "Destination directory"
+// @Param        chunkNumber  formData  int     true   "Chunk number (1-indexed)"
+// @Param        totalChunks  formData  int     true   "Total number of chunks"
+// @Param        checksum     formData  string  false  "Chunk checksum (CRC32/MD5/SHA256)"
+// @Param        chunk        formData  file    true   "The chunk file data"
+// @Success      200          {object}  map[string]interface{}
+// @Failure      400          {object}  map[string]interface{}
+// @Failure      413          {object}  map[string]interface{}
+// @Failure      507          {object}  map[string]interface{}
+// @Router       /api/user/files/upload-chunk [post]
 func UploadChunk(c *gin.Context, cfg *config.CloudConfig) {
 	// Quick check on Content-Length to prevent massive abuse before parsing
 	if config.AppCloudConfig != nil {

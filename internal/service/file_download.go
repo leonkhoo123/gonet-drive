@@ -15,6 +15,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// DownloadFiles downloads files or directories as a ZIP archive or single file.
+// @Summary      Download Files
+// @Description  Download one or more files/directories. Single files are served directly; multiple items are packaged as a ZIP.
+// @Tags         Files
+// @Produce      octet-stream
+// @Produce      application/zip
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        source  query     []string  true  "Source file paths"
+// @Success      200     {file}    binary
+// @Failure      400     {object}  map[string]interface{}
+// @Failure      404     {object}  map[string]interface{}
+// @Router       /api/user/files/download [get]
 func DownloadFiles(c *gin.Context, cfg *config.CloudConfig) {
 	sources := c.QueryArray("source")
 	if len(sources) == 0 {

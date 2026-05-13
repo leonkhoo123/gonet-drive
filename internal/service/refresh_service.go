@@ -14,6 +14,14 @@ import (
 	"github.com/google/uuid"
 )
 
+// RefreshToken issues a new access token and refresh token pair.
+// @Summary      Refresh Token
+// @Description  Exchange a valid refresh token cookie for a new access/refresh token pair.
+// @Tags         Auth
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Failure      401  {object}  map[string]interface{}
+// @Router       /api/refresh [post]
 func (s *UserService) RefreshToken(c *gin.Context, cfg *config.CloudConfig) {
 	refreshToken, err := util.GetRefreshToken(c, cfg)
 	if err != nil {

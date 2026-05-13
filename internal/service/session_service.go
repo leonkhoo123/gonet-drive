@@ -19,6 +19,16 @@ type SessionInfo struct {
 	ExpiresAt  string `json:"expires_at"`
 }
 
+// GetSessions returns active sessions for the current user.
+// @Summary      Get Active Sessions
+// @Description  List all active refresh token sessions for the authenticated user.
+// @Tags         User
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Success      200  {array}   SessionInfo
+// @Failure      401  {object}  map[string]interface{}
+// @Router       /api/user/me/sessions [get]
 func (s *UserService) GetSessions(c *gin.Context) {
 	username := c.GetString("username")
 	if username == "" {
@@ -52,6 +62,20 @@ func (s *UserService) GetSessions(c *gin.Context) {
 	c.JSON(http.StatusOK, sessionInfos)
 }
 
+// RevokeSession revokes a specific session (family) by password confirmation.
+// @Summary      Revoke Session
+// @Description  Revoke a specific refresh token family. Requires password confirmation.
+// @Tags         User
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        family_id  path      string  true  "Session family ID"
+// @Param        body       body      object{password=string}  true  "Password confirmation"
+// @Success      200        {object}  map[string]interface{}
+// @Failure      400        {object}  map[string]interface{}
+// @Failure      401        {object}  map[string]interface{}
+// @Router       /api/user/me/sessions/{family_id} [delete]
 func (s *UserService) RevokeSession(c *gin.Context) {
 	username := c.GetString("username")
 	familyID := c.Param("family_id")

@@ -24,6 +24,16 @@ type UserInfo struct {
 	IsSuperAdmin   bool   `json:"is_super_admin"`
 }
 
+// GetUsers lists all registered users (admin only).
+// @Summary      List All Users
+// @Description  Retrieve a list of all registered users. Requires admin role.
+// @Tags         Admin
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Success      200  {array}   UserInfo
+// @Failure      403  {object}  map[string]interface{}
+// @Router       /api/user/admin/users [get]
 func (s *UserService) GetUsers(c *gin.Context) {
 	superAdminUser := config.AppConfig.Auth.AdminUser
 
@@ -69,6 +79,19 @@ type CreateUserRequest struct {
 	StorageQuota int64  `json:"storage_quota"`
 }
 
+// CreateUser creates a new user (admin only).
+// @Summary      Create User
+// @Description  Create a new user account. Requires admin role.
+// @Tags         Admin
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        body  body      CreateUserRequest  true  "User details"
+// @Success      200   {object}  map[string]interface{}
+// @Failure      400   {object}  map[string]interface{}
+// @Failure      403   {object}  map[string]interface{}
+// @Router       /api/user/admin/users [post]
 func (s *UserService) CreateUser(c *gin.Context) {
 	var req CreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -113,6 +136,19 @@ func (s *UserService) CreateUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "id": id})
 }
 
+// RevokeSessions revokes all sessions for a user (admin only).
+// @Summary      Revoke User Sessions
+// @Description  Revoke all access tokens and refresh tokens for a specific user. Requires admin role.
+// @Tags         Admin
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        id   path      string  true  "User ID"
+// @Success      200  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]interface{}
+// @Failure      403  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Router       /api/user/admin/users/{id}/revoke [post]
 func (s *UserService) RevokeSessions(c *gin.Context) {
 	id := c.Param("id")
 	currentUsername := c.GetString("username")
@@ -155,6 +191,18 @@ func (s *UserService) RevokeSessions(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
+// DeleteUser deletes a user (admin only).
+// @Summary      Delete User
+// @Description  Delete a user account permanently. Requires admin role.
+// @Tags         Admin
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        id   path      string  true  "User ID"
+// @Success      200  {object}  map[string]interface{}
+// @Failure      403  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Router       /api/user/admin/users/{id} [delete]
 func (s *UserService) DeleteUser(c *gin.Context) {
 	id := c.Param("id")
 	currentUsername := c.GetString("username")

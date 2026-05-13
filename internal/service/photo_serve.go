@@ -18,7 +18,18 @@ import (
 
 var thumbnailGroup singleflight.Group
 
-// ServePhoto serves photo files
+// ServePhoto serves photo/image files.
+// @Summary      Serve Photo
+// @Description  Serve a photo/image file.
+// @Tags         Media
+// @Produce      image/*
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        filepath  path  string  true  "Relative file path"
+// @Success      200  {file}  binary
+// @Failure      403  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Router       /api/user/photo/play/file/{filepath} [get]
 func ServePhoto(c *gin.Context, cfg *config.CloudConfig) {
 	relPath := c.Param("filepath")
 	fullPath, err := util.SanitizeRepoPath(cfg.Server.FileRoot, relPath)
@@ -44,6 +55,18 @@ func ServePhoto(c *gin.Context, cfg *config.CloudConfig) {
 }
 
 // ServePhotoThumbnail serves a generated thumbnail for a photo file
+// ServePhotoThumbnail generates and serves a photo thumbnail.
+// @Summary      Photo Thumbnail
+// @Description  Generate and serve a thumbnail for a photo/image file.
+// @Tags         Media
+// @Produce      image/webp
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        filepath  path  string  true  "Relative file path"
+// @Success      200  {file}  binary
+// @Failure      403  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Router       /api/user/photo/thumbnail/file/{filepath} [get]
 func ServePhotoThumbnail(c *gin.Context, cfg *config.CloudConfig) {
 	relPath := c.Param("filepath")
 	fullPath, err := util.SanitizeRepoPath(cfg.Server.FileRoot, relPath)

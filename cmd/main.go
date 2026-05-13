@@ -1,3 +1,24 @@
+// @title           GoNet Drive API
+// @version         1.0
+// @description     GoNet Drive is a self-hosted cloud file storage and sharing service.
+// @termsOfService  https://example.com/terms
+
+// @contact.name   GoNet Drive Support
+// @contact.url    https://github.com
+
+// @host      localhost:3333
+// @BasePath  /api
+
+// @securityDefinitions.apikey  BearerAuth
+// @in                          header
+// @name                        Authorization
+// @description                 Type "Bearer" followed by a space and the JWT access token.
+
+// @securityDefinitions.apikey  CookieAuth
+// @in                          cookie
+// @name                        access_token
+// @description                 JWT access token stored as a cookie.
+
 package main
 
 import (
@@ -11,6 +32,7 @@ import (
 	"syscall"
 	"time"
 
+	_ "go-file-server/docs"
 	"go-file-server/internal/config"
 	"go-file-server/internal/controller"
 	"go-file-server/internal/repository"
@@ -21,6 +43,8 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func main() {
@@ -43,19 +67,12 @@ func main() {
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "X-Share-Id"},
 	}))
 
-	router.GET("/api/health", func(c *gin.Context) {
-		cloudConfig := config.AppCloudConfig
-		if cloudConfig == nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "cloud config not available"})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{
-			"status":            "OK",
-			"service_name":      cloudConfig.ServiceName,
-			"upload_chunk_size": cloudConfig.UploadChunkSize,
-			"video_mode":        config.AppConfig.Server.VideoMode,
-		})
-	})
+	// Swagger UI (only in dev)
+	if cfg.Server.AppEnv == "dev" {
+		router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	}
+
+	router.GET("/api/health", healthHandler)
 
 	repo := repository.NewSQLiteUserRepo(config.DB)
 	tokenRepo := repository.NewSQLiteRefreshTokenRepo(config.DB)
@@ -135,4 +152,26 @@ func main() {
 	}
 
 	log.Println("Server exiting gracefully")
+}
+
+// healthHandler godoc
+// @Summary      Health Check
+// @Description  Get service health status and configuration info.
+// @Tags         System
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]interface{}
+// @Router       /api/health [get]
+func healthHandler(c *gin.Context) {
+	cloudConfig := config.AppCloudConfig
+	if cloudConfig == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "cloud config not available"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"status":            "OK",
+		"service_name":      cloudConfig.ServiceName,
+		"upload_chunk_size": cloudConfig.UploadChunkSize,
+		"video_mode":        config.AppConfig.Server.VideoMode,
+	})
 }

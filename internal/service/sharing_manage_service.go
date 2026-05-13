@@ -45,6 +45,19 @@ func generateRandomPin() string {
 	return fmt.Sprintf("%06d", n.Int64())
 }
 
+// CreateShareEndpoint creates a new share link (requires authentication).
+// @Summary      Create Share Link
+// @Description  Create a new share link for a given path with PIN protection.
+// @Tags         Share Management
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        body  body      CreateShareRequest  true  "Share creation details"
+// @Success      200   {object}  map[string]interface{}
+// @Failure      400   {object}  map[string]interface{}
+// @Failure      401   {object}  map[string]interface{}
+// @Router       /api/user/share/create [post]
 func (s *SharingService) CreateShareEndpoint(c *gin.Context) {
 	username, exists := c.Get("username")
 	if !exists {
@@ -110,6 +123,16 @@ func (s *SharingService) CreateShareEndpoint(c *gin.Context) {
 	})
 }
 
+// ListSharesEndpoint lists all shares owned by the current user.
+// @Summary      List My Shares
+// @Description  Get all share links created by the authenticated user.
+// @Tags         Share Management
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Success      200  {object}  map[string]interface{}
+// @Failure      401  {object}  map[string]interface{}
+// @Router       /api/user/share/get-shares [get]
 func (s *SharingService) ListSharesEndpoint(c *gin.Context) {
 	username, exists := c.Get("username")
 	if !exists {
@@ -143,6 +166,18 @@ func (s *SharingService) ListSharesEndpoint(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"shares": shares})
 }
 
+// ToggleShareBlockedEndpoint toggles the blocked status of a share link.
+// @Summary      Toggle Share Block
+// @Description  Block or unblock an existing share link.
+// @Tags         Share Management
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        id   path      string  true  "Share ID"
+// @Success      200  {object}  map[string]interface{}
+// @Failure      401  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Router       /api/user/share/{id}/toggle-block [put]
 func (s *SharingService) ToggleShareBlockedEndpoint(c *gin.Context) {
 	username, exists := c.Get("username")
 	if !exists {
@@ -179,6 +214,18 @@ func (s *SharingService) ToggleShareBlockedEndpoint(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Status updated", "blocked": newBlocked})
 }
 
+// DeleteShareEndpoint deletes a share link.
+// @Summary      Delete Share Link
+// @Description  Permanently delete a share link and invalidate all existing share JWTs.
+// @Tags         Share Management
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        id   path      string  true  "Share ID"
+// @Success      200  {object}  map[string]interface{}
+// @Failure      401  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Router       /api/user/share/{id} [delete]
 func (s *SharingService) DeleteShareEndpoint(c *gin.Context) {
 	username, exists := c.Get("username")
 	if !exists {

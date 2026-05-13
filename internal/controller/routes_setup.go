@@ -55,38 +55,10 @@ func SetupAuthenticatedRoutes(router *gin.Engine, cfg *config.CloudConfig, userS
 	}
 	{
 		authRouter.GET("/ws", ws.WsHandler)
-
-		authRouter.GET("/status", func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{"status": "ok", "message": "authenticated"})
-		})
-
+		authRouter.GET("/status", userStatusHandler)
 		authRouter.GET("/mfa/setup", middleware.LoginRateLimiter(), func(c *gin.Context) { userService.SetupMFA(c, cfg) })
 		authRouter.POST("/mfa/enable", middleware.LoginRateLimiter(), userService.EnableMFA)
-
-		authRouter.GET("/me", func(c *gin.Context) {
-			username := c.GetString("username")
-			user, err := userService.UserRepo.GetByUsername(username)
-
-			role := "user"
-			mfaEnabled := false
-			mfaMandatory := false
-
-			if err == nil {
-				role = user.Role
-				mfaEnabled = user.MFAEnabled
-				mfaMandatory = user.MFAMandatory
-			}
-
-			superAdminUser := cfg.Auth.AdminUser
-			isSuperAdmin := username == superAdminUser
-			mfaSetupRequired := !mfaEnabled && mfaMandatory
-			c.JSON(http.StatusOK, gin.H{
-				"username":           username,
-				"role":               role,
-				"is_super_admin":     isSuperAdmin,
-				"mfa_setup_required": mfaSetupRequired,
-			})
-		})
+		authRouter.GET("/me", newUserMeHandler(cfg, userService))
 
 		authRouter.GET("/me/sessions", userService.GetSessions)
 		authRouter.DELETE("/me/sessions/:family_id", userService.RevokeSession)
@@ -109,6 +81,55 @@ func SetupAuthenticatedRoutes(router *gin.Engine, cfg *config.CloudConfig, userS
 			adminRouter.DELETE("/users/:id", userService.DeleteUser)
 			adminRouter.PUT("/config/logo", UpdateLogo)
 		}
+	}
+}
+
+// userStatusHandler godoc
+// @Summary      Auth Status Check
+// @Description  Check if the current request is properly authenticated.
+// @Tags         User
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Success      200  {object}  map[string]interface{}
+// @Router       /api/user/status [get]
+func userStatusHandler(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": "ok", "message": "authenticated"})
+}
+
+// userMeHandler godoc
+// @Summary      Current User Info
+// @Description  Get information about the currently authenticated user.
+// @Tags         User
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Success      200  {object}  map[string]interface{}
+// @Router       /api/user/me [get]
+func newUserMeHandler(cfg *config.CloudConfig, userService *service.UserService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		username := c.GetString("username")
+		user, err := userService.UserRepo.GetByUsername(username)
+
+		role := "user"
+		mfaEnabled := false
+		mfaMandatory := false
+
+		if err == nil {
+			role = user.Role
+			mfaEnabled = user.MFAEnabled
+			mfaMandatory = user.MFAMandatory
+		}
+
+		superAdminUser := cfg.Auth.AdminUser
+		isSuperAdmin := username == superAdminUser
+		mfaSetupRequired := !mfaEnabled && mfaMandatory
+		c.JSON(http.StatusOK, gin.H{
+			"username":           username,
+			"role":               role,
+			"is_super_admin":     isSuperAdmin,
+			"mfa_setup_required": mfaSetupRequired,
+		})
 	}
 }
 
@@ -148,7 +169,6 @@ func SetupConfigRoutes(router *gin.Engine, configRepo repository.CloudConfigRepo
 }
 
 // SetupUserShareRoutes wires /api/share/** public and /api/user/share/** authenticated routes.
-// Note: the authenticated share routes require JWTAuthMiddleware, which must already be on the router.
 func SetupUserShareRoutes(router *gin.Engine, cfg *config.CloudConfig, sharingService *service.SharingService) {
 	PublicShareRoutes(router, sharingService)
 

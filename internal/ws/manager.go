@@ -82,7 +82,14 @@ func Broadcast(message interface{}) {
 	Manager.broadcast <- message
 }
 
-// WsHandler handles the websocket handshake
+// WsHandler handles the websocket handshake and manages real-time operation progress.
+// @Summary      WebSocket Connection
+// @Description  Establish a WebSocket connection for real-time file operation progress updates.
+// @Tags         WebSocket
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Success      101  {string}  string  "Switching Protocols"
+// @Router       /api/user/ws [get]
 func WsHandler(c *gin.Context) {
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {

@@ -29,6 +29,18 @@ type DuplicateItem struct {
 	Target FileDetail `json:"target"`
 }
 
+// CheckDuplicates checks for name collisions when copying/moving files to a destination.
+// @Summary      Check Duplicates
+// @Description  Check for name collision between source and destination paths.
+// @Tags         Files
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        body  body      CheckDuplicateReq  true  "Check duplicates request"
+// @Success      200   {object}  map[string]interface{}
+// @Failure      400   {object}  map[string]interface{}
+// @Router       /api/user/files/check-duplicates [post]
 func CheckDuplicates(c *gin.Context, cfg *config.CloudConfig) {
 	var req CheckDuplicateReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -97,6 +109,18 @@ type CheckUploadDuplicateReq struct {
 	DestDir string             `json:"destDir" binding:"required"`
 }
 
+// CheckUploadDuplicates checks for name collisions when uploading files.
+// @Summary      Check Upload Duplicates
+// @Description  Check for file name collision when uploading files to a destination.
+// @Tags         Files
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        body  body      CheckUploadDuplicateReq  true  "Check upload duplicates request"
+// @Success      200   {object}  map[string]interface{}
+// @Failure      400   {object}  map[string]interface{}
+// @Router       /api/user/files/check-upload-duplicates [post]
 func CheckUploadDuplicates(c *gin.Context, cfg *config.CloudConfig) {
 	var req CheckUploadDuplicateReq
 	if err := c.ShouldBindJSON(&req); err != nil {

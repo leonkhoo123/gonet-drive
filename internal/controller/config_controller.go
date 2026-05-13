@@ -22,6 +22,13 @@ func PublicConfigRoutes(router *gin.RouterGroup) {
 	}
 }
 
+// getManifest returns the PWA manifest JSON.
+// @Summary      Get PWA Manifest
+// @Description  Return the Progressive Web App manifest JSON.
+// @Tags         Config
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Router       /api/config/manifest [get]
 func getManifest(c *gin.Context) {
 	cloudConfig := config.AppCloudConfig
 	serviceName := "GoNet Drive"
@@ -45,6 +52,13 @@ func getManifest(c *gin.Context) {
 	})
 }
 
+// getLogo returns the service logo image.
+// @Summary      Get Logo
+// @Description  Return the service logo image file.
+// @Tags         Config
+// @Produce      image/png
+// @Success      200  {file}  binary
+// @Router       /api/config/logo [get]
 func getLogo(c *gin.Context) {
 	config.EnsureDefaultLogo()
 
@@ -52,6 +66,18 @@ func getLogo(c *gin.Context) {
 	c.File(config.GetLogoPath())
 }
 
+// UpdateLogo uploads a new logo image (admin only).
+// @Summary      Update Logo
+// @Description  Upload a new PNG logo file. Requires admin role.
+// @Tags         Admin
+// @Accept       multipart/form-data
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        logo  formData  file  true  "PNG logo file"
+// @Success      200   {object}  map[string]interface{}
+// @Failure      400   {object}  map[string]interface{}
+// @Router       /api/user/admin/config/logo [put]
 func UpdateLogo(c *gin.Context) {
 	file, err := c.FormFile("logo")
 	if err != nil {
@@ -94,6 +120,16 @@ func ConfigRoutes(router *gin.RouterGroup, repo repository.CloudConfigRepository
 	}
 }
 
+// listConfigs lists all non-deleted cloud configs.
+// @Summary      List Configs
+// @Description  Get all cloud configuration entries.
+// @Tags         Config
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Success      200  {array}   model.CloudConfig
+// @Failure      500  {object}  map[string]interface{}
+// @Router       /api/user/config [get]
 func listConfigs(repo repository.CloudConfigRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		configs, err := repo.ListAllNotDeleted()
@@ -116,6 +152,20 @@ type UpdateConfigRequest struct {
 	IsDeleted   *bool   `json:"is_deleted"`
 }
 
+// updateConfig updates a cloud config entry by ID.
+// @Summary      Update Config
+// @Description  Update a cloud configuration entry (value, enabled status, or soft-delete).
+// @Tags         Config
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        id    path      int                  true  "Config ID"
+// @Param        body  body      UpdateConfigRequest  true  "Update request"
+// @Success      200   {object}  map[string]interface{}
+// @Failure      400   {object}  map[string]interface{}
+// @Failure      404   {object}  map[string]interface{}
+// @Router       /api/user/config/{id} [put]
 func updateConfig(repo repository.CloudConfigRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		idParam := c.Param("id")

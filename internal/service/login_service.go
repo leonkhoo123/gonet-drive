@@ -29,6 +29,17 @@ type LoginRequest struct {
 	DeviceID string `json:"device_id"`
 }
 
+// Login authenticates a user with username and password.
+// @Summary      Login
+// @Description  Authenticate with username and password. Returns JWT cookies. If MFA is enabled, a pre-auth token is returned and the client must call /api/mfa/verify.
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        body  body      LoginRequest  true  "Login credentials"
+// @Success      200   {object}  map[string]interface{}
+// @Failure      400   {object}  map[string]interface{}
+// @Failure      401   {object}  map[string]interface{}
+// @Router       /api/login [post]
 func (s *UserService) Login(c *gin.Context, cfg *config.CloudConfig) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

@@ -17,6 +17,16 @@ import (
 
 var mfaFailedCache = cache.New(15*time.Minute, 30*time.Minute)
 
+// SetupMFA generates a new TOTP secret for the current user.
+// @Summary      Setup MFA
+// @Description  Generate a TOTP secret and return the secret key and provisioning URL. Requires authentication.
+// @Tags         User
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Success      200  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]interface{}
+// @Router       /api/user/mfa/setup [get]
 func (s *UserService) SetupMFA(c *gin.Context, cfg *config.CloudConfig) {
 	username := c.GetString("username")
 
@@ -58,6 +68,19 @@ type MFAVerifyRequest struct {
 	DeviceID string `json:"device_id"`
 }
 
+// EnableMFA enables MFA for the current user after verifying a TOTP code.
+// @Summary      Enable MFA
+// @Description  Enable MFA after setting up a TOTP secret via /api/user/mfa/setup.
+// @Tags         User
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        body  body      MFAVerifyRequest  true  "TOTP code"
+// @Success      200   {object}  map[string]interface{}
+// @Failure      400   {object}  map[string]interface{}
+// @Failure      401   {object}  map[string]interface{}
+// @Router       /api/user/mfa/enable [post]
 func (s *UserService) EnableMFA(c *gin.Context) {
 	username := c.GetString("username")
 
@@ -87,6 +110,17 @@ func (s *UserService) EnableMFA(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "MFA enabled successfully"})
 }
 
+// VerifyLoginMFA completes login by validating a TOTP code.
+// @Summary      Verify MFA Code
+// @Description  Verify the TOTP code after receiving a pre-auth token from /api/login. On success, full auth cookies are set.
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        body  body      MFAVerifyRequest  true  "MFA verification"
+// @Success      200   {object}  map[string]interface{}
+// @Failure      400   {object}  map[string]interface{}
+// @Failure      401   {object}  map[string]interface{}
+// @Router       /api/mfa/verify [post]
 func (s *UserService) VerifyLoginMFA(c *gin.Context, cfg *config.CloudConfig) {
 	// The user should have an mfa_pending cookie, which is just an access token but we must validate it carefully
 	tokenStr, err := util.GetMfaPendingToken(c, cfg)

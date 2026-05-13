@@ -54,6 +54,14 @@ type ProgressReq struct {
 	ProgressTime  float64 `json:"progress_time"`
 }
 
+// GetAudioBookPaths returns the user's audiobook library paths.
+// @Summary      Get Audiobook Paths
+// @Tags         Audiobooks
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Success      200  {array}   model.AudioPath
+// @Router       /api/user/audiobook/paths [get]
 func (s *AudiobookService) GetAudioBookPaths(c *gin.Context) {
 	username := c.GetString("username")
 	paths, err := s.PathRepo.GetByUsername(username)
@@ -69,6 +77,16 @@ func (s *AudiobookService) GetAudioBookPaths(c *gin.Context) {
 	c.JSON(http.StatusOK, paths)
 }
 
+// AddAudioBookPath adds a new audiobook library path.
+// @Summary      Add Audiobook Path
+// @Tags         Audiobooks
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        body  body      PathReq  true  "Path request"
+// @Success      200   {object}  map[string]interface{}
+// @Router       /api/user/audiobook/path [post]
 func (s *AudiobookService) AddAudioBookPath(c *gin.Context) {
 	username := c.GetString("username")
 	var req PathReq
@@ -97,6 +115,17 @@ func (s *AudiobookService) AddAudioBookPath(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Path added successfully"})
 }
 
+// UpdateAudioBookPath updates an audiobook library path.
+// @Summary      Update Audiobook Path
+// @Tags         Audiobooks
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        id    path      int      true  "Path ID"
+// @Param        body  body      PathReq  true  "Path request"
+// @Success      200   {object}  map[string]interface{}
+// @Router       /api/user/audiobook/path/{id} [put]
 func (s *AudiobookService) UpdateAudioBookPath(c *gin.Context) {
 	username := c.GetString("username")
 	idStr := c.Param("id")
@@ -123,6 +152,15 @@ func (s *AudiobookService) UpdateAudioBookPath(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Path updated successfully"})
 }
 
+// DeleteAudioBookPath deletes an audiobook library path.
+// @Summary      Delete Audiobook Path
+// @Tags         Audiobooks
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        id   path      int  true  "Path ID"
+// @Success      200  {object}  map[string]interface{}
+// @Router       /api/user/audiobook/path/{id} [delete]
 func (s *AudiobookService) DeleteAudioBookPath(c *gin.Context) {
 	username := c.GetString("username")
 	idStr := c.Param("id")
@@ -141,6 +179,16 @@ func (s *AudiobookService) DeleteAudioBookPath(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Path deleted successfully"})
 }
 
+// ReportAudioBookProgress reports playback progress for an audiobook.
+// @Summary      Report Audiobook Progress
+// @Tags         Audiobooks
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        body  body      ProgressReq  true  "Progress request"
+// @Success      200   {object}  map[string]interface{}
+// @Router       /api/user/audiobook/progress [post]
 func (s *AudiobookService) ReportAudioBookProgress(c *gin.Context) {
 	username := c.GetString("username")
 	var req ProgressReq
@@ -217,6 +265,14 @@ func estimateDuration(path string, size int64) float64 {
 	return float64(size) * 8 / 128000.0
 }
 
+// ListAudioBooks lists all audiobooks found in enabled library paths.
+// @Summary      List Audiobooks
+// @Tags         Audiobooks
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Success      200  {array}   AudioBookItem
+// @Router       /api/user/audiobook/list [get]
 func (s *AudiobookService) ListAudioBooks(cfg *config.CloudConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username := c.GetString("username")
@@ -302,6 +358,16 @@ func (s *AudiobookService) ListAudioBooks(cfg *config.CloudConfig) gin.HandlerFu
 	}
 }
 
+// StreamAudioBook streams an audiobook file by name.
+// @Summary      Stream Audiobook
+// @Tags         Audiobooks
+// @Produce      audio/mpeg
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        name  path  string  true  "Audiobook name (e.g. xyz.mp3)"
+// @Success      200   {file}  binary
+// @Failure      404   {object}  map[string]interface{}
+// @Router       /api/user/audiobook/stream/{name} [get]
 func (s *AudiobookService) StreamAudioBook(cfg *config.CloudConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username := c.GetString("username")
@@ -339,6 +405,15 @@ func (s *AudiobookService) StreamAudioBook(cfg *config.CloudConfig) gin.HandlerF
 	}
 }
 
+// AudioBookFileList lists files in an audiobook directory.
+// @Summary      Audiobook File List
+// @Tags         Audiobooks
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        path  query     string  false  "Directory path"
+// @Success      200   {object}  map[string]interface{}
+// @Router       /api/user/audiobook/filelist [get]
 func (s *AudiobookService) AudioBookFileList(cfg *config.CloudConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		relPath := c.Query("path")

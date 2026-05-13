@@ -13,6 +13,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// VideoDisqualified moves a video file to a disqualified folder.
+// @Summary      Mark Video Disqualified
+// @Description  Move a video file to the 'disqualified' subdirectory.
+// @Tags         Media
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        body  body      object  true  "Request with path and opId"
+// @Success      200   {object}  map[string]interface{}
+// @Failure      400   {object}  map[string]interface{}
+// @Router       /api/user/video/disqualified [post]
 func VideoDisqualified(c *gin.Context, cfg *config.CloudConfig) {
 	var req struct {
 		Path string `json:"path"`

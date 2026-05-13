@@ -10,7 +10,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ServeDocument serves text and document files
+// ServeDocument serves text and document files.
+// @Summary      Serve Document
+// @Description  Serve a text document file with appropriate MIME type.
+// @Tags         Media
+// @Produce      text/plain
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        filepath  path  string  true  "Relative file path"
+// @Success      200  {file}  binary
+// @Failure      403  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Router       /api/user/document/read/file/{filepath} [get]
 func ServeDocument(c *gin.Context, cfg *config.CloudConfig) {
 	relPath := c.Param("filepath")
 	fullPath, err := util.SanitizeRepoPath(cfg.Server.FileRoot, relPath)
