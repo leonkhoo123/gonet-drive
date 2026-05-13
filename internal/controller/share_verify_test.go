@@ -182,6 +182,26 @@ func TestVerifySharePIN_RateLimit(t *testing.T) {
 	assert.Equal(t, http.StatusTooManyRequests, rec.Code)
 }
 
+func TestVerifySharePIN_WrongPIN_RateLimit(t *testing.T) {
+	router, _, shareRepo, _ := setupShareVerifyRouter(t)
+
+	share, _ := createShareDirect(t, shareRepo, "share-wrong-ratelimit", "/shared/docs", "view", "999999", false, time.Now().Add(24*time.Hour))
+
+	wrongBody := map[string]string{
+		"id":  share.ID,
+		"pin": "000000",
+	}
+
+	for i := 0; i < 5; i++ {
+		rec := testutil.MakeAuthRequestJSON(t, router, http.MethodPost, "/api/share/verify", wrongBody, nil)
+		require.NotEqual(t, http.StatusTooManyRequests, rec.Code, "request %d should not be rate-limited", i+1)
+		require.Equal(t, http.StatusUnauthorized, rec.Code, "request %d should be unauthorized", i+1)
+	}
+
+	rec := testutil.MakeAuthRequestJSON(t, router, http.MethodPost, "/api/share/verify", wrongBody, nil)
+	assert.Equal(t, http.StatusTooManyRequests, rec.Code)
+}
+
 // ---------------------------------------------------------------------------
 // Check Share Permission
 // ---------------------------------------------------------------------------

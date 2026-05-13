@@ -13,7 +13,6 @@ import (
 	"go-file-server/internal/controller"
 	"go-file-server/internal/middleware"
 	"go-file-server/internal/model"
-	"go-file-server/internal/service"
 	"go-file-server/internal/testutil"
 
 	"github.com/gin-gonic/gin"
@@ -21,7 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func setupShareRouter(t *testing.T) (*gin.Engine, *config.CloudConfig, *service.SharingService, *service.UserService, *sql.DB) {
+func setupShareRouter(t *testing.T) (*gin.Engine, *sql.DB) {
 	t.Helper()
 	db := testutil.SetupTestDB(t)
 	cfg := config.AppConfig
@@ -40,7 +39,7 @@ func setupShareRouter(t *testing.T) (*gin.Engine, *config.CloudConfig, *service.
 	}
 	controller.ShareRoutes(authRouter, sharingService)
 
-	return router, cfg, sharingService, userService, db
+	return router, db
 }
 
 // ---------------------------------------------------------------------------
@@ -48,7 +47,7 @@ func setupShareRouter(t *testing.T) (*gin.Engine, *config.CloudConfig, *service.
 // ---------------------------------------------------------------------------
 
 func TestCreateShare_Success(t *testing.T) {
-	router, _, _, _, db := setupShareRouter(t)
+	router, db := setupShareRouter(t)
 	testutil.CreateTestUser(t, db, "creator", "pass123", "user")
 
 	// create a test dir so IsDir detection works
@@ -82,7 +81,7 @@ func TestCreateShare_Success(t *testing.T) {
 }
 
 func TestCreateShare_WithExpiry(t *testing.T) {
-	router, _, _, _, db := setupShareRouter(t)
+	router, db := setupShareRouter(t)
 	testutil.CreateTestUser(t, db, "creator", "pass123", "user")
 
 	accessCookie := testutil.LoginAndGetCookie(t, router, "creator", "pass123")
@@ -111,7 +110,7 @@ func TestCreateShare_WithExpiry(t *testing.T) {
 }
 
 func TestCreateShare_NeverExpires(t *testing.T) {
-	router, _, _, _, db := setupShareRouter(t)
+	router, db := setupShareRouter(t)
 	testutil.CreateTestUser(t, db, "creator", "pass123", "user")
 
 	accessCookie := testutil.LoginAndGetCookie(t, router, "creator", "pass123")
@@ -136,7 +135,7 @@ func TestCreateShare_NeverExpires(t *testing.T) {
 }
 
 func TestCreateShare_InvalidExpiry(t *testing.T) {
-	router, _, _, _, db := setupShareRouter(t)
+	router, db := setupShareRouter(t)
 	testutil.CreateTestUser(t, db, "creator", "pass123", "user")
 
 	accessCookie := testutil.LoginAndGetCookie(t, router, "creator", "pass123")
@@ -151,7 +150,7 @@ func TestCreateShare_InvalidExpiry(t *testing.T) {
 }
 
 func TestCreateShare_ModifyAuthority(t *testing.T) {
-	router, _, _, _, db := setupShareRouter(t)
+	router, db := setupShareRouter(t)
 	testutil.CreateTestUser(t, db, "creator", "pass123", "user")
 
 	accessCookie := testutil.LoginAndGetCookie(t, router, "creator", "pass123")
@@ -173,7 +172,7 @@ func TestCreateShare_ModifyAuthority(t *testing.T) {
 }
 
 func TestCreateShare_ViewAuthorityDefault(t *testing.T) {
-	router, _, _, _, db := setupShareRouter(t)
+	router, db := setupShareRouter(t)
 	testutil.CreateTestUser(t, db, "creator", "pass123", "user")
 
 	accessCookie := testutil.LoginAndGetCookie(t, router, "creator", "pass123")
@@ -194,7 +193,7 @@ func TestCreateShare_ViewAuthorityDefault(t *testing.T) {
 }
 
 func TestCreateShare_Unauthenticated(t *testing.T) {
-	router, _, _, _, db := setupShareRouter(t)
+	router, db := setupShareRouter(t)
 	testutil.CreateTestUser(t, db, "creator", "pass123", "user")
 
 	body := map[string]interface{}{
@@ -211,7 +210,7 @@ func TestCreateShare_Unauthenticated(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestListShares_Success(t *testing.T) {
-	router, _, sharingService, _, db := setupShareRouter(t)
+	router, db := setupShareRouter(t)
 	testutil.CreateTestUser(t, db, "lister", "pass123", "user")
 
 	accessCookie := testutil.LoginAndGetCookie(t, router, "lister", "pass123")
@@ -241,12 +240,10 @@ func TestListShares_Success(t *testing.T) {
 	assert.Len(t, shares, 1)
 	first := shares[0].(map[string]interface{})
 	assert.Equal(t, createdID, first["id"])
-
-	_ = sharingService
 }
 
 func TestListShares_EmptyList(t *testing.T) {
-	router, _, _, _, db := setupShareRouter(t)
+	router, db := setupShareRouter(t)
 	testutil.CreateTestUser(t, db, "noshareguy", "pass123", "user")
 
 	accessCookie := testutil.LoginAndGetCookie(t, router, "noshareguy", "pass123")
@@ -262,7 +259,7 @@ func TestListShares_EmptyList(t *testing.T) {
 }
 
 func TestListShares_OnlyOwnShares(t *testing.T) {
-	router, _, _, _, db := setupShareRouter(t)
+	router, db := setupShareRouter(t)
 	testutil.CreateTestUser(t, db, "alice", "pass123", "user")
 	testutil.CreateTestUser(t, db, "bob", "pass456", "user")
 
@@ -304,7 +301,7 @@ func TestListShares_OnlyOwnShares(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestToggleBlock_Success(t *testing.T) {
-	router, _, _, _, db := setupShareRouter(t)
+	router, db := setupShareRouter(t)
 	testutil.CreateTestUser(t, db, "blocker", "pass123", "user")
 
 	accessCookie := testutil.LoginAndGetCookie(t, router, "blocker", "pass123")
@@ -339,7 +336,7 @@ func TestToggleBlock_Success(t *testing.T) {
 }
 
 func TestToggleBlock_NotFound(t *testing.T) {
-	router, _, _, _, db := setupShareRouter(t)
+	router, db := setupShareRouter(t)
 	testutil.CreateTestUser(t, db, "blocker", "pass123", "user")
 
 	accessCookie := testutil.LoginAndGetCookie(t, router, "blocker", "pass123")
@@ -357,7 +354,7 @@ func TestToggleBlock_NotFound(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestDeleteShare_Success(t *testing.T) {
-	router, _, _, _, db := setupShareRouter(t)
+	router, db := setupShareRouter(t)
 	testutil.CreateTestUser(t, db, "deleter", "pass123", "user")
 
 	accessCookie := testutil.LoginAndGetCookie(t, router, "deleter", "pass123")
@@ -391,7 +388,7 @@ func TestDeleteShare_Success(t *testing.T) {
 }
 
 func TestDeleteShare_NotFound(t *testing.T) {
-	router, _, _, _, db := setupShareRouter(t)
+	router, db := setupShareRouter(t)
 	testutil.CreateTestUser(t, db, "deleter", "pass123", "user")
 
 	accessCookie := testutil.LoginAndGetCookie(t, router, "deleter", "pass123")
@@ -405,7 +402,7 @@ func TestDeleteShare_NotFound(t *testing.T) {
 }
 
 func TestDeleteShare_NotOwn(t *testing.T) {
-	router, _, _, _, db := setupShareRouter(t)
+	router, db := setupShareRouter(t)
 	testutil.CreateTestUser(t, db, "alice_del", "pass123", "user")
 	testutil.CreateTestUser(t, db, "bob_del", "pass456", "user")
 

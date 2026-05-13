@@ -38,7 +38,8 @@
 | `TestVerifySharePIN_Blocked` | blocked share → 403 |
 | `TestVerifySharePIN_Expired` | expired share → 410 Gone |
 | `TestVerifySharePIN_NotFound` | nonexistent share ID → 404 |
-| `TestVerifySharePIN_RateLimit` | 6 rapid attempts → 429 |
+| `TestVerifySharePIN_RateLimit` | 6 rapid correct attempts → 429 |
+| `TestVerifySharePIN_WrongPIN_RateLimit` | 6 rapid wrong PIN attempts → first 5 are 401, 6th is 429 |
 | `TestVerifySharePIN_NeverExpires` | never-expiring share (NeverExpires sentinel) → 200 |
 | `TestCheckSharePermission_ValidToken` | valid shareJwt cookie → 200 |
 | `TestCheckSharePermission_NoToken` | no token → 401 |
