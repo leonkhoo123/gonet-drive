@@ -29,8 +29,8 @@
 | 05 | File Operations Tests | ✅ done | [05-file-ops.md](05-file-ops.md) | 2026-05-12 | 2026-05-13 |
 | 06 | Sharing Tests | ✅ done | [06-sharing.md](06-sharing.md) | 2026-05-13 | 2026-05-13 |
 | 07 | Edge Cases, Security & Sanity | ✅ done | [07-security.md](07-security.md) | 2026-05-13 | 2026-05-13 |
-| 08 | CI & Test Runner Setup | *not started* | [08-ci.md](08-ci.md) | — | — |
-| 09 | Scope Boundaries & Execution Order | *not started* | [09-scope.md](09-scope.md) | — | — |
+| 08 | CI & Test Runner Setup | ✅ done | [08-ci.md](08-ci.md) | 2026-05-13 | 2026-05-13 |
+| 09 | Scope Boundaries & Execution Order | ✅ done | [09-scope.md](09-scope.md) | 2026-05-13 | 2026-05-13 |
 
 ---
 
