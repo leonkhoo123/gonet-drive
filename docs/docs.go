@@ -17,7 +17,6 @@ const docTemplate = `{
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
-    "basePath": "{{.BasePath}}",
     "paths": {
         "/api/config/logo": {
             "get": {

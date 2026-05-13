@@ -7,7 +7,6 @@
 // @contact.url    https://github.com
 
 // @host      localhost:3333
-// @BasePath  /api
 
 // @securityDefinitions.apikey  BearerAuth
 // @in                          header
