@@ -46,7 +46,23 @@ cd frontend && npm run dev
 
 ## Tests
 
-- **No test files exist** in this repo. There is no test command or framework set up.
+- **Test runner**: `go test` + `stretchr/testify`. Requires `CGO_ENABLED=1` for SQLite.
+- **Database**: Each test uses in-memory SQLite (`:memory:?_busy_timeout=5000`), isolated via `t.TempDir()`.
+- **Test helpers**: [`internal/testutil/setup.go`](internal/testutil/setup.go:65) — `SetupTestDB`, `SetupServices`, `CreateTestUser`, `TestConfig`.
+- **Test files**: `*_test.go` files live alongside their production code in `internal/`.
+
+```bash
+make test          # Quick run
+make test-verbose  # Verbose output
+make test-cover    # With coverage
+make test-race     # Race detection
+```
+
+### Rule: run tests after writing features
+
+**After implementing or modifying any Go code**, run `make test`. All tests must pass before the change is complete. Add test cases for new behavior.
+
+- ✅ Pass → proceed. ❌ Fail → fix first. Do not leave failing tests behind.
 
 ## Key conventions
 
