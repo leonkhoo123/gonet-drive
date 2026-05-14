@@ -2,13 +2,12 @@ package service
 
 import (
 	"database/sql"
-	"net/http"
-	"time"
-
 	"go-file-server/internal/config"
 	"go-file-server/internal/middleware"
 	"go-file-server/internal/model"
 	"go-file-server/internal/util"
+	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -55,6 +54,7 @@ func (s *UserService) RefreshToken(c *gin.Context, cfg *config.CloudConfig) {
 
 		// We could also increment token_version to invalidate all access tokens immediately
 		s.UserRepo.IncrementTokenVersion(rt.Username)
+		middleware.ClearUserRoleCache(rt.Username)
 
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "token compromised, please log in again"})
 		return
@@ -74,7 +74,7 @@ func (s *UserService) RefreshToken(c *gin.Context, cfg *config.CloudConfig) {
 		return
 	}
 
-	newAccessToken, err := middleware.GenerateAccessToken(rt.Username, user.TokenVersion, cfg, false, rt.FamilyID)
+	newAccessToken, err := middleware.GenerateAccessToken(rt.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, false, rt.FamilyID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate access token"})
 		return

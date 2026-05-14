@@ -63,7 +63,7 @@ func main() {
 		AllowOrigins:     cfg.Server.AllowedOrigins,
 		AllowCredentials: true,
 		AllowMethods:     []string{"GET", "HEAD", "OPTIONS", "POST", "PUT", "DELETE"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "X-Share-Id"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Share-Id", "X-Device-Id"},
 	}))
 
 	// Swagger UI (only in dev)
@@ -94,6 +94,7 @@ func main() {
 
 	// Public routes
 	controller.SetupPublicAuthRoutes(router, cfg, userService)
+	controller.SetupMobileAuthRoutes(router, cfg, userService)
 	controller.SetupPublicConfigRoutes(router)
 	controller.SetupPublicShareRoutes(router, sharingService)
 	controller.SetupShareFileRoutes(router, shareRepo)

@@ -87,7 +87,7 @@ func TestJWTAuth_ExpiredToken(t *testing.T) {
 
 	origMaxAge := cfg.Auth.AccessTokenMaxAge
 	cfg.Auth.AccessTokenMaxAge = -1 * time.Hour
-	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, cfg, false, "family-expired")
+	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, false, "family-expired")
 	require.NoError(t, err)
 	cfg.Auth.AccessTokenMaxAge = origMaxAge
 
@@ -113,7 +113,7 @@ func TestJWTAuth_InvalidSignature(t *testing.T) {
 		Auth:   cfg.Auth,
 	}
 	badCfg.Auth.JwtSecret = "a-different-secret-key"
-	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, badCfg, false, "family-sig")
+	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, badCfg, false, "family-sig")
 	require.NoError(t, err)
 
 	cookie := &http.Cookie{
@@ -133,7 +133,7 @@ func TestJWTAuth_PreAuthTokenRejected(t *testing.T) {
 	router, cfg, _, db := setupMiddlewareRouter(t)
 	user := testutil.CreateTestUser(t, db, "preauthuser", "pass123", "user")
 
-	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, cfg, true, "")
+	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, true, "")
 	require.NoError(t, err)
 
 	cookie := &http.Cookie{
@@ -154,7 +154,7 @@ func TestJWTAuth_RevokedSession(t *testing.T) {
 	user := testutil.CreateTestUser(t, db, "revokeduser", "pass123", "user")
 
 	familyID := "family-revoked-test"
-	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, cfg, false, familyID)
+	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, false, familyID)
 	require.NoError(t, err)
 
 	middleware.RevokedSessionsCache.Set(familyID, true, 20*time.Minute)
@@ -176,7 +176,7 @@ func TestJWTAuth_TokenVersionMismatch(t *testing.T) {
 	router, cfg, _, db := setupMiddlewareRouter(t)
 	user := testutil.CreateTestUser(t, db, "tvuser", "pass123", "user")
 
-	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, cfg, false, "family-tv")
+	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, false, "family-tv")
 	require.NoError(t, err)
 
 	_, dbErr := db.Exec("UPDATE users SET token_version = token_version + 1 WHERE id = ?", user.ID)
@@ -199,7 +199,7 @@ func TestJWTAuth_ValidToken(t *testing.T) {
 	router, cfg, _, db := setupMiddlewareRouter(t)
 	user := testutil.CreateTestUser(t, db, "validuser", "pass123", "user")
 
-	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, cfg, false, "family-valid")
+	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, false, "family-valid")
 	require.NoError(t, err)
 
 	cookie := &http.Cookie{
@@ -220,7 +220,7 @@ func TestJWTAuth_BearerHeader(t *testing.T) {
 	router, cfg, _, db := setupMiddlewareRouter(t)
 	user := testutil.CreateTestUser(t, db, "beareruser", "pass123", "user")
 
-	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, cfg, false, "family-bearer")
+	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, false, "family-bearer")
 	require.NoError(t, err)
 
 	rec := makeBearerRequest(t, router, token)
@@ -238,7 +238,7 @@ func TestJWTAuth_MFAMandatoryNotSetup(t *testing.T) {
 	_, err := db.Exec("UPDATE users SET mfa_mandatory = 1 WHERE id = ?", user.ID)
 	require.NoError(t, err)
 
-	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, cfg, false, "family-mfaforced")
+	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, false, "family-mfaforced")
 	require.NoError(t, err)
 
 	cookie := &http.Cookie{
@@ -265,7 +265,7 @@ func TestJWTAuth_MFAMandatoryAllowedPaths(t *testing.T) {
 	_, err := db.Exec("UPDATE users SET mfa_mandatory = 1 WHERE id = ?", user.ID)
 	require.NoError(t, err)
 
-	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, cfg, false, "family-mfaforced2")
+	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, false, "family-mfaforced2")
 	require.NoError(t, err)
 
 	cookie := &http.Cookie{

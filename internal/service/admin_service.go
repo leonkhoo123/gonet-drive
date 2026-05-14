@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"go-file-server/internal/config"
+	"go-file-server/internal/middleware"
 	"go-file-server/internal/model"
 
 	"github.com/gin-gonic/gin"
@@ -187,6 +188,7 @@ func (s *UserService) RevokeSessions(c *gin.Context) {
 
 	// Revoke refresh tokens
 	s.TokenRepo.RevokeByUsername(targetUser.Username)
+	middleware.ClearUserRoleCache(targetUser.Username)
 
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
@@ -242,6 +244,7 @@ func (s *UserService) DeleteUser(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
 		return
 	}
+	middleware.ClearUserRoleCache(targetUser.Username)
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 

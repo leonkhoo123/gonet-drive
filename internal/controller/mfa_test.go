@@ -63,7 +63,7 @@ func TestMFASetup_Success(t *testing.T) {
 	router, cfg, _, db := setupMFARouter(t)
 	user := testutil.CreateTestUser(t, db, "mfasetupuser", "pass123", "user")
 
-	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, cfg, false, "family-setup")
+	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, false, "family-setup")
 	require.NoError(t, err)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/user/mfa/setup", nil)
@@ -84,7 +84,7 @@ func TestMFASetup_AlreadyEnabled(t *testing.T) {
 	_, dbErr := db.Exec("UPDATE users SET mfa_enabled = 1, mfa_secret = ? WHERE id = ?", "JBSWY3DPEHPK3PXP", user.ID)
 	require.NoError(t, dbErr)
 
-	token, err := middleware.GenerateAccessToken(user.Username, 1, cfg, false, "family-setup2")
+	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, false, "family-setup2")
 	require.NoError(t, err)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/user/mfa/setup", nil)
@@ -114,7 +114,7 @@ func TestMFAEnable_Success(t *testing.T) {
 	router, cfg, _, db := setupMFARouter(t)
 	user := testutil.CreateTestUser(t, db, "mfaenableuser", "pass123", "user")
 
-	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, cfg, false, "family-enable")
+	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, false, "family-enable")
 	require.NoError(t, err)
 	authCookie := &http.Cookie{Name: cfg.Auth.CookieAccessToken, Value: token, Path: "/"}
 
@@ -153,7 +153,7 @@ func TestMFAEnable_WrongCode(t *testing.T) {
 	router, cfg, _, db := setupMFARouter(t)
 	user := testutil.CreateTestUser(t, db, "mfaenableuser2", "pass123", "user")
 
-	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, cfg, false, "family-enable2")
+	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, false, "family-enable2")
 	require.NoError(t, err)
 	authCookie := &http.Cookie{Name: cfg.Auth.CookieAccessToken, Value: token, Path: "/"}
 
@@ -178,7 +178,7 @@ func TestMFAEnable_NoSetupFirst(t *testing.T) {
 	router, cfg, _, db := setupMFARouter(t)
 	user := testutil.CreateTestUser(t, db, "mfaenableuser3", "pass123", "user")
 
-	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, cfg, false, "family-enable3")
+	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, false, "family-enable3")
 	require.NoError(t, err)
 
 	enableBody := map[string]string{"code": "123456"}
@@ -312,7 +312,7 @@ func TestMFAVerify_ExpiredPending(t *testing.T) {
 
 	origMfaMaxAge := cfg.Auth.MfaPendingMaxAge
 	cfg.Auth.MfaPendingMaxAge = -1 * time.Hour
-	preAuthToken, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, cfg, true, "")
+	preAuthToken, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, true, "")
 	require.NoError(t, err)
 	cfg.Auth.MfaPendingMaxAge = origMfaMaxAge
 
@@ -386,7 +386,7 @@ func TestMFAVerify_RateLimit(t *testing.T) {
 	_, err := db.Exec("UPDATE users SET mfa_enabled = 1, mfa_secret = ? WHERE id = ?", secret, user.ID)
 	require.NoError(t, err)
 
-	preAuthToken, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, cfg, true, "")
+	preAuthToken, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, true, "")
 	require.NoError(t, err)
 	pendingCookie := &http.Cookie{Name: "mfa_pending", Value: preAuthToken, Path: "/"}
 
@@ -417,7 +417,7 @@ func TestMFAMandatory_NotSetup(t *testing.T) {
 	_, err := db.Exec("UPDATE users SET mfa_mandatory = 1 WHERE id = ?", user.ID)
 	require.NoError(t, err)
 
-	token, tokenErr := middleware.GenerateAccessToken(user.Username, user.TokenVersion, cfg, false, "family-mfamand")
+	token, tokenErr := middleware.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, false, "family-mfamand")
 	require.NoError(t, tokenErr)
 	authCookie := &http.Cookie{Name: cfg.Auth.CookieAccessToken, Value: token, Path: "/"}
 
@@ -449,7 +449,7 @@ func TestMFAMandatory_AfterSetup(t *testing.T) {
 	_, err := db.Exec("UPDATE users SET mfa_mandatory = 1 WHERE id = ?", user.ID)
 	require.NoError(t, err)
 
-	token, tokenErr := middleware.GenerateAccessToken(user.Username, user.TokenVersion, cfg, false, "family-mfamand2")
+	token, tokenErr := middleware.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, false, "family-mfamand2")
 	require.NoError(t, tokenErr)
 	authCookie := &http.Cookie{Name: cfg.Auth.CookieAccessToken, Value: token, Path: "/"}
 

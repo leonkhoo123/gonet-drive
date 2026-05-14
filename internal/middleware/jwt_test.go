@@ -46,7 +46,7 @@ func jwtTestConfig() *config.CloudConfig {
 func TestGenerateAccessToken_Success(t *testing.T) {
 	cfg := jwtTestConfig()
 
-	token, err := GenerateAccessToken("testuser", 1, cfg, false, "family-001")
+	token, err := GenerateAccessToken("testuser", 1, "user", false, cfg, false, "family-001")
 	require.NoError(t, err)
 	require.NotEmpty(t, token)
 
@@ -65,7 +65,7 @@ func TestGenerateAccessToken_Success(t *testing.T) {
 func TestGenerateAccessToken_PreAuth(t *testing.T) {
 	cfg := jwtTestConfig()
 
-	token, err := GenerateAccessToken("testuser", 1, cfg, true, "")
+	token, err := GenerateAccessToken("testuser", 1, "user", false, cfg, true, "")
 	require.NoError(t, err)
 	require.NotEmpty(t, token)
 
@@ -83,7 +83,7 @@ func TestGenerateAccessToken_PreAuth(t *testing.T) {
 func TestValidateTokenString_Valid(t *testing.T) {
 	cfg := jwtTestConfig()
 
-	token, err := GenerateAccessToken("testuser", 1, cfg, false, "")
+	token, err := GenerateAccessToken("testuser", 1, "user", false, cfg, false, "")
 	require.NoError(t, err)
 
 	parsed, err := ValidateTokenString(token, cfg)
@@ -95,7 +95,7 @@ func TestValidateTokenString_Expired(t *testing.T) {
 	cfg := jwtTestConfig()
 	cfg.Auth.AccessTokenMaxAge = -1 * time.Minute
 
-	token, err := GenerateAccessToken("testuser", 1, cfg, false, "")
+	token, err := GenerateAccessToken("testuser", 1, "user", false, cfg, false, "")
 	require.NoError(t, err)
 
 	_, err = ValidateTokenString(token, cfg)
@@ -133,7 +133,7 @@ func TestValidateTokenString_WrongSecret(t *testing.T) {
 	badCfg := jwtTestConfig()
 	badCfg.Auth.JwtSecret = "a-different-secret-key"
 
-	token, err := GenerateAccessToken("testuser", 1, cfg, false, "")
+	token, err := GenerateAccessToken("testuser", 1, "user", false, cfg, false, "")
 	require.NoError(t, err)
 
 	_, err = ValidateTokenString(token, badCfg)
@@ -195,4 +195,74 @@ func TestHashToken_Unicode(t *testing.T) {
 	hash4 := HashToken("😀🎉🚀")
 	assert.Equal(t, hash3, hash4)
 	assert.Len(t, hash3, 64)
+}
+
+func TestGenerateAccessToken_RoleClaims(t *testing.T) {
+	cfg := jwtTestConfig()
+
+	token, err := GenerateAccessToken("roleuser", 1, "admin", true, cfg, false, "family-role")
+	require.NoError(t, err)
+
+	parsed, err := ValidateTokenString(token, cfg)
+	require.NoError(t, err)
+	assert.True(t, parsed.Valid)
+
+	claims, ok := parsed.Claims.(*AccessTokenClaims)
+	require.True(t, ok)
+	assert.Equal(t, "admin", claims.Role)
+	assert.True(t, claims.IsSuperAdmin)
+	assert.Equal(t, "access", claims.Type)
+	assert.Equal(t, "roleuser", claims.Subject)
+}
+
+func TestGenerateAccessToken_RoleSuperAdminFalse(t *testing.T) {
+	cfg := jwtTestConfig()
+
+	token, err := GenerateAccessToken("normaluser", 1, "user", false, cfg, false, "family-normal")
+	require.NoError(t, err)
+
+	parsed, err := ValidateTokenString(token, cfg)
+	require.NoError(t, err)
+
+	claims, ok := parsed.Claims.(*AccessTokenClaims)
+	require.True(t, ok)
+	assert.Equal(t, "user", claims.Role)
+	assert.False(t, claims.IsSuperAdmin)
+}
+
+func TestGenerateMobileRefreshToken_Success(t *testing.T) {
+	cfg := jwtTestConfig()
+
+	token, err := GenerateMobileRefreshToken("mobileruser", "family-001", "device-abc", 7*24*time.Hour, cfg)
+	require.NoError(t, err)
+	require.NotEmpty(t, token)
+
+	parsed, err := ValidateTokenString(token, cfg)
+	require.NoError(t, err)
+	assert.True(t, parsed.Valid)
+
+	claims, ok := parsed.Claims.(*AccessTokenClaims)
+	require.True(t, ok)
+	assert.Equal(t, "mobileruser", claims.Username)
+	assert.Equal(t, "family-001", claims.FamilyID)
+	assert.Equal(t, "refresh", claims.Type)
+	assert.Empty(t, claims.Role)
+	assert.False(t, claims.IsSuperAdmin)
+	assert.Equal(t, int(0), claims.TokenVersion)
+}
+
+func TestGenerateMobileRefreshToken_Expiry(t *testing.T) {
+	cfg := jwtTestConfig()
+
+	token, err := GenerateMobileRefreshToken("user", "fam", "dev", 30*24*time.Hour, cfg)
+	require.NoError(t, err)
+
+	parsed, err := ValidateTokenString(token, cfg)
+	require.NoError(t, err)
+
+	claims, ok := parsed.Claims.(*AccessTokenClaims)
+	require.True(t, ok)
+
+	expectedExpiry := time.Now().Add(30 * 24 * time.Hour)
+	assert.WithinDuration(t, expectedExpiry, claims.ExpiresAt.Time, 2*time.Second)
 }

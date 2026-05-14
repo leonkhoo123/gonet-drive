@@ -68,7 +68,7 @@ func (s *UserService) Login(c *gin.Context, cfg *config.CloudConfig) {
 
 	if user.MFAEnabled {
 		// Issue pre-auth cookie
-		token, err := middleware.GenerateAccessToken(req.Username, user.TokenVersion, cfg, true, "") // Using AT as temporary Pre-Auth token
+		token, err := middleware.GenerateAccessToken(req.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, true, "") // Using AT as temporary Pre-Auth token
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate token"})
 			return
@@ -83,7 +83,7 @@ func (s *UserService) Login(c *gin.Context, cfg *config.CloudConfig) {
 	familyID := uuid.New().String()
 
 	// generate Access Token
-	token, err := middleware.GenerateAccessToken(req.Username, user.TokenVersion, cfg, false, familyID)
+	token, err := middleware.GenerateAccessToken(req.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, false, familyID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate access token"})
 		return

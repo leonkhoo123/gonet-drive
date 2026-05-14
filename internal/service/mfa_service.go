@@ -106,6 +106,7 @@ func (s *UserService) EnableMFA(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
+	middleware.ClearUserRoleCache(username)
 
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "MFA enabled successfully"})
 }
@@ -204,7 +205,7 @@ func (s *UserService) VerifyLoginMFA(c *gin.Context, cfg *config.CloudConfig) {
 
 	familyID := uuid.New().String()
 
-	newAccessToken, err := middleware.GenerateAccessToken(username, user.TokenVersion, cfg, false, familyID)
+	newAccessToken, err := middleware.GenerateAccessToken(username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, false, familyID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate token"})
 		return

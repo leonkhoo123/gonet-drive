@@ -31,6 +31,26 @@ func SetupPublicAuthRoutes(router *gin.Engine, cfg *config.CloudConfig, userServ
 	}
 }
 
+// SetupMobileAuthRoutes wires /api/mobile/login, /api/mobile/refresh, /api/mobile/mfa/verify, /api/mobile/logout.
+// These endpoints return tokens in the JSON body instead of setting httpOnly cookies.
+func SetupMobileAuthRoutes(router *gin.Engine, cfg *config.CloudConfig, userService *service.UserService) {
+	api := router.Group("/api/mobile")
+	{
+		api.POST("/login", middleware.LoginRateLimiter(), func(c *gin.Context) {
+			userService.MobileLogin(c, cfg)
+		})
+		api.POST("/refresh", func(c *gin.Context) {
+			userService.MobileRefresh(c, cfg)
+		})
+		api.POST("/mfa/verify", middleware.LoginRateLimiter(), func(c *gin.Context) {
+			userService.MobileVerifyLoginMFA(c, cfg)
+		})
+		api.POST("/logout", func(c *gin.Context) {
+			userService.MobileLogout(c, cfg)
+		})
+	}
+}
+
 // SetupPublicConfigRoutes wires /api/config/logo, /api/config/manifest.
 func SetupPublicConfigRoutes(router *gin.Engine) {
 	api := router.Group("/api")
