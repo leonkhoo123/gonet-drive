@@ -26,6 +26,8 @@ export function useFileSystem(baseRoute = "/home") {
   const fetchIdRef = useRef<number>(0);
   const lastRefreshTimeRef = useRef<number>(0);
   const throttledTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const currentPathRef = useRef<string>("/");
+  currentPathRef.current = currentPath;
 
   const handleSortChange = useCallback((field: SortField) => {
     if (sortField === field) {
@@ -53,7 +55,7 @@ export function useFileSystem(baseRoute = "/home") {
     setError(false);
     try {
       const [itemsrs] = await Promise.all([
-        fetchDirList(currentPath, showHidden, sortField ?? undefined, sortField ? sortOrder : undefined),
+        fetchDirList(currentPathRef.current, showHidden, sortField ?? undefined, sortField ? sortOrder : undefined),
         new Promise(resolve => setTimeout(resolve, 200))
       ]);
       if (currentFetchId === fetchIdRef.current) {
@@ -76,12 +78,12 @@ export function useFileSystem(baseRoute = "/home") {
         setIsLoading(false);
       }
     }
-  }, [currentPath, showHidden, sortField, sortOrder, navigate, baseRoute]);
+  }, [showHidden, sortField, sortOrder, navigate, baseRoute]);
 
   const THROTTLE_MS = 4000;
 
   const handleThrottledRefresh = useCallback((targetDir?: string) => {
-    if (targetDir !== undefined && targetDir !== currentPath) return;
+    if (targetDir !== undefined && targetDir !== currentPathRef.current) return;
 
     const now = Date.now();
     const elapsed = now - lastRefreshTimeRef.current;
@@ -94,7 +96,7 @@ export function useFileSystem(baseRoute = "/home") {
         void handleRefresh();
       }, THROTTLE_MS - elapsed);
     }
-  }, [handleRefresh, currentPath]);
+  }, [handleRefresh]);
 
   useEffect(() => {
     const loadFiles = async () => {
