@@ -15,5 +15,4 @@ main
 server
 # Runtime data
 db/
-# Docs
-docs/
+
