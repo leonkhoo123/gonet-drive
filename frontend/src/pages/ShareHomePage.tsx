@@ -282,6 +282,7 @@ export default function ShareHomePage() {
                 onDownload={() => { handleDownload(); }}
                 onCreateFolder={handleCreateFolder}
                 authority={authority}
+                isRefreshing={isLoading}
               />
             )}
           </div>
@@ -295,6 +296,7 @@ export default function ShareHomePage() {
               onRefresh={() => { void handleRefresh(); }}
               onCreateFolder={handleCreateFolder}
               authority={authority}
+              isRefreshing={isLoading}
             />
           </div>
 
@@ -319,6 +321,7 @@ export default function ShareHomePage() {
               onCreateFolder={handleCreateFolder}
               onUploadFiles={(files: File[]) => { void handleUploadFiles(files, currentPath); }}
               authority={authority}
+              isRefreshing={isLoading}
             />
           </div>
 

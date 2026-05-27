@@ -19,6 +19,7 @@ interface ShareBreadcrumbProps {
   onDownload?: () => void;
   onCreateFolder?: () => void;
   authority?: string;
+  isRefreshing?: boolean;
 }
 
 export default function ShareBreadcrumb({
@@ -31,6 +32,7 @@ export default function ShareBreadcrumb({
   onDownload,
   onCreateFolder,
   authority,
+  isRefreshing = false,
 }: ShareBreadcrumbProps) {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -116,7 +118,7 @@ export default function ShareBreadcrumb({
         {/* Mobile Action Buttons */}
         <div className="md:hidden flex items-center">
           <Button variant="ghost" size="icon" className="h-12 w-12 text-muted-foreground" onClick={onRefresh}>
-            <RefreshCcw className="h-6 w-6" />
+            <RefreshCcw className={`h-6 w-6 ${isRefreshing ? 'animate-spin' : ''}`} />
             <span className="sr-only">Refresh</span>
           </Button>
           <DropdownMenu>

@@ -28,6 +28,7 @@ interface HomeBreadcrumbProps {
   onDownload?: () => void;
   onEmptyRecycleBin?: () => void;
   onCreateFolder?: () => void;
+  isRefreshing?: boolean;
 }
 
 export default function HomeBreadcrumb({
@@ -40,6 +41,7 @@ export default function HomeBreadcrumb({
   onDownload,
   onEmptyRecycleBin,
   onCreateFolder,
+  isRefreshing = false,
 }: HomeBreadcrumbProps) {
   const navigate = useNavigate();
   const swRegistrationRef = useRef<ServiceWorkerRegistration | undefined>(undefined);
@@ -267,7 +269,7 @@ export default function HomeBreadcrumb({
         {/* Mobile Action Buttons */}
         <div className="md:hidden flex items-center">
           <Button variant="ghost" size="icon" className="h-12 w-12 text-muted-foreground" onClick={onRefresh}>
-            <RefreshCcw className="h-6 w-6" />
+            <RefreshCcw className={`h-6 w-6 ${isRefreshing ? 'animate-spin' : ''}`} />
             <span className="sr-only">Refresh</span>
           </Button>
           <DropdownMenu>

@@ -204,6 +204,7 @@ export default function HomePage() {
                 onDownload={() => { handleDownload(); }}
                 onEmptyRecycleBin={() => { handleEmptyRecycleBin((items?.items ?? []).map(i => i.name)); }}
                 onCreateFolder={handleCreateFolder}
+                isRefreshing={isLoading}
               />
             )}
           </div>
@@ -217,6 +218,7 @@ export default function HomePage() {
               onRefresh={() => { void handleRefresh(); }}
               onEmptyRecycleBin={() => { handleEmptyRecycleBin((items?.items ?? []).map(i => i.name)); }}
               onCreateFolder={handleCreateFolder}
+              isRefreshing={isLoading}
             />
           </div>
 
@@ -241,6 +243,7 @@ export default function HomePage() {
               onUploadFiles={(files) => { void handleUploadFiles(files, currentPath); }}
               isRecycleBinSelected={selectedItems.has('.cloud_delete')}
               onEmptyRecycleBin={() => { handleEmptyRecycleBin((items?.items ?? []).map(i => i.name)); }}
+              isRefreshing={isLoading}
             />
           </div>
 

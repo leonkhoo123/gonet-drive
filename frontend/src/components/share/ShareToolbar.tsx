@@ -30,6 +30,7 @@ interface ShareToolbarProps {
   onUploadFiles?: (files: File[]) => void;
   isRecycleBinSelected?: boolean;
   authority: string;
+  isRefreshing?: boolean;
 }
 
 export default function ShareToolbar({
@@ -54,6 +55,7 @@ export default function ShareToolbar({
   onUploadFiles,
   isRecycleBinSelected = false,
   authority,
+  isRefreshing = false,
 }: ShareToolbarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -152,7 +154,7 @@ export default function ShareToolbar({
       <div className="flex-1" />
 
       <Button variant="ghost" size="sm" onClick={onRefresh} className="h-8 w-8 p-0 text-muted-foreground" title="Refresh">
-        <RefreshCcw className="h-4 w-4" />
+        <RefreshCcw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
       </Button>
     </div>
   );

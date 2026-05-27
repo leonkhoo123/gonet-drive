@@ -29,6 +29,7 @@ interface HomeToolbarProps {
   onUploadFiles?: (files: File[]) => void;
   isRecycleBinSelected?: boolean;
   onEmptyRecycleBin?: () => void;
+  isRefreshing?: boolean;
 }
 
 export default function HomeToolbar({
@@ -50,6 +51,7 @@ export default function HomeToolbar({
   onCreateFolder,
   onUploadFiles,
   isRecycleBinSelected = false,
+  isRefreshing = false,
   onEmptyRecycleBin,
 }: HomeToolbarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -157,7 +159,7 @@ export default function HomeToolbar({
       </Button>
 
       <Button variant="ghost" size="sm" onClick={onRefresh} className="h-8 w-8 p-0 text-muted-foreground" title="Refresh">
-        <RefreshCcw className="h-4 w-4" />
+        <RefreshCcw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
       </Button>
     </div>
   );
