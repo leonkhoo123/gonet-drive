@@ -3,7 +3,7 @@ import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { useOperationProgress } from '../../context/OperationProgressContext';
 import { Progress } from '../ui/progress';
 import { Button } from '../ui/button';
-import { X, ChevronDown, CheckCircle2, AlertCircle, Loader2, Files, Trash2, Edit, Scissors, Copy, UploadCloud } from 'lucide-react';
+import { X, ChevronDown, CheckCircle2, Files, Trash2, Edit, Scissors, Copy, UploadCloud, CircleEllipsis, Loader2 } from 'lucide-react';
 import type { OperationMessage } from '@/api/wsClient';
 import { cancelOperation, uploadControllers, cancelledUploads } from '@/api/api-file';
 
@@ -89,7 +89,7 @@ export function OperationQueueProgress() {
         : (opsList.length > 0 ? `All operations completed` : `No operation`);
 
     const getHeaderIcon = () => {
-        if (hasActiveOps) return <Loader2 className="w-4 h-4 animate-spin text-primary" />;
+        if (hasActiveOps) return <CircleEllipsis className="w-4 h-4 text-primary" />;
         if (opsList.length > 0) return <CheckCircle2 className="w-4 h-4 text-green-500" />;
         return <CheckCircle2 className="w-4 h-4 text-muted-foreground" />;
     };
@@ -112,18 +112,6 @@ export function OperationQueueProgress() {
         }
     };
 
-    const getStatusIcon = (status: string) => {
-        switch (status) {
-            case 'completed': return <CheckCircle2 className="w-5 h-5 text-green-500" />;
-            case 'error': return <AlertCircle className="w-5 h-5 text-red-500" />;
-            case 'aborted': return <AlertCircle className="w-5 h-5 text-orange-500" />;
-            case 'in-progress':
-            case 'starting':
-            case 'queued': return <Loader2 className="w-5 h-5 text-primary animate-spin" />;
-            default: return null;
-        }
-    };
-
     const renderOpItem = (op: OperationMessage) => (
         <div key={op.opId} className="flex flex-col border rounded-md p-2 bg-background shadow-sm">
             <div className="flex justify-between items-center">
@@ -143,7 +131,6 @@ export function OperationQueueProgress() {
                     </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                    {getStatusIcon(op.opStatus)}
                     {(op.opStatus === 'completed' || op.opStatus === 'error' || op.opStatus === 'aborted') && (
                         <Button
                             variant="ghost"
