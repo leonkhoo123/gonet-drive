@@ -24,6 +24,8 @@ export function useFileSystem(baseRoute = "/home") {
 
   const prevPathRef = useRef<string>("/");
   const fetchIdRef = useRef<number>(0);
+  const lastRefreshTimeRef = useRef<number>(0);
+  const throttledTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSortChange = useCallback((field: SortField) => {
     if (sortField === field) {
@@ -40,6 +42,12 @@ export function useFileSystem(baseRoute = "/home") {
   }, [sortField, sortOrder]);
 
   const handleRefresh = useCallback(async () => {
+    if (throttledTimerRef.current !== null) {
+      clearTimeout(throttledTimerRef.current);
+      throttledTimerRef.current = null;
+    }
+    lastRefreshTimeRef.current = Date.now();
+
     const currentFetchId = ++fetchIdRef.current;
     setIsLoading(true);
     setError(false);
@@ -69,6 +77,24 @@ export function useFileSystem(baseRoute = "/home") {
       }
     }
   }, [currentPath, showHidden, sortField, sortOrder, navigate, baseRoute]);
+
+  const THROTTLE_MS = 4000;
+
+  const handleThrottledRefresh = useCallback((targetDir?: string) => {
+    if (targetDir !== undefined && targetDir !== currentPath) return;
+
+    const now = Date.now();
+    const elapsed = now - lastRefreshTimeRef.current;
+
+    if (elapsed >= THROTTLE_MS) {
+      void handleRefresh();
+    } else {
+      throttledTimerRef.current ??= setTimeout(() => {
+        throttledTimerRef.current = null;
+        void handleRefresh();
+      }, THROTTLE_MS - elapsed);
+    }
+  }, [handleRefresh, currentPath]);
 
   useEffect(() => {
     const loadFiles = async () => {
@@ -155,6 +181,15 @@ export function useFileSystem(baseRoute = "/home") {
     };
   }, [handleRefresh]);
 
+  useEffect(() => {
+    return () => {
+      if (throttledTimerRef.current !== null) {
+        clearTimeout(throttledTimerRef.current);
+        throttledTimerRef.current = null;
+      }
+    };
+  }, []);
+
   return {
     items,
     setItems,
@@ -165,6 +200,7 @@ export function useFileSystem(baseRoute = "/home") {
     currentPath,
     shareRoot,
     handleRefresh,
+    handleThrottledRefresh,
     sortField,
     setSortField,
     sortOrder,

@@ -5,7 +5,7 @@ import { uploadFile, checkUploadDuplicates, type UploadProgressEvent, type Dupli
 import { useOperationProgress } from "@/context/OperationProgressContext";
 import { formatBytes } from "@/utils/utils";
 
-export function useFileUpload(handleRefresh: () => Promise<void>, uploadChunkSize?: number) {
+export function useFileUpload(handleThrottledRefresh: (targetDir?: string) => void, uploadChunkSize?: number) {
   const { addOrUpdateOperation } = useOperationProgress();
   const [isUploadDuplicateCheckDialogOpen, setIsUploadDuplicateCheckDialogOpen] = useState(false);
   const [isUploadDuplicateChecking, setIsUploadDuplicateChecking] = useState(false);
@@ -84,6 +84,7 @@ export function useFileUpload(handleRefresh: () => Promise<void>, uploadChunkSiz
           destDir: target,
           opPercentage: 100,
         });
+        handleThrottledRefresh(target);
       } catch (error: unknown) {
         console.error("Upload error:", error);
         let errorMessage = error instanceof Error ? error.message : 'Upload failed';
@@ -111,12 +112,7 @@ export function useFileUpload(handleRefresh: () => Promise<void>, uploadChunkSiz
         }
       }
     }
-    
-    // Refresh after all uploads finish
-    if (filesToUpload.length > 0) {
-      void handleRefresh();
-    }
-  }, [pendingUploads, addOrUpdateOperation, handleRefresh, uploadChunkSize]);
+  }, [pendingUploads, addOrUpdateOperation, handleThrottledRefresh, uploadChunkSize]);
 
   const handleUploadFiles = useCallback(async (files: File[], targetPath: string) => {
     if (files.length === 0) return;

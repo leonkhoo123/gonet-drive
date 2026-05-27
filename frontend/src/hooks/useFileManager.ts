@@ -23,6 +23,7 @@ export function useFileManager({ uploadChunkSize, baseRoute = "/home" }: { uploa
     currentPath,
     shareRoot,
     handleRefresh,
+    handleThrottledRefresh,
     sortField,
     setSortField,
     sortOrder,
@@ -108,7 +109,7 @@ export function useFileManager({ uploadChunkSize, baseRoute = "/home" }: { uploa
     isUploadDuplicateChecking,
     uploadDuplicateItems,
     setPendingUploads
-  } = useFileUpload(handleRefresh, uploadChunkSize);
+  } = useFileUpload(handleThrottledRefresh, uploadChunkSize);
 
   // 6. Keyboard Shortcuts
   useKeyboardShortcuts({
