@@ -41,7 +41,7 @@ func (s *UserService) SetupMFA(c *gin.Context, cfg *config.CloudConfig) {
 	}
 
 	key, err := totp.Generate(totp.GenerateOpts{
-		Issuer:      cfg.Auth.TokenName,
+		Issuer:      cfg.Defaults.ServiceName,
 		AccountName: username,
 	})
 	if err != nil {
