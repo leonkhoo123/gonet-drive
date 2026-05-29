@@ -18,7 +18,7 @@ ENV VITE_PROFILE=prod
 RUN npm run build
 
 # ====== 2. Backend Build Stage ======
-FROM golang:1.25.3-alpine AS backend-builder
+FROM golang:1.25.10-alpine AS backend-builder
 
 RUN apk add --no-cache git gcc musl-dev
 

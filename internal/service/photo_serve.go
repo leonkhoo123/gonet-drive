@@ -9,9 +9,9 @@ import (
 
 	"go-file-server/internal/config"
 	"go-file-server/internal/util"
+	"go-file-server/internal/util/imageutil"
 
 	"github.com/chai2010/webp"
-	"github.com/disintegration/imaging"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/sync/singleflight"
 )
@@ -105,14 +105,13 @@ func ServePhotoThumbnail(c *gin.Context, cfg *config.CloudConfig) {
 	// Use singleflight to prevent multiple requests from generating the same thumbnail concurrently
 	_, err, _ = thumbnailGroup.Do(thumbPath, func() (interface{}, error) {
 		// Open original image
-		src, err := imaging.Open(fullPath, imaging.AutoOrientation(true))
+		src, err := imageutil.DecodeImage(fullPath)
 		if err != nil {
 			return nil, err
 		}
 
 		// Resize to 300px width, preserving aspect ratio
-		// Using Lanczos for better downscaling quality compared to Box
-		dst := imaging.Resize(src, 300, 0, imaging.Lanczos)
+		dst := imageutil.ResizeImage(src, 300)
 
 		// Save as WebP
 		out, err := os.Create(thumbPath)
