@@ -18,9 +18,9 @@ import (
 )
 
 func TestNewThumbnailSemaphore_Defaults(t *testing.T) {
-	s := newThumbnailSemaphore(4)
-	assert.Equal(t, 4, s.limit)
-	assert.Equal(t, 4, s.Available())
+	s := newThumbnailSemaphore(2)
+	assert.Equal(t, 2, s.limit)
+	assert.Equal(t, 2, s.Available())
 	assert.Equal(t, 0, s.Acquiring())
 }
 
@@ -30,33 +30,32 @@ func TestNewThumbnailSemaphore_ClampsToMinimum(t *testing.T) {
 }
 
 func TestThumbnailSemaphore_AcquireRelease(t *testing.T) {
-	s := newThumbnailSemaphore(4)
+	s := newThumbnailSemaphore(2)
 
 	ctx := context.Background()
 	require.NoError(t, s.Acquire(ctx))
-	assert.Equal(t, 3, s.Available())
+	assert.Equal(t, 1, s.Available())
 	assert.Equal(t, 1, s.Acquiring())
 
 	require.NoError(t, s.Acquire(ctx))
-	assert.Equal(t, 2, s.Available())
+	assert.Equal(t, 0, s.Available())
 	assert.Equal(t, 2, s.Acquiring())
 
 	s.Release()
-	assert.Equal(t, 3, s.Available())
+	assert.Equal(t, 1, s.Available())
 
 	require.NoError(t, s.Acquire(ctx))
-	assert.Equal(t, 2, s.Available())
+	assert.Equal(t, 0, s.Available())
 
 	s.Release()
 	s.Release()
 	s.Release()
-	s.Release()
-	assert.Equal(t, 4, s.Available())
+	assert.Equal(t, 2, s.Available())
 	assert.Equal(t, 0, s.Acquiring())
 }
 
 func TestThumbnailSemaphore_ConcurrencyLimit(t *testing.T) {
-	s := newThumbnailSemaphore(4)
+	s := newThumbnailSemaphore(2)
 	ctx := context.Background()
 
 	var wg sync.WaitGroup
@@ -80,8 +79,8 @@ func TestThumbnailSemaphore_ConcurrencyLimit(t *testing.T) {
 	}
 
 	wg.Wait()
-	assert.Equal(t, 4, maxSeen, "max concurrent should never exceed limit")
-	assert.Equal(t, 4, s.Available())
+	assert.Equal(t, 2, maxSeen, "max concurrent should never exceed limit")
+	assert.Equal(t, 2, s.Available())
 	assert.Equal(t, 0, s.Acquiring())
 }
 
@@ -171,8 +170,11 @@ func TestServeVideoThumbnail_WithSemaphore(t *testing.T) {
 
 			cmd := exec.CommandContext(ctx,
 				"ffmpeg",
-				"-i", videoPath,
+				"-loglevel", "error",
+				"-threads", "2",
 				"-ss", "00:00:00.000",
+				"-i", videoPath,
+				"-an",
 				"-vframes", "1",
 				"-vf", "scale='min(300,iw)':min'(300,ih)':force_original_aspect_ratio=decrease",
 				"-c:v", "libwebp",
@@ -241,8 +243,11 @@ func TestVideoThumbnail_SingleflightStillWorks(t *testing.T) {
 
 				cmd := exec.CommandContext(ctx,
 					"ffmpeg",
-					"-i", videoPath,
+					"-loglevel", "error",
+					"-threads", "2",
 					"-ss", "00:00:00.000",
+					"-i", videoPath,
+					"-an",
 					"-vframes", "1",
 					"-vf", "scale='min(300,iw)':min'(300,ih)':force_original_aspect_ratio=decrease",
 					"-c:v", "libwebp",
@@ -274,7 +279,7 @@ func testConfig(t *testing.T) *config.CloudConfig {
 			FileRoot:                   t.TempDir(),
 			ListenAddr:                 ":0",
 			AllowedOrigins:             []string{"*"},
-			ThumbnailMaxConcurrent:     4,
+			ThumbnailMaxConcurrent:     2,
 			ThumbnailGenerationTimeout: 30 * time.Second,
 		},
 		Auth: config.AuthConfig{

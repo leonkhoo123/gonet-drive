@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 
 	"go-file-server/internal/config"
 
@@ -146,8 +147,11 @@ func ServeVideoThumbnail(c *gin.Context, cfg *config.CloudConfig) {
 
 		cmd := exec.CommandContext(ctx,
 			"ffmpeg",
-			"-i", fullPath,
+			"-loglevel", "error",
+			"-threads", strconv.Itoa(cfg.Server.ThumbnailMaxConcurrent),
 			"-ss", "00:00:00.000",
+			"-i", fullPath,
+			"-an",
 			"-vframes", "1",
 			"-vf", "scale='min(300,iw)':min'(300,ih)':force_original_aspect_ratio=decrease",
 			"-c:v", "libwebp",

@@ -34,7 +34,7 @@ func TestConfig(t *testing.T) *config.CloudConfig {
 			FileRoot:                   workDir,
 			ListenAddr:                 ":0",
 			AllowedOrigins:             []string{"*"},
-			ThumbnailMaxConcurrent:     4,
+			ThumbnailMaxConcurrent:     2,
 			ThumbnailGenerationTimeout: 30 * time.Second,
 		},
 		Auth: config.AuthConfig{
