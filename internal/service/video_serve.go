@@ -1,8 +1,10 @@
 package service
 
 import (
+	"context"
 	"crypto/md5"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -133,9 +135,17 @@ func ServeVideoThumbnail(c *gin.Context, cfg *config.CloudConfig) {
 
 	// Use singleflight to prevent multiple requests from generating the same thumbnail concurrently
 	_, err, _ = videoThumbnailGroup.Do(thumbPath, func() (interface{}, error) {
-		// Use ffmpeg to extract a frame and generate a thumbnail, limiting size to 300x300 while keeping aspect ratio.
-		// ffmpeg natively respects orientation metadata when converting.
-		cmd := exec.Command("ffmpeg",
+		ctx, cancel := context.WithTimeout(c.Request.Context(), cfg.Server.ThumbnailGenerationTimeout)
+		defer cancel()
+
+		sem := getThumbnailSemaphore()
+		if err := sem.Acquire(ctx); err != nil {
+			return nil, err
+		}
+		defer sem.Release()
+
+		cmd := exec.CommandContext(ctx,
+			"ffmpeg",
 			"-i", fullPath,
 			"-ss", "00:00:00.000",
 			"-vframes", "1",
@@ -145,12 +155,19 @@ func ServeVideoThumbnail(c *gin.Context, cfg *config.CloudConfig) {
 			thumbPath)
 
 		if err := cmd.Run(); err != nil {
+			os.Remove(thumbPath)
 			return nil, fmt.Errorf("failed to generate video thumbnail: %w", err)
 		}
 		return nil, nil
 	})
 
 	if err != nil {
+		// Check if error is due to concurrency limit (context timeout/cancelled)
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+			c.Header("Retry-After", "5")
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": "thumbnail generation is busy, retry after a few seconds"})
+			return
+		}
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}

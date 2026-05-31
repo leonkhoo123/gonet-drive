@@ -1,8 +1,10 @@
 package service
 
 import (
+	"context"
 	"crypto/md5"
 	"encoding/hex"
+	"errors"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -104,6 +106,15 @@ func ServePhotoThumbnail(c *gin.Context, cfg *config.CloudConfig) {
 
 	// Use singleflight to prevent multiple requests from generating the same thumbnail concurrently
 	_, err, _ = thumbnailGroup.Do(thumbPath, func() (interface{}, error) {
+		ctx, cancel := context.WithTimeout(c.Request.Context(), cfg.Server.ThumbnailGenerationTimeout)
+		defer cancel()
+
+		sem := getThumbnailSemaphore()
+		if err := sem.Acquire(ctx); err != nil {
+			return nil, err
+		}
+		defer sem.Release()
+
 		// Open original image
 		src, err := imageutil.DecodeImage(fullPath)
 		if err != nil {
@@ -127,6 +138,11 @@ func ServePhotoThumbnail(c *gin.Context, cfg *config.CloudConfig) {
 	})
 
 	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+			c.Header("Retry-After", "5")
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": "thumbnail generation is busy, retry after a few seconds"})
+			return
+		}
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}

@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -13,13 +14,15 @@ import (
 )
 
 type ServerConfig struct {
-	AppEnv         string
-	DbDir          string
-	FileRoot       string
-	ListenAddr     string
-	Hostname       string
-	AllowedOrigins []string
-	VideoMode      string
+	AppEnv                     string
+	DbDir                      string
+	FileRoot                   string
+	ListenAddr                 string
+	Hostname                   string
+	AllowedOrigins             []string
+	VideoMode                  string
+	ThumbnailMaxConcurrent     int
+	ThumbnailGenerationTimeout time.Duration
 }
 
 type AuthConfig struct {
@@ -70,13 +73,15 @@ func Load() *CloudConfig {
 
 	c := &CloudConfig{
 		Server: ServerConfig{
-			AppEnv:         getEnv("APP_ENV", "local"),
-			DbDir:          getEnv("DB_DIR", ""),
-			FileRoot:       getEnv("WORK_DIR", "/app/data"), // default path
-			ListenAddr:     getEnv("LISTEN_ADDR", ":8080"),  // default internal port
-			Hostname:       getEnv("VIDEO_HOSTNAME", ""),    // optional override for public URL
-			AllowedOrigins: origins,
-			VideoMode:      getEnv("VIDEO_MODE", "normal"),
+			AppEnv:                     getEnv("APP_ENV", "local"),
+			DbDir:                      getEnv("DB_DIR", ""),
+			FileRoot:                   getEnv("WORK_DIR", "/app/data"), // default path
+			ListenAddr:                 getEnv("LISTEN_ADDR", ":8080"),  // default internal port
+			Hostname:                   getEnv("VIDEO_HOSTNAME", ""),    // optional override for public URL
+			AllowedOrigins:             origins,
+			VideoMode:                  getEnv("VIDEO_MODE", "normal"),
+			ThumbnailMaxConcurrent:     getEnvInt("THUMBNAIL_MAX_CONCURRENT", 4),
+			ThumbnailGenerationTimeout: getEnvDuration("THUMBNAIL_GENERATION_TIMEOUT", 30*time.Second),
 		},
 		Auth: AuthConfig{
 			AppJwt:             getEnv("APP_JWT", ""),
@@ -177,6 +182,18 @@ func getEnvDuration(key string, fallback time.Duration) time.Duration {
 			return d
 		} else {
 			fmt.Printf("⚠️  Invalid duration for %s: %v, using default %v\n", key, v, fallback)
+		}
+	}
+	return fallback
+}
+
+// getEnvInt returns the parsed int from env or fallback if not found or invalid
+func getEnvInt(key string, fallback int) int {
+	if v := os.Getenv(key); v != "" {
+		if i, err := strconv.Atoi(v); err == nil {
+			return i
+		} else {
+			fmt.Printf("⚠️  Invalid integer for %s: %v, using default %v\n", key, v, fallback)
 		}
 	}
 	return fallback

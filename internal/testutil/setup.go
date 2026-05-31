@@ -30,10 +30,12 @@ func TestConfig(t *testing.T) *config.CloudConfig {
 
 	cfg := &config.CloudConfig{
 		Server: config.ServerConfig{
-			AppEnv:         "local",
-			FileRoot:       workDir,
-			ListenAddr:     ":0",
-			AllowedOrigins: []string{"*"},
+			AppEnv:                     "local",
+			FileRoot:                   workDir,
+			ListenAddr:                 ":0",
+			AllowedOrigins:             []string{"*"},
+			ThumbnailMaxConcurrent:     4,
+			ThumbnailGenerationTimeout: 30 * time.Second,
 		},
 		Auth: config.AuthConfig{
 			AppJwt:             "ON",

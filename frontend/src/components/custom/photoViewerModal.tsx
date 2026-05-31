@@ -52,6 +52,7 @@ const ThumbnailItem = React.memo(
             : ""
         }`}
         loading="lazy"
+        decoding="async"
       />
     </button>
   )

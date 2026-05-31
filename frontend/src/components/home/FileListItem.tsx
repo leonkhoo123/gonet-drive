@@ -117,10 +117,11 @@ export const FileListItem = memo(function FileListItem({
             )
           ) : (
             (file.media_type === "photo" || file.media_type === "video") && imgErrorUrl !== file.url ? (
-              <img 
-                src={file.media_type === "photo" ? file.url.replace('/photo/play/', '/photo/thumbnail/') : file.url.replace('/video/play/', '/video/thumbnail/')} 
-                loading="lazy" 
-                alt={file.name} 
+              <img
+                src={file.media_type === "photo" ? file.url.replace('/photo/play/', '/photo/thumbnail/') : file.url.replace('/video/play/', '/video/thumbnail/')}
+                loading="lazy"
+                decoding="async"
+                alt={file.name}
                 className="object-contain w-full h-full transition-opacity duration-300"
                 onLoad={(e) => { e.currentTarget.style.opacity = '1'; }}
                 style={{ opacity: 0 }}
@@ -249,10 +250,11 @@ export const FileListItem = memo(function FileListItem({
             <>
               {(file.media_type === "photo" || file.media_type === "video") && imgErrorUrl !== file.url ? (
                 <div className="h-10 w-10 md:h-8 md:w-8 shrink-0 rounded overflow-hidden bg-transparent flex items-center justify-center relative">
-                  <img 
-                    src={file.media_type === "photo" ? file.url.replace('/photo/play/', '/photo/thumbnail/') : file.url.replace('/video/play/', '/video/thumbnail/')} 
-                    loading="lazy" 
-                    alt={file.name} 
+                  <img
+                    src={file.media_type === "photo" ? file.url.replace('/photo/play/', '/photo/thumbnail/') : file.url.replace('/video/play/', '/video/thumbnail/')}
+                    loading="lazy"
+                    decoding="async"
+                    alt={file.name}
                     className="object-contain w-full h-full transition-opacity duration-300"
                     onLoad={(e) => { e.currentTarget.style.opacity = '1'; }}
                     style={{ opacity: 0 }}
