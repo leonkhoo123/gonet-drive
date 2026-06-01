@@ -52,6 +52,7 @@ export function useFileSystem(baseRoute = "/home") {
 
     const currentFetchId = ++fetchIdRef.current;
     setIsLoading(true);
+    setItems(undefined);
     setError(false);
     try {
       const [itemsrs] = await Promise.all([
@@ -107,12 +108,9 @@ export function useFileSystem(baseRoute = "/home") {
       const rawPath = decodeURIComponent(location.pathname.replace(baseRoute, "")) || "/";
       const path = decodeUrlToPath(rawPath);
       
-      // Clear items to show skeleton ONLY on directory change
-      if (path !== prevPathRef.current) {
-        setItems(undefined);
-        setCurrentPath(path); // Immediately update currentPath so handleRefresh uses the new path
-        prevPathRef.current = path;
-      }
+      setItems(undefined);
+      setCurrentPath(path);
+      prevPathRef.current = path;
 
       try {
         const [itemsrs] = await Promise.all([
