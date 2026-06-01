@@ -3,10 +3,11 @@ package util
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"go-file-server/internal/logger"
 )
 
 // CopyFiles copies multiple files and/or folders to a destination directory.
@@ -55,7 +56,9 @@ func CopyFiles(tracker *ProgressTracker, sources []string, destDir string, opID 
 	}
 	defer os.RemoveAll(tempDir) // Cleanup temp dir after operation
 
-	log.Println("Calculating total size...")
+	logger.L.Debug("created copy temp dir", "path", tempDir)
+
+	logger.L.Debug("calculating total size", "opId", shortID)
 
 	// Calculate total size and file count
 	for _, source := range sources {
@@ -70,10 +73,7 @@ func CopyFiles(tracker *ProgressTracker, sources []string, destDir string, opID 
 		}
 	}
 
-	log.Printf("Starting copy operation: %s across %d files",
-		FormatBytes(tracker.TotalBytes),
-		tracker.TotalFiles,
-	)
+	logger.L.Info("starting copy operation", "size", FormatBytes(tracker.TotalBytes), "files", tracker.TotalFiles)
 
 	// Ensure destination directory exists
 	if err := os.MkdirAll(destDir, 0755); err != nil {
@@ -120,7 +120,7 @@ func CopyFiles(tracker *ProgressTracker, sources []string, destDir string, opID 
 
 	defer func() {
 		if finalErr != nil {
-			log.Printf("Copy failed halfway. Cleaning up successfully copied items in destination...")
+			logger.L.Warn("copy failed halfway, cleaning up copied items")
 			for _, p := range copiedPaths {
 				os.RemoveAll(p)
 			}

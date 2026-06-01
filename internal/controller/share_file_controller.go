@@ -283,7 +283,7 @@ func ShareFileDelete(c *gin.Context) {
 	// Perform actual delete using existing service logic
 	// We'll use DeletePermanentFiles because normal DeleteFiles moves to a .cloud_delete recycle bin
 	// which is likely not what we want for share guests, or we can use regular DeleteFiles
-	err := service.ShareDeletePermanentFiles(req, config.AppConfig)
+	err := service.ShareDeletePermanentFiles(req, config.AppConfig, c.GetString("request_id"))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to permanently delete files"})
 		return
@@ -402,7 +402,7 @@ func ShareFileDeleteSoft(c *gin.Context) {
 	}
 	req.Sources = safePaths
 
-	err := service.ShareDeleteFiles(req, config.AppConfig)
+	err := service.ShareDeleteFiles(req, config.AppConfig, c.GetString("request_id"))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete files"})
 		return
@@ -480,7 +480,7 @@ func ShareFileCopy(c *gin.Context) {
 	}
 	req.DestDir = destPath
 
-	if err := service.ShareCopyFiles(req, config.AppConfig); err != nil {
+	if err := service.ShareCopyFiles(req, config.AppConfig, c.GetString("request_id")); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -524,7 +524,7 @@ func ShareFileMove(c *gin.Context) {
 	}
 	req.DestDir = destPath
 
-	if err := service.ShareMoveFiles(req, config.AppConfig); err != nil {
+	if err := service.ShareMoveFiles(req, config.AppConfig, c.GetString("request_id")); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

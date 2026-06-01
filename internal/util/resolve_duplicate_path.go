@@ -2,10 +2,11 @@ package util
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"go-file-server/internal/logger"
 )
 
 // ResolveDuplicatePath adds a numeric suffix to a filename if it already exists in the given directory.
@@ -17,14 +18,14 @@ func ResolveDuplicatePath(dir, filename string) (string, error) {
 	if _, err := os.Stat(dest); os.IsNotExist(err) {
 		return dest, nil
 	}
-	log.Printf("File name [%s] duplicate at %s", filename, filepath.Dir(dest))
+	logger.L.Debug("file name duplicate", "name", filename, "dir", filepath.Dir(dest))
 	ext := filepath.Ext(filename)
 	name := strings.TrimSuffix(filepath.Base(filename), ext)
 	for i := 1; ; i++ {
 		newName := fmt.Sprintf("%s(%d)%s", name, i, ext)
 		newPath := filepath.Join(dir, newName)
 		if _, err := os.Stat(newPath); os.IsNotExist(err) {
-			log.Printf("Rename file to  %s", filepath.Base(newPath))
+			logger.L.Debug("renamed file to resolve duplicate", "name", filepath.Base(newPath))
 			return newPath, nil
 		}
 	}

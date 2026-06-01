@@ -2,11 +2,12 @@ package storage
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"sync/atomic"
 	"time"
+
+	"go-file-server/internal/logger"
 )
 
 var (
@@ -31,13 +32,11 @@ func InitStorageManager(rootPath string) {
 		startTime := time.Now()
 		var totalSize int64
 
-		log.Printf("StorageManager: Starting background scan of %s...", rootPath)
+		logger.L.Info("storage scan started", "path", rootPath)
 
 		err := filepath.WalkDir(rootPath, func(path string, d os.DirEntry, err error) error {
 			if err != nil {
-				// We might encounter permission errors or files deleted during the scan.
-				// Log the error but continue scanning.
-				log.Printf("StorageManager: Error accessing path %s: %v", path, err)
+				logger.L.Warn("storage scan path access error", "path", path, "err", err)
 				return nil
 			}
 
@@ -51,14 +50,13 @@ func InitStorageManager(rootPath string) {
 		})
 
 		if err != nil {
-			log.Printf("StorageManager: Background scan failed: %v", err)
+			logger.L.Error("storage scan failed", "err", err)
 			return
 		}
 
 		usedBytes.Store(totalSize)
 		duration := time.Since(startTime)
-		log.Printf("StorageManager: Background scan complete in %v. Total used storage: %d bytes (%.2f GB)",
-			duration, totalSize, float64(totalSize)/(1024*1024*1024))
+		logger.L.Info("storage scan complete", "duration", duration.String(), "total_bytes", totalSize)
 	}()
 }
 

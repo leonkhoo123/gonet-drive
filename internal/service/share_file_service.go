@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -15,6 +14,7 @@ import (
 	"time"
 
 	"go-file-server/internal/config"
+	"go-file-server/internal/logger"
 	"go-file-server/internal/state"
 	"go-file-server/internal/storage"
 	"go-file-server/internal/util"
@@ -23,27 +23,36 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func submitShareAsyncJob(opID, opType, opName string, tracker *util.ProgressTracker, includeSpeed bool, destDir string, action func(tracker *util.ProgressTracker) error) {
+func submitShareAsyncJob(opID, opType, opName string, tracker *util.ProgressTracker, includeSpeed bool, destDir string, requestID string, action func(tracker *util.ProgressTracker) error) {
 	var destDirPtr *string
 	if destDir != "" {
 		destDirPtr = &destDir
 	}
 
+	var requestIDPtr *string
+	if requestID != "" {
+		requestIDPtr = &requestID
+	}
+
 	ws.Broadcast(ws.OperationMessage{
-		OpId:     opID,
-		OpType:   opType,
-		OpName:   opName,
-		OpStatus: "queued",
-		DestDir:  destDirPtr,
+		OpId:      opID,
+		OpType:    opType,
+		OpName:    opName,
+		OpStatus:  "queued",
+		DestDir:   destDirPtr,
+		RequestId: requestIDPtr,
 	})
 
 	JobQueue <- func() {
+		jobLog := logger.L.With("request_id", requestID, "opId", opID)
+
 		ws.Broadcast(ws.OperationMessage{
-			OpId:     opID,
-			OpType:   opType,
-			OpName:   opName,
-			OpStatus: "starting",
-			DestDir:  destDirPtr,
+			OpId:      opID,
+			OpType:    opType,
+			OpName:    opName,
+			OpStatus:  "starting",
+			DestDir:   destDirPtr,
+			RequestId: requestIDPtr,
 		})
 
 		tracker.OnProgress = func(pt *util.ProgressTracker) {
@@ -75,13 +84,14 @@ func submitShareAsyncJob(opID, opType, opName string, tracker *util.ProgressTrac
 				OpSpeed:      speedStr,
 				OpFileCount:  &fileCountStr,
 				DestDir:      destDirPtr,
+				RequestId:    requestIDPtr,
 			})
 		}
 
 		err := action(tracker)
 
 		if err != nil {
-			log.Printf("Error in share %s operation %s: %v", opType, opID, err)
+			jobLog.Error("share file operation failed", "opType", opType, "err", err)
 			errMsg := err.Error()
 
 			status := "error"
@@ -90,27 +100,30 @@ func submitShareAsyncJob(opID, opType, opName string, tracker *util.ProgressTrac
 			}
 
 			ws.Broadcast(ws.OperationMessage{
-				OpId:     opID,
-				OpType:   opType,
-				OpName:   opName,
-				OpStatus: status,
-				Error:    &errMsg,
-				DestDir:  destDirPtr,
+				OpId:      opID,
+				OpType:    opType,
+				OpName:    opName,
+				OpStatus:  status,
+				Error:     &errMsg,
+				DestDir:   destDirPtr,
+				RequestId: requestIDPtr,
 			})
 		} else {
+			jobLog.Debug("share file operation completed", "opType", opType)
 			ws.Broadcast(ws.OperationMessage{
-				OpId:     opID,
-				OpType:   opType,
-				OpName:   opName,
-				OpStatus: "completed",
-				DestDir:  destDirPtr,
+				OpId:      opID,
+				OpType:    opType,
+				OpName:    opName,
+				OpStatus:  "completed",
+				DestDir:   destDirPtr,
+				RequestId: requestIDPtr,
 			})
 		}
 	}
 }
 
-func ShareCopyFiles(req CopyReq, cfg *config.CloudConfig) error {
-	log.Printf("[OpID: %s] ShareCopyFiles: sources=%v, destDir=%s", req.OpID, req.Sources, req.DestDir)
+func ShareCopyFiles(req CopyReq, cfg *config.CloudConfig, requestID string) error {
+	logger.L.Debug("share copy files requested", "opId", req.OpID, "sources", req.Sources, "destDir", req.DestDir)
 
 	opID := req.OpID
 	if opID == "" {
@@ -153,7 +166,7 @@ func ShareCopyFiles(req CopyReq, cfg *config.CloudConfig) error {
 	tracker := util.NewProgressTracker()
 	state.SetProgress(opID, tracker)
 
-	submitShareAsyncJob(opID, "copy", opName, tracker, true, req.DestDir, func(t *util.ProgressTracker) error {
+	submitShareAsyncJob(opID, "copy", opName, tracker, true, req.DestDir, requestID, func(t *util.ProgressTracker) error {
 		var reservedSize int64
 		err := util.CopyFiles(t, safeSources, safeDestDir, opID, isSameDir, func(totalSize int64) error {
 			if config.AppCloudConfig != nil {
@@ -176,8 +189,8 @@ func ShareCopyFiles(req CopyReq, cfg *config.CloudConfig) error {
 	return nil
 }
 
-func ShareMoveFiles(req MoveReq, cfg *config.CloudConfig) error {
-	log.Printf("[OpID: %s] ShareMoveFiles: sources=%v, destDir=%s", req.OpID, req.Sources, req.DestDir)
+func ShareMoveFiles(req MoveReq, cfg *config.CloudConfig, requestID string) error {
+	logger.L.Debug("share move files requested", "opId", req.OpID, "sources", req.Sources, "destDir", req.DestDir)
 
 	opID := req.OpID
 	if opID == "" {
@@ -218,15 +231,15 @@ func ShareMoveFiles(req MoveReq, cfg *config.CloudConfig) error {
 	tracker := util.NewProgressTracker()
 	state.SetProgress(opID, tracker)
 
-	submitShareAsyncJob(opID, "move", opName, tracker, false, req.DestDir, func(t *util.ProgressTracker) error {
+	submitShareAsyncJob(opID, "move", opName, tracker, false, req.DestDir, requestID, func(t *util.ProgressTracker) error {
 		return util.MoveFiles(t, safeSources, safeDestDir, opID)
 	})
 
 	return nil
 }
 
-func ShareDeleteFiles(req DeleteReq, cfg *config.CloudConfig) error {
-	log.Printf("[OpID: %s] ShareDeleteFiles: sources=%v", req.OpID, req.Sources)
+func ShareDeleteFiles(req DeleteReq, cfg *config.CloudConfig, requestID string) error {
+	logger.L.Debug("share delete files requested", "opId", req.OpID, "sources", req.Sources)
 
 	opID := req.OpID
 	if opID == "" {
@@ -256,7 +269,7 @@ func ShareDeleteFiles(req DeleteReq, cfg *config.CloudConfig) error {
 	for _, source := range safeSources {
 		baseName := filepath.Base(source)
 		if baseName == ".cloud_reserve" || baseName == ".cloud_delete" {
-			log.Printf("Skipping deletion of protected folder in share context: %s", source)
+			logger.L.Warn("skipping protected folder in share context", "path", source)
 			continue
 		}
 		validSources = append(validSources, source)
@@ -269,7 +282,7 @@ func ShareDeleteFiles(req DeleteReq, cfg *config.CloudConfig) error {
 	tracker := util.NewProgressTracker()
 	state.SetProgress(opID, tracker)
 
-	submitShareAsyncJob(opID, "delete", opName, tracker, false, "", func(t *util.ProgressTracker) error {
+	submitShareAsyncJob(opID, "delete", opName, tracker, false, "", requestID, func(t *util.ProgressTracker) error {
 		recycleBinDir := filepath.Join(cfg.Server.FileRoot, ".cloud_delete")
 		if _, err := os.Stat(recycleBinDir); os.IsNotExist(err) {
 			os.MkdirAll(recycleBinDir, 0755)
@@ -280,8 +293,8 @@ func ShareDeleteFiles(req DeleteReq, cfg *config.CloudConfig) error {
 	return nil
 }
 
-func ShareDeletePermanentFiles(req DeleteReq, cfg *config.CloudConfig) error {
-	log.Printf("[OpID: %s] ShareDeletePermanentFiles: sources=%v", req.OpID, req.Sources)
+func ShareDeletePermanentFiles(req DeleteReq, cfg *config.CloudConfig, requestID string) error {
+	logger.L.Debug("share permanent delete requested", "opId", req.OpID, "sources", req.Sources)
 
 	opID := req.OpID
 	if opID == "" {
@@ -311,7 +324,7 @@ func ShareDeletePermanentFiles(req DeleteReq, cfg *config.CloudConfig) error {
 	for _, source := range safeSources {
 		baseName := filepath.Base(source)
 		if baseName == ".cloud_reserve" || baseName == ".cloud_delete" {
-			log.Printf("Skipping permanent deletion of protected folder in share context: %s", source)
+			logger.L.Warn("skipping protected folder in share context", "path", source)
 			continue
 		}
 		validSources = append(validSources, source)
@@ -324,7 +337,7 @@ func ShareDeletePermanentFiles(req DeleteReq, cfg *config.CloudConfig) error {
 	tracker := util.NewProgressTracker()
 	state.SetProgress(opID, tracker)
 
-	submitShareAsyncJob(opID, "delete_permanent", opName, tracker, false, "", func(t *util.ProgressTracker) error {
+	submitShareAsyncJob(opID, "delete_permanent", opName, tracker, false, "", requestID, func(t *util.ProgressTracker) error {
 		return util.DeleteFilesPermanent(t, validSources, opID, func(deletedSize int64) {
 			storage.SubtractUsage(deletedSize)
 		})
@@ -334,7 +347,7 @@ func ShareDeletePermanentFiles(req DeleteReq, cfg *config.CloudConfig) error {
 }
 
 func ShareRenameFile(req RenameReq, cfg *config.CloudConfig) error {
-	log.Printf("[OpID: %s] ShareRenameFile: source=%s, newName=%s", req.OpID, req.Source, req.NewName)
+	logger.L.Debug("share rename file requested", "opId", req.OpID, "source", req.Source, "newName", req.NewName)
 
 	safeSource, err := util.SanitizeRepoPath(cfg.Server.FileRoot, req.Source)
 	if err != nil {
@@ -358,7 +371,7 @@ func ShareRenameFile(req RenameReq, cfg *config.CloudConfig) error {
 }
 
 func ShareCreateFolder(req CreateFolderReq, cfg *config.CloudConfig) error {
-	log.Printf("[OpID: %s] ShareCreateFolder: dir=%s, folderName=%s", req.OpID, req.Dir, req.FolderName)
+	logger.L.Debug("share create folder requested", "opId", req.OpID, "dir", req.Dir, "folderName", req.FolderName)
 
 	safeDir, err := util.SanitizeRepoPath(cfg.Server.FileRoot, req.Dir)
 	if err != nil {
@@ -702,7 +715,7 @@ func ShareDownloadFiles(c *gin.Context, cfg *config.CloudConfig) {
 		})
 
 		if err != nil {
-			fmt.Printf("Error zipping %s: %v\n", fullPath, err)
+			logger.L.Error("share zip download failed", "path", fullPath, "err", err)
 			return
 		}
 	}

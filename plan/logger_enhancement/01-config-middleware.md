@@ -1,6 +1,6 @@
 # 01 — Config & Middleware (Gin + Correlation IDs)
 
-> Parent: [logger_plan_index.md](logger_plan_index.md) | Status: none
+> Parent: [logger_plan_index.md](logger_plan_index.md) | Status: implemented
 
 ---
 

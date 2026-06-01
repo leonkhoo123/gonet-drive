@@ -5,12 +5,12 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"go-file-server/internal/logger"
 	"go-file-server/internal/repository"
 	"go-file-server/internal/service"
 	"go-file-server/internal/state"
@@ -30,14 +30,14 @@ func StartThumbnailMaintenanceScheduler(rootPath string, repo repository.Thumbna
 	go func() {
 		for {
 			delay := untilNext(time.Now(), 4, 30)
-			log.Printf("Thumbnail maintenance scheduled in %s (next run at 04:30)", delay.Round(time.Second))
+			logger.L.Debug("thumbnail maintenance scheduled", "delay", delay.Round(time.Second))
 			time.Sleep(delay)
 
 			deleted, generated, err := maintainThumbnails(rootPath, repo)
 			if err != nil {
-				log.Printf("Thumbnail maintenance failed: %v", err)
+				logger.L.Error("thumbnail maintenance failed", "err", err)
 			} else {
-				log.Printf("Thumbnail maintenance: %d orphaned removed, %d pre-generated", deleted, generated)
+				logger.L.Info("thumbnail maintenance complete", "orphaned_removed", deleted, "pre_generated", generated)
 			}
 		}
 	}()
@@ -45,7 +45,7 @@ func StartThumbnailMaintenanceScheduler(rootPath string, repo repository.Thumbna
 
 func maintainThumbnails(rootPath string, repo repository.ThumbnailRepository) (deleted, generated int, err error) {
 	defer func() {
-		log.Println("Storage calibration: Re-scanning...")
+		logger.L.Debug("storage calibration re-scanning")
 		storage.InitStorageManager(rootPath)
 	}()
 
@@ -84,7 +84,7 @@ func maintainThumbnails(rootPath string, repo repository.ThumbnailRepository) (d
 			thumbStat, e := os.Stat(thumbPath)
 			if e == nil && thumbStat.ModTime().After(info.ModTime()) {
 				if uerr := repo.Upsert(hashStr, path, true); uerr != nil {
-					log.Printf("Thumbnail maintenance: upsert error for %s: %v", path, uerr)
+					logger.L.Warn("thumbnail upsert error during maintenance", "path", path, "err", uerr)
 				}
 			} else {
 				pending = append(pending, fileNeedingThumbnail{
@@ -95,7 +95,7 @@ func maintainThumbnails(rootPath string, repo repository.ThumbnailRepository) (d
 			thumbStat, e := os.Stat(thumbPath)
 			if e == nil && thumbStat.ModTime().After(info.ModTime()) {
 				if uerr := repo.Upsert(hashStr, path, false); uerr != nil {
-					log.Printf("Thumbnail maintenance: upsert error for %s: %v", path, uerr)
+					logger.L.Warn("thumbnail upsert error during maintenance", "path", path, "err", uerr)
 				}
 			} else {
 				pending = append(pending, fileNeedingThumbnail{
@@ -119,7 +119,7 @@ func maintainThumbnails(rootPath string, repo repository.ThumbnailRepository) (d
 	for _, h := range orphanHashes {
 		thumbFile := filepath.Join(thumbDir, h+".webp")
 		if err := os.Remove(thumbFile); err != nil && !os.IsNotExist(err) {
-			log.Printf("Thumbnail maintenance: failed to remove orphan file %s: %v", thumbFile, err)
+			logger.L.Warn("failed to remove orphan thumbnail", "path", thumbFile, "err", err)
 		} else if err == nil {
 			deleted++
 		}
@@ -136,20 +136,20 @@ func preGenerateThumbnails(pending []fileNeedingThumbnail, repo repository.Thumb
 	generated := 0
 	for _, f := range pending {
 		if !state.IsIdle(idleThreshold) {
-			log.Println("Thumbnail maintenance: pausing — API activity detected")
+			logger.L.Info("thumbnail maintenance pausing, API activity detected")
 			for !state.IsIdle(idleThreshold) {
 				time.Sleep(idleSleepDuration)
 			}
-			log.Println("Thumbnail maintenance: resuming pre-generation")
+			logger.L.Info("thumbnail maintenance resuming")
 		}
 
 		if err := generateThumbnail(f); err != nil {
-			log.Printf("Thumbnail maintenance: failed to generate thumbnail for %s: %v", f.fullPath, err)
+			logger.L.Error("failed to generate thumbnail", "path", f.fullPath, "err", err)
 			continue
 		}
 
 		if err := repo.Upsert(f.hash, f.fullPath, f.isVideo); err != nil {
-			log.Printf("Thumbnail maintenance: upsert error after generation for %s: %v", f.fullPath, err)
+			logger.L.Warn("thumbnail upsert error after generation", "path", f.fullPath, "err", err)
 			continue
 		}
 		generated++

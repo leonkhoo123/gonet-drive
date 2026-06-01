@@ -1,9 +1,9 @@
 package schedule
 
 import (
-	"log"
 	"time"
 
+	"go-file-server/internal/logger"
 	"go-file-server/internal/repository"
 )
 
@@ -19,14 +19,14 @@ func StartCleanupScheduler(tokenRepo repository.RefreshTokenRepository) {
 	go func() {
 		for {
 			delay := untilNext(time.Now(), 3, 0)
-			log.Printf("Token cleanup scheduled in %s (next run at 03:00)", delay.Round(time.Second))
+			logger.L.Debug("token cleanup scheduled", "delay", delay.Round(time.Second))
 			time.Sleep(delay)
 
 			deleted, err := tokenRepo.DeleteExpired()
 			if err != nil {
-				log.Printf("Token cleanup failed: %v", err)
+				logger.L.Error("token cleanup failed", "err", err)
 			} else if deleted > 0 {
-				log.Printf("Token cleanup: removed %d expired/revoked rows", deleted)
+				logger.L.Info("token cleanup completed", "removed", deleted)
 			}
 		}
 	}()

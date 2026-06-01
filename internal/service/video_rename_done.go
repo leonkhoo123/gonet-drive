@@ -3,8 +3,8 @@ package service
 import (
 	"fmt"
 	"go-file-server/internal/config"
+	"go-file-server/internal/logger"
 	"go-file-server/internal/util"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -37,7 +37,7 @@ func VideoRenameDone(c *gin.Context, cfg *config.CloudConfig) {
 		return
 	}
 
-	log.Printf("[OpID: %s] VideoRenameDone: path=%s, newName=%s, angle=%d", req.OpID, req.Path, req.NewName, req.RotateAngle)
+	logger.L.Debug("video rename requested", "opId", req.OpID, "path", req.Path, "newName", req.NewName, "angle", req.RotateAngle)
 
 	srcPath, err := util.SanitizeRepoPath(cfg.Server.FileRoot, req.Path)
 	if err != nil {
@@ -61,7 +61,7 @@ func VideoRenameDone(c *gin.Context, cfg *config.CloudConfig) {
 	}
 
 	if req.RotateAngle != 0 {
-		log.Printf("Will add [%d°] to [%s]", req.RotateAngle, newName)
+		logger.L.Debug("applying video rotation", "angle", req.RotateAngle, "file", newName)
 		rotatedPath, err := util.AdjustVideoRotationTemp(cfg.Server.FileRoot, srcPath, req.RotateAngle)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

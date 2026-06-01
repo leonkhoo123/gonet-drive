@@ -5,13 +5,13 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"fmt"
-	"log"
 	"math/big"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
+	"go-file-server/internal/logger"
 	"go-file-server/internal/model"
 	"go-file-server/internal/state"
 	"go-file-server/internal/util"
@@ -111,7 +111,7 @@ func (s *SharingService) CreateShareEndpoint(c *gin.Context) {
 	}
 
 	if err := s.ShareRepo.Create(share); err != nil {
-		log.Printf("Failed to insert share link: %v", err)
+		logger.L.Error("failed to insert share link", "err", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
@@ -142,7 +142,7 @@ func (s *SharingService) ListSharesEndpoint(c *gin.Context) {
 
 	shares, err := s.ShareRepo.ListByUsername(username.(string))
 	if err != nil {
-		log.Printf("Failed to query shares: %v", err)
+		logger.L.Error("failed to query shares", "err", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
@@ -156,10 +156,10 @@ func (s *SharingService) ListSharesEndpoint(c *gin.Context) {
 			if stat, statErr := os.Stat(fullPath); statErr == nil {
 				shares[i].IsDir = stat.IsDir()
 			} else {
-				log.Printf("Failed to stat share path: %s, error: %v", fullPath, statErr)
+				logger.L.Warn("failed to stat share path", "path", fullPath, "err", statErr)
 			}
 		} else {
-			log.Printf("Failed to sanitize share path: %s, error: %v", shares[i].Path, err)
+			logger.L.Warn("failed to sanitize share path", "path", shares[i].Path, "err", err)
 		}
 	}
 

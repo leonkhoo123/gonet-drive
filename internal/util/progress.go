@@ -2,9 +2,10 @@ package util
 
 import (
 	"fmt"
-	"log"
 	"sync"
 	"time"
+
+	"go-file-server/internal/logger"
 )
 
 // ProgressTracker tracks the progress of file operations (copy, move, delete)
@@ -114,24 +115,9 @@ func (pt *ProgressTracker) logProgress() {
 	}
 
 	if pt.TotalBytes > 0 {
-		// Copy mode log
-		log.Printf("Progress: %.2f%% | %s / %s | Speed: %s/s | Files: %d/%d | ETA: %s",
-			percentage,
-			FormatBytes(pt.CopiedBytes),
-			FormatBytes(pt.TotalBytes),
-			FormatBytes(int64(speed)),
-			pt.CopiedFiles,
-			pt.TotalFiles,
-			eta,
-		)
+		logger.L.Debug("progress", "percentage", percentage, "copied", FormatBytes(pt.CopiedBytes), "total", FormatBytes(pt.TotalBytes), "speed", FormatBytes(int64(speed))+"/s", "files_done", pt.CopiedFiles, "files_total", pt.TotalFiles, "eta", eta)
 	} else {
-		// Move/Delete mode log
-		log.Printf("Progress: %.2f%% | Files: %d/%d | ETA: %s",
-			percentage,
-			pt.CopiedFiles, // Works as generic "Done" count
-			pt.TotalFiles,
-			eta,
-		)
+		logger.L.Debug("progress", "percentage", percentage, "files_done", pt.CopiedFiles, "files_total", pt.TotalFiles, "eta", eta)
 	}
 }
 
@@ -144,17 +130,9 @@ func (pt *ProgressTracker) FinalLog() {
 
 	if pt.TotalBytes > 0 {
 		avgSpeed := float64(pt.TotalBytes) / elapsed.Seconds()
-		log.Printf("✓ Operation completed! Total: %s | Files: %d | Time: %s | Avg Speed: %s/s",
-			FormatBytes(pt.TotalBytes),
-			pt.TotalFiles,
-			formatDuration(elapsed),
-			FormatBytes(int64(avgSpeed)),
-		)
+		logger.L.Info("operation completed", "bytes", pt.TotalBytes, "files", pt.TotalFiles, "duration", elapsed.String(), "speed", FormatBytes(int64(avgSpeed))+"")
 	} else {
-		log.Printf("✓ Operation completed! Total files: %d | Time: %s",
-			pt.TotalFiles,
-			formatDuration(elapsed),
-		)
+		logger.L.Info("operation completed", "files", pt.TotalFiles, "duration", elapsed.String())
 	}
 }
 

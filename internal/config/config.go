@@ -1,9 +1,8 @@
 package config
 
 import (
-	"fmt"
 	"go-file-server/internal/assets"
-	"log"
+	"go-file-server/internal/logger"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -23,6 +22,7 @@ type ServerConfig struct {
 	VideoMode                  string
 	ThumbnailMaxConcurrent     int
 	ThumbnailGenerationTimeout time.Duration
+	LogLevel                   string
 }
 
 type AuthConfig struct {
@@ -60,7 +60,7 @@ func Load() *CloudConfig {
 	// Try to load .env from current working directory
 	envPath := filepath.Join(".", ".env")
 	if err := godotenv.Load(envPath); err != nil {
-		fmt.Println("⚠️  No .env file found, using built-in defaults")
+		logger.L.Warn("no .env file found, using built-in defaults")
 	}
 
 	allowedOriginsStr := getEnv("ALLOWED_ORIGINS", "*") // default to allow all origins
@@ -82,6 +82,7 @@ func Load() *CloudConfig {
 			VideoMode:                  getEnv("VIDEO_MODE", "normal"),
 			ThumbnailMaxConcurrent:     getEnvInt("THUMBNAIL_MAX_CONCURRENT", 1),
 			ThumbnailGenerationTimeout: getEnvDuration("THUMBNAIL_GENERATION_TIMEOUT", 30*time.Second),
+			LogLevel:                   getEnv("LOG_LEVEL", "info"),
 		},
 		Auth: AuthConfig{
 			AppJwt:             getEnv("APP_JWT", ""),
@@ -107,17 +108,14 @@ func Load() *CloudConfig {
 	AppConfig = c
 	// --- Logging the configuration ---
 
-	log.Println("--- Starting application with configuration ---")
-	log.Printf("FileRoot:   %s", c.Server.FileRoot)
-	log.Printf("ListenAddr: %s", c.Server.ListenAddr)
-	log.Println("---------------------------------------------")
+	logger.L.Info("starting application with configuration", "file_root", c.Server.FileRoot, "listen_addr", c.Server.ListenAddr, "log_level", c.Server.LogLevel)
 
 	if c.Auth.JwtSecret == "" {
-		log.Fatalf("Missing JWT secret .env")
+		logger.L.Fatal("missing JWT secret")
 	}
 
 	if _, err := os.Stat(c.Server.FileRoot); os.IsNotExist(err) {
-		log.Fatalf("Working directory does not exist (%s)\n", c.Server.FileRoot)
+		logger.L.Fatal("working directory does not exist", "path", c.Server.FileRoot)
 	}
 
 	initCloudReserve(c.Server.FileRoot)
@@ -132,7 +130,7 @@ func initCloudReserve(workDir string) {
 	if _, err := os.Stat(cloudReserveDir); os.IsNotExist(err) {
 		err = os.Mkdir(cloudReserveDir, 0755)
 		if err != nil {
-			log.Fatalf("Failed to create %s directory: %v", cloudReserveDir, err)
+			logger.L.Fatal("failed to create directory", "path", cloudReserveDir, "err", err)
 		}
 	}
 
@@ -149,16 +147,16 @@ func EnsureDefaultLogo() {
 
 	if _, err := os.Stat(iconDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(iconDir, 0755); err != nil {
-			log.Printf("Failed to create %s directory: %v", iconDir, err)
+			logger.L.Error("failed to create directory", "path", iconDir, "err", err)
 			return
 		}
 	}
 
 	if _, err := os.Stat(logoPath); os.IsNotExist(err) {
 		if err := os.WriteFile(logoPath, assets.DefaultLogo, 0644); err != nil {
-			log.Printf("Failed to write default logo to %s: %v", logoPath, err)
+			logger.L.Warn("failed to write default logo", "path", logoPath, "err", err)
 		} else {
-			log.Printf("Initialized default logo at %s", logoPath)
+			logger.L.Info("initialized default logo", "path", logoPath)
 		}
 	}
 }
@@ -181,7 +179,7 @@ func getEnvDuration(key string, fallback time.Duration) time.Duration {
 		if d, err := time.ParseDuration(v); err == nil {
 			return d
 		} else {
-			fmt.Printf("⚠️  Invalid duration for %s: %v, using default %v\n", key, v, fallback)
+			logger.L.Warn("invalid duration config", "key", key, "value", v, "default", fallback)
 		}
 	}
 	return fallback
@@ -193,7 +191,7 @@ func getEnvInt(key string, fallback int) int {
 		if i, err := strconv.Atoi(v); err == nil {
 			return i
 		} else {
-			fmt.Printf("⚠️  Invalid integer for %s: %v, using default %v\n", key, v, fallback)
+			logger.L.Warn("invalid integer config", "key", key, "value", v, "default", fallback)
 		}
 	}
 	return fallback

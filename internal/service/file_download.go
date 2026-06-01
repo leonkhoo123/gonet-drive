@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"go-file-server/internal/config"
+	"go-file-server/internal/logger"
 
 	"github.com/gin-gonic/gin"
 )
@@ -102,6 +103,8 @@ func DownloadFiles(c *gin.Context, cfg *config.CloudConfig) {
 	dateStr := now.Format("2006_01_02")
 	zipFileName := fmt.Sprintf("%s_%d_%s_download.zip", dateStr, timestamp, cleanServerName.String())
 
+	logger.L.Debug("creating zip download", "count", len(validPaths), "zipName", zipFileName)
+
 	c.Writer.Header().Set("Content-Type", "application/zip")
 	c.Writer.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, zipFileName))
 	c.Writer.Header().Set("X-Accel-Buffering", "no")
@@ -163,9 +166,7 @@ func DownloadFiles(c *gin.Context, cfg *config.CloudConfig) {
 		})
 
 		if err != nil {
-			// If we fail midway, we might have already written some headers,
-			// but we can at least log it. We can't change the HTTP status code anymore.
-			fmt.Printf("Error zipping %s: %v\n", fullPath, err)
+			logger.L.Error("zip download failed", "path", fullPath, "err", err)
 			return
 		}
 	}

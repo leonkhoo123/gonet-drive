@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 
+	"go-file-server/internal/logger"
 	"go-file-server/internal/repository"
 	"go-file-server/internal/util/imageutil"
 
@@ -19,6 +20,7 @@ func SetThumbnailRepo(repo repository.ThumbnailRepository) {
 }
 
 func GenerateVideoThumbnail(ctx context.Context, fullPath, thumbPath string) error {
+	logger.L.Debug("generating video thumbnail", "input", fullPath, "output", thumbPath)
 	cmd := exec.CommandContext(ctx,
 		"prlimit",
 		"--as=524288000",
@@ -42,6 +44,7 @@ func GenerateVideoThumbnail(ctx context.Context, fullPath, thumbPath string) err
 }
 
 func GeneratePhotoThumbnail(fullPath, thumbPath string) error {
+	logger.L.Debug("generating photo thumbnail", "input", fullPath, "output", thumbPath)
 	src, err := imageutil.DecodeImage(fullPath)
 	if err != nil {
 		return fmt.Errorf("decode: %w", err)
@@ -64,8 +67,7 @@ func GeneratePhotoThumbnail(fullPath, thumbPath string) error {
 func UpsertThumbnailRecord(hash, filePath string, isVideo bool) {
 	if thumbRepo != nil {
 		if err := thumbRepo.Upsert(hash, filePath, isVideo); err != nil {
-			// Log but don't fail — thumbnail generation succeeded, just tracking failed
-			fmt.Printf("thumbnail upsert failed for %s: %v\n", filePath, err)
+			logger.L.Warn("thumbnail upsert failed", "file", filePath, "err", err)
 		}
 	}
 }

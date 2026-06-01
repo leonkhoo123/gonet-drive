@@ -23,7 +23,7 @@ package main
 import (
 	"context"
 	"io/fs"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -34,6 +34,7 @@ import (
 	_ "go-file-server/docs"
 	"go-file-server/internal/config"
 	"go-file-server/internal/controller"
+	"go-file-server/internal/logger"
 	"go-file-server/internal/repository"
 	"go-file-server/internal/schedule"
 	"go-file-server/internal/service"
@@ -51,6 +52,9 @@ import (
 func main() {
 	cfg := config.Load()
 
+	// Initialize structured logger
+	logger.Init(parseLogLevel(cfg.Server.LogLevel), cfg.Server.AppEnv)
+
 	// Initialize database
 	config.InitDB(cfg.Server.FileRoot)
 	defer config.DB.Close()
@@ -59,7 +63,8 @@ func main() {
 	storage.InitStorageManager(cfg.Server.FileRoot)
 
 	router := gin.New()
-	router.Use(gin.Logger())
+	router.Use(logger.RequestIDMiddleware())
+	router.Use(logger.RequestLoggerMiddleware())
 	router.Use(gin.Recovery())
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     cfg.Server.AllowedOrigins,
@@ -122,7 +127,7 @@ func main() {
 
 	distFS, err := fs.Sub(ui.ReactFiles, "dist")
 	if err != nil {
-		log.Fatalf("failed to create sub filesystem for ui dist: %v", err)
+		logger.L.Fatal("failed to create sub filesystem", "err", err)
 	}
 
 	fileServer := http.FileServer(http.FS(distFS))
@@ -151,9 +156,9 @@ func main() {
 
 	// graceful shutdown
 	go func() {
-		log.Printf("Starting server on %s", cfg.Server.ListenAddr)
+		logger.L.Info("starting server", "addr", cfg.Server.ListenAddr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("failed to start server: %v", err)
+			logger.L.Fatal("server start failed", "err", err)
 		}
 	}()
 
@@ -161,15 +166,15 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	log.Println("Shutting down...")
+	logger.L.Info("shutting down")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
+		logger.L.Fatal("forced shutdown", "err", err)
 	}
 
-	log.Println("Server exiting gracefully")
+	logger.L.Info("server exited gracefully")
 }
 
 // healthHandler godoc
@@ -192,4 +197,17 @@ func healthHandler(c *gin.Context) {
 		"upload_chunk_size": cloudConfig.UploadChunkSize,
 		"video_mode":        config.AppConfig.Server.VideoMode,
 	})
+}
+
+func parseLogLevel(level string) slog.Level {
+	switch strings.ToLower(level) {
+	case "debug":
+		return slog.LevelDebug
+	case "warn", "warning":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
+	}
 }

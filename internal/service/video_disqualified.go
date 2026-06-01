@@ -3,8 +3,8 @@ package service
 import (
 	"fmt"
 	"go-file-server/internal/config"
+	"go-file-server/internal/logger"
 	"go-file-server/internal/util"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -36,7 +36,7 @@ func VideoDisqualified(c *gin.Context, cfg *config.CloudConfig) {
 		return
 	}
 
-	log.Printf("[OpID: %s] VideoDisqualified: path=%s", req.OpID, req.Path)
+	logger.L.Debug("video disqualified requested", "opId", req.OpID, "path", req.Path)
 
 	if req.Path == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing 'path' field"})

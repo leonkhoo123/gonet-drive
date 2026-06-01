@@ -3,13 +3,14 @@ package util
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"go-file-server/internal/logger"
 )
 
 func AdjustVideoRotationTemp(fileRoot, srcPath string, rotateAngle int) (string, error) {
@@ -32,6 +33,7 @@ func AdjustVideoRotationTemp(fileRoot, srcPath string, rotateAngle int) (string,
 	cmd := exec.Command("ffprobe", "-v", "error", "-select_streams", "v:0",
 		"-show_entries", "stream_tags=rotate:stream_side_data=rotation",
 		"-of", "default=noprint_wrappers=1:nokey=1", tempSrc)
+	logger.L.Debug("running ffprobe", "cmd", cmd.String(), "input", tempSrc)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	if err := cmd.Run(); err != nil {
@@ -39,7 +41,7 @@ func AdjustVideoRotationTemp(fileRoot, srcPath string, rotateAngle int) (string,
 	}
 
 	ffprobeOutput := out.String()
-	log.Printf("ffprobe output: [%s]", ffprobeOutput)
+	logger.L.Debug("ffprobe output", "output", ffprobeOutput, "file", filename)
 
 	current := 0
 	if s := strings.TrimSpace(ffprobeOutput); s != "" {
@@ -56,7 +58,7 @@ func AdjustVideoRotationTemp(fileRoot, srcPath string, rotateAngle int) (string,
 		newAngle -= 360
 	}
 
-	log.Printf("Video [%s]: Current=%d°, Adjusting=-%d°, New=%d°", filename, current, rotateAngle, newAngle)
+	logger.L.Debug("video rotation calculation", "file", filename, "current", current, "adjust_by", rotateAngle, "new_angle", newAngle)
 
 	// Apply new rotation using display_rotation (as INPUT option) and metadata
 	tempOutput := filepath.Join(tempDir, fmt.Sprintf("%d_rotated_%s", time.Now().UnixNano(), filename))
@@ -66,12 +68,13 @@ func AdjustVideoRotationTemp(fileRoot, srcPath string, rotateAngle int) (string,
 		"-c", "copy",
 		"-metadata:s:v:0", fmt.Sprintf("rotate=%d", newAngle),
 		tempOutput)
+	logger.L.Debug("running ffmpeg for rotation", "cmd", cmd.String(), "new_angle", newAngle)
 
 	var errBuf bytes.Buffer
 	cmd.Stderr = &errBuf
 	if err := cmd.Run(); err != nil {
 		ffmpegError := errBuf.String()
-		log.Printf("ffmpeg stderr: %s", ffmpegError)
+		logger.L.Error("ffmpeg failed", "stderr", ffmpegError, "file", filename)
 		os.Remove(tempOutput)
 		return "", fmt.Errorf("ffmpeg error: %v: %s", err, ffmpegError)
 	}
@@ -79,11 +82,11 @@ func AdjustVideoRotationTemp(fileRoot, srcPath string, rotateAngle int) (string,
 	// Defer cleanup of temp source file
 	defer func() {
 		if err := os.Remove(tempSrc); err != nil {
-			log.Printf("Warning: failed to remove temp source file %s: %v", tempSrc, err)
+			logger.L.Warn("failed to remove temp source file", "path", tempSrc, "err", err)
 		}
 	}()
 
-	log.Printf("Rotation applied successfully. Output: %s", tempOutput)
+	logger.L.Info("video rotation applied", "output", tempOutput, "file", filename)
 
 	return tempOutput, nil
 }

@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"go-file-server/internal/config"
+	"go-file-server/internal/logger"
 	"go-file-server/internal/storage"
 	"go-file-server/internal/util"
 
@@ -71,6 +72,8 @@ func UploadChunk(c *gin.Context, cfg *config.CloudConfig) {
 
 	// Create temp directory for this upload inside .cloud_reserve/upload_temp
 	tempDir := filepath.Join(cfg.Server.FileRoot, ".cloud_reserve", "upload_temp", identifier)
+
+	logger.L.Debug("upload chunk", "identifier", identifier, "status", status, "filename", c.PostForm("filename"), "chunk", c.PostForm("chunkNumber"), "total", c.PostForm("totalChunks"))
 
 	// If the frontend is aborting the upload
 	if status == "cancel" {
@@ -196,6 +199,7 @@ func UploadChunk(c *gin.Context, cfg *config.CloudConfig) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Checksum mismatch"})
 			return
 		}
+		logger.L.Debug("chunk checksum verified", "identifier", identifier, "chunk", chunkNumber)
 	}
 
 	if err := os.Rename(tmpChunkPath, chunkPath); err != nil {
@@ -268,6 +272,7 @@ func UploadChunk(c *gin.Context, cfg *config.CloudConfig) {
 			"status":  "done",
 			"path":    filepath.ToSlash(filepath.Clean(destination + "/" + cleanFilename)),
 		})
+		logger.L.Info("upload complete", "identifier", identifier, "file", cleanFilename, "dest", finalDest, "size", finalSize)
 		return
 	}
 

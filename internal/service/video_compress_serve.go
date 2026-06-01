@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"go-file-server/internal/config"
+	"go-file-server/internal/logger"
 	"go-file-server/internal/util"
 
 	"github.com/gin-gonic/gin"
@@ -29,6 +30,7 @@ func ServeCompressVid(c *gin.Context, cfg *config.CloudConfig) {
 	targetURL := fmt.Sprintf("http://localhost:8080/video/stream?filepath=%s&start=%s",
 		fullPath, start,
 	)
+	logger.L.Debug("proxying video stream", "file", fullPath, "start", start, "target", targetURL)
 
 	// Prepare request to transcoder server
 	req, err := http.NewRequest("GET", targetURL, nil)
@@ -62,6 +64,6 @@ func ServeCompressVid(c *gin.Context, cfg *config.CloudConfig) {
 	// Stream response directly to browser
 	_, err = io.Copy(c.Writer, resp.Body)
 	if err != nil {
-		fmt.Printf("Stream error: %v\n", err)
+		logger.L.Error("video stream error", "err", err)
 	}
 }

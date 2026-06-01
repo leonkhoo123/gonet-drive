@@ -1,6 +1,6 @@
 # 02 — File Migration (22 files, level mapping)
 
-> Parent: [logger_plan_index.md](logger_plan_index.md) | Status: none
+> Parent: [logger_plan_index.md](logger_plan_index.md) | Status: implemented
 
 ---
 

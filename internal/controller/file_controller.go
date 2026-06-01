@@ -97,7 +97,8 @@ func copyFilesHandler(cfg *config.CloudConfig) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		if err := service.CopyFiles(req, cfg); err != nil {
+		requestID := c.GetString("request_id")
+		if err := service.CopyFiles(req, cfg, requestID); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
@@ -124,7 +125,8 @@ func moveFilesHandler(cfg *config.CloudConfig) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		if err := service.MoveFiles(req, cfg); err != nil {
+		requestID := c.GetString("request_id")
+		if err := service.MoveFiles(req, cfg, requestID); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
@@ -176,7 +178,8 @@ func deleteFilesHandler(cfg *config.CloudConfig) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		if err := service.DeleteFiles(req, cfg); err != nil {
+		requestID := c.GetString("request_id")
+		if err := service.DeleteFiles(req, cfg, requestID); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
@@ -203,7 +206,8 @@ func deletePermanentFilesHandler(cfg *config.CloudConfig) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		if err := service.DeletePermanentFiles(req, cfg); err != nil {
+		requestID := c.GetString("request_id")
+		if err := service.DeletePermanentFiles(req, cfg, requestID); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}

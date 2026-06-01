@@ -4,9 +4,10 @@ import (
 	"database/sql"
 	"embed"
 	"fmt"
-	"log"
 	"sort"
 	"strings"
+
+	"go-file-server/internal/logger"
 )
 
 //go:embed migrations/*.sql
@@ -65,13 +66,12 @@ func RunMigrations(db *sql.DB) error {
 	sort.Strings(toApply)
 
 	if len(toApply) == 0 {
-		log.Println("No new migrations to apply.")
+		logger.L.Info("no new migrations to apply")
 		return nil
 	}
 
-	// 5. Apply new migrations
 	for _, file := range toApply {
-		log.Printf("Applying migration: %s", file)
+		logger.L.Info("applying migration", "file", file)
 		content, err := embeddedMigrations.ReadFile("migrations/" + file)
 		if err != nil {
 			return fmt.Errorf("failed to read migration file %s: %w", file, err)
@@ -98,7 +98,7 @@ func RunMigrations(db *sql.DB) error {
 		if err := tx.Commit(); err != nil {
 			return fmt.Errorf("failed to commit migration %s: %w", file, err)
 		}
-		log.Printf("Successfully applied migration: %s", file)
+		logger.L.Info("migration applied successfully", "file", file)
 	}
 
 	return nil

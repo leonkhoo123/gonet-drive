@@ -3,9 +3,9 @@ package ws
 import (
 	"encoding/json"
 	"fmt"
+	"go-file-server/internal/logger"
 	"go-file-server/internal/state"
 	"go-file-server/internal/util"
-	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -51,14 +51,14 @@ func (m *WsManager) Start() {
 			m.mu.Lock()
 			m.clients[client] = true
 			m.mu.Unlock()
-			log.Println("New WebSocket client connected")
+			logger.L.Info("websocket client connected")
 
 		case client := <-m.unregister:
 			m.mu.Lock()
 			if _, ok := m.clients[client]; ok {
 				delete(m.clients, client)
 				client.Close()
-				log.Println("WebSocket client disconnected")
+				logger.L.Info("websocket client disconnected")
 			}
 			m.mu.Unlock()
 
@@ -67,7 +67,7 @@ func (m *WsManager) Start() {
 			for client := range m.clients {
 				err := client.WriteJSON(message)
 				if err != nil {
-					log.Printf("Websocket error: %v", err)
+					logger.L.Error("websocket write error", "err", err)
 					client.Close()
 					delete(m.clients, client)
 				}
@@ -93,7 +93,7 @@ func Broadcast(message interface{}) {
 func WsHandler(c *gin.Context) {
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		log.Printf("Failed to upgrade to websocket: %v", err)
+		logger.L.Error("failed to upgrade to websocket", "err", err)
 		return
 	}
 
@@ -126,7 +126,7 @@ func WsHandler(c *gin.Context) {
 			// Handle client messages
 			var msg ClientMessage
 			if err := json.Unmarshal(p, &msg); err != nil {
-				log.Printf("Error unmarshalling client message: %v", err)
+				logger.L.Error("failed to unmarshal websocket message", "err", err)
 				continue
 			}
 
@@ -189,4 +189,5 @@ type OperationMessage struct {
 	OpFileCount  *string  `json:"opFileCount"`       // "3/367", null when error/completed/aborted
 	Error        *string  `json:"error,omitempty"`   // error message if status is "error" or "aborted"
 	DestDir      *string  `json:"destDir,omitempty"` // destination directory
+	RequestId    *string  `json:"requestId,omitempty"`
 }

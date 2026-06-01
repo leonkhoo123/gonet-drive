@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"go-file-server/database"
-	"log"
+	"go-file-server/internal/logger"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -49,7 +49,7 @@ func InitDB(workDir string) {
 	if _, err := os.Stat(configDir); os.IsNotExist(err) {
 		err = os.MkdirAll(configDir, 0755)
 		if err != nil {
-			log.Fatalf("Failed to create %s directory: %v", configDir, err)
+			logger.L.Fatal("failed to create DB directory", "path", configDir, "err", err)
 		}
 	}
 
@@ -59,12 +59,12 @@ func InitDB(workDir string) {
 	var err error
 	DB, err = sql.Open("sqlite3", dbPath)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		logger.L.Fatal("failed to connect to database", "err", err)
 	}
 
 	// Run migrations
 	if err := database.RunMigrations(DB); err != nil {
-		log.Fatalf("Failed to run database migrations: %v", err)
+		logger.L.Fatal("database migrations failed", "err", err)
 	}
 
 	// Clean up deprecated configs
@@ -83,16 +83,16 @@ func InitDB(workDir string) {
 		if err == nil {
 			break
 		}
-		log.Printf("Failed to insert default config (attempt %d/5): %v", i+1, err)
+		logger.L.Warn("failed to insert default config", "attempt", i+1, "max_attempts", 5, "err", err)
 		time.Sleep(2 * time.Second)
 	}
 	if err != nil {
-		log.Fatalf("Failed to insert default config after retries: %v", err)
+		logger.L.Fatal("failed to insert default config after retries", "err", err)
 	}
 
 	// Refresh cache at startup
 	if err := RefreshCloudConfigCache(); err != nil {
-		log.Printf("Warning: Failed to load cloud config cache: %v", err)
+		logger.L.Warn("failed to load cloud config cache", "err", err)
 
 		uploadChunkSize, _ := strconv.ParseInt(AppConfig.Defaults.UploadChunkSize, 10, 64)
 		storageLimit, _ := strconv.ParseInt(AppConfig.Defaults.StorageLimit, 10, 64)
@@ -118,14 +118,14 @@ func bootstrapAdmin() {
 	var exists bool
 	err := DB.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE username = ?)", adminUser).Scan(&exists)
 	if err != nil {
-		log.Printf("Failed to check if admin user exists: %v", err)
+		logger.L.Error("failed to check admin user existence", "err", err)
 		return
 	}
 
 	if !exists {
 		hashedPass, err := bcrypt.GenerateFromPassword([]byte(adminPass), bcrypt.DefaultCost)
 		if err != nil {
-			log.Printf("Failed to hash admin password: %v", err)
+			logger.L.Error("failed to hash admin password", "err", err)
 			return
 		}
 
@@ -135,9 +135,9 @@ func bootstrapAdmin() {
 			VALUES (?, ?, ?, 'superadmin', 1)
 		`, adminID, adminUser, string(hashedPass))
 		if err != nil {
-			log.Printf("Failed to create admin user: %v", err)
+			logger.L.Error("failed to create admin user", "err", err)
 		} else {
-			log.Printf("Successfully bootstrapped superadmin user: %s", adminUser)
+			logger.L.Info("bootstrapped superadmin user", "username", adminUser)
 		}
 	}
 }

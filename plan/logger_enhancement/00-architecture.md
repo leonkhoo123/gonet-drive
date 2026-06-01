@@ -1,6 +1,6 @@
 # 00 — Architecture & Decisions
 
-> Parent: [logger_plan_index.md](logger_plan_index.md) | Status: none
+> Parent: [logger_plan_index.md](logger_plan_index.md) | Status: implemented
 
 ---
 

@@ -2,25 +2,25 @@ package util
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
+
+	"go-file-server/internal/logger"
 )
 
 // DeleteFilesPermanent permanently deletes files and folders from the filesystem.
 // Progress is tracked by file count.
 func DeleteFilesPermanent(tracker *ProgressTracker, sources []string, opID string, onDeleted func(int64)) error {
-	log.Println("Counting files to permanently delete...")
+	logger.L.Debug("counting files to permanently delete")
 
 	// Count total files
 	for _, source := range sources {
 		if err := countFiles(source, tracker); err != nil {
-			// Log but don't fail, might be permission issues or already deleted
-			log.Printf("Warning: failed to count files for '%s': %v", source, err)
+			logger.L.Warn("failed to count files for deletion", "path", source, "err", err)
 		}
 	}
 
-	log.Printf("Starting permanent delete operation: %d files to delete", tracker.TotalFiles)
+	logger.L.Info("starting permanent delete operation", "files", tracker.TotalFiles)
 
 	var finalErr error
 
@@ -31,7 +31,7 @@ func DeleteFilesPermanent(tracker *ProgressTracker, sources []string, opID strin
 		}
 		if err := removePath(source, tracker, opID, onDeleted); err != nil {
 			finalErr = fmt.Errorf("failed to permanently delete '%s': %w", source, err)
-			log.Println(finalErr)
+			logger.L.Error("failed to permanently delete", "path", source, "err", err)
 			// Continue attempting to delete other files even if one fails
 		}
 	}

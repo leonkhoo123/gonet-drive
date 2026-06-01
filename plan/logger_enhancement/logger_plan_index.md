@@ -46,9 +46,9 @@ Each `NN-name.md` file describes **what** to change for a specific phase, **how*
 
 | # | Section | Status | File | Started | Done |
 |---|---------|--------|------|---------|------|
-| 00 | Architecture & Decisions | none | [00-architecture.md](00-architecture.md) | - | - |
-| 01 | Config & Middleware (Gin + Correlation IDs) | none | [01-config-middleware.md](01-config-middleware.md) | - | - |
-| 02 | File Migration (24 files, level mapping) | none | [02-file-migration.md](02-file-migration.md) | - | - |
+| 00 | Architecture & Decisions | done-review | [00-architecture.md](00-architecture.md) | 2026-06-01 | 2026-06-01 |
+| 01 | Config & Middleware (Gin + Correlation IDs) | done-review | [01-config-middleware.md](01-config-middleware.md) | 2026-06-01 | 2026-06-01 |
+| 02 | File Migration (24 files, level mapping) | done-review | [02-file-migration.md](02-file-migration.md) | 2026-06-01 | 2026-06-01 |
 
 ---
 

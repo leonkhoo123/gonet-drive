@@ -2,10 +2,11 @@ package util
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"go-file-server/internal/logger"
 )
 
 // MoveFiles moves multiple files and/or folders to a destination directory.
@@ -41,7 +42,7 @@ func MoveFiles(tracker *ProgressTracker, sources []string, destDir string, opID 
 	destDir = filepath.Clean(destDir)
 	// Tracker is passed in now
 
-	log.Println("Counting files to move...")
+	logger.L.Debug("counting files to move")
 
 	// Count total files
 	for _, source := range sources {
@@ -50,7 +51,7 @@ func MoveFiles(tracker *ProgressTracker, sources []string, destDir string, opID 
 		}
 	}
 
-	log.Printf("Starting move operation: %d files to move", tracker.TotalFiles)
+	logger.L.Info("starting move operation", "files", tracker.TotalFiles)
 
 	// Ensure destination directory exists
 	if err := os.MkdirAll(destDir, 0755); err != nil {
@@ -62,13 +63,13 @@ func MoveFiles(tracker *ProgressTracker, sources []string, destDir string, opID 
 
 	defer func() {
 		if finalErr != nil {
-			log.Printf("Move failed halfway. Reverting %d successfully moved items...", len(movedItems))
+			logger.L.Warn("move failed halfway, reverting", "items", len(movedItems))
 			for i := len(movedItems) - 1; i >= 0; i-- {
 				item := movedItems[i]
 				// We attempt to rename it back. If it's a merged directory, this may only partially work,
 				// but for most items, this will revert the move properly.
 				if err := os.Rename(item.dst, item.src); err != nil {
-					log.Printf("Failed to revert move from %s to %s: %v", item.dst, item.src, err)
+					logger.L.Warn("failed to revert move", "source", item.src, "dest", item.dst, "err", err)
 				}
 			}
 		}
@@ -259,8 +260,7 @@ func mergeMoveDir(src, dst string, tracker *ProgressTracker, opID string) error 
 
 	// Remove the now-empty source directory
 	if err := os.Remove(src); err != nil {
-		// Log but don't fail if we can't remove the source directory
-		log.Printf("Warning: failed to remove source directory '%s': %v", src, err)
+		logger.L.Warn("failed to remove source directory after merge", "path", src, "err", err)
 	}
 
 	return nil

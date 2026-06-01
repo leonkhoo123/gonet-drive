@@ -2,13 +2,13 @@ package service
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"go-file-server/internal/config"
+	"go-file-server/internal/logger"
 	"go-file-server/internal/state"
 	"go-file-server/internal/storage"
 	"go-file-server/internal/util"
@@ -86,27 +86,38 @@ func getOpName(opType string, sources []string, destDir string) string {
 	return fmt.Sprintf("%s %s and %d more items", actionDesc, firstFile, len(sources)-1)
 }
 
-func submitAsyncJob(opID, opType, opName string, tracker *util.ProgressTracker, includeSpeed bool, destDir string, action func(tracker *util.ProgressTracker) error) {
+func submitAsyncJob(opID, opType, opName string, tracker *util.ProgressTracker, includeSpeed bool, destDir string, requestID string, action func(tracker *util.ProgressTracker) error) {
 	var destDirPtr *string
 	if destDir != "" {
 		destDirPtr = &destDir
 	}
 
+	var requestIDPtr *string
+	if requestID != "" {
+		requestIDPtr = &requestID
+	}
+
 	ws.Broadcast(ws.OperationMessage{
-		OpId:     opID,
-		OpType:   opType,
-		OpName:   opName,
-		OpStatus: "queued",
-		DestDir:  destDirPtr,
+		OpId:      opID,
+		OpType:    opType,
+		OpName:    opName,
+		OpStatus:  "queued",
+		DestDir:   destDirPtr,
+		RequestId: requestIDPtr,
 	})
 
+	logger.L.With("request_id", requestID).Info("job queued", "opId", opID, "opType", opType)
+
 	JobQueue <- func() {
+		jobLog := logger.L.With("request_id", requestID, "opId", opID)
+
 		ws.Broadcast(ws.OperationMessage{
-			OpId:     opID,
-			OpType:   opType,
-			OpName:   opName,
-			OpStatus: "starting",
-			DestDir:  destDirPtr,
+			OpId:      opID,
+			OpType:    opType,
+			OpName:    opName,
+			OpStatus:  "starting",
+			DestDir:   destDirPtr,
+			RequestId: requestIDPtr,
 		})
 
 		tracker.OnProgress = func(pt *util.ProgressTracker) {
@@ -138,43 +149,46 @@ func submitAsyncJob(opID, opType, opName string, tracker *util.ProgressTracker, 
 				OpSpeed:      speedStr,
 				OpFileCount:  &fileCountStr,
 				DestDir:      destDirPtr,
+				RequestId:    requestIDPtr,
 			})
 		}
 
 		err := action(tracker)
 
 		if err != nil {
-			log.Printf("Error in %s operation %s: %v", opType, opID, err)
+			jobLog.Error("file operation failed", "opType", opType, "err", err)
 			errMsg := err.Error()
 
 			status := "error"
-			// Check if the error is due to cancellation to send the correct status
 			if strings.Contains(errMsg, "operation canceled") {
 				status = "aborted"
 			}
 
 			ws.Broadcast(ws.OperationMessage{
-				OpId:     opID,
-				OpType:   opType,
-				OpName:   opName,
-				OpStatus: status,
-				Error:    &errMsg,
-				DestDir:  destDirPtr,
+				OpId:      opID,
+				OpType:    opType,
+				OpName:    opName,
+				OpStatus:  status,
+				Error:     &errMsg,
+				DestDir:   destDirPtr,
+				RequestId: requestIDPtr,
 			})
 		} else {
+			jobLog.Debug("file operation completed", "opType", opType, "files", tracker.CopiedFiles, "bytes", tracker.CopiedBytes)
 			ws.Broadcast(ws.OperationMessage{
-				OpId:     opID,
-				OpType:   opType,
-				OpName:   opName,
-				OpStatus: "completed",
-				DestDir:  destDirPtr,
+				OpId:      opID,
+				OpType:    opType,
+				OpName:    opName,
+				OpStatus:  "completed",
+				DestDir:   destDirPtr,
+				RequestId: requestIDPtr,
 			})
 		}
 	}
 }
 
 func CancelOperation(req CancelReq) error {
-	log.Printf("Received cancel request for OpID: %s", req.OpID)
+	logger.L.Debug("received cancel request", "opId", req.OpID)
 	// We assume sending to this endpoint means intent to cancel,
 	// but we respect the cancel flag if it's explicitly false.
 	if req.Cancel != nil && !*req.Cancel {
@@ -184,8 +198,8 @@ func CancelOperation(req CancelReq) error {
 	return nil
 }
 
-func CopyFiles(req CopyReq, cfg *config.CloudConfig) error {
-	log.Printf("[OpID: %s] CopyFiles: sources=%v, destDir=%s", req.OpID, req.Sources, req.DestDir)
+func CopyFiles(req CopyReq, cfg *config.CloudConfig, requestID string) error {
+	logger.L.Debug("copy files requested", "opId", req.OpID, "sources", req.Sources, "destDir", req.DestDir)
 
 	opID := req.OpID
 	if opID == "" {
@@ -228,7 +242,7 @@ func CopyFiles(req CopyReq, cfg *config.CloudConfig) error {
 	tracker := util.NewProgressTracker()
 	state.SetProgress(opID, tracker)
 
-	submitAsyncJob(opID, "copy", opName, tracker, true, req.DestDir, func(t *util.ProgressTracker) error {
+	submitAsyncJob(opID, "copy", opName, tracker, true, req.DestDir, requestID, func(t *util.ProgressTracker) error {
 		var reservedSize int64
 		err := util.CopyFiles(t, safeSources, safeDestDir, opID, isSameDir, func(totalSize int64) error {
 			if config.AppCloudConfig != nil {
@@ -251,8 +265,8 @@ func CopyFiles(req CopyReq, cfg *config.CloudConfig) error {
 	return nil
 }
 
-func MoveFiles(req MoveReq, cfg *config.CloudConfig) error {
-	log.Printf("[OpID: %s] MoveFiles: sources=%v, destDir=%s", req.OpID, req.Sources, req.DestDir)
+func MoveFiles(req MoveReq, cfg *config.CloudConfig, requestID string) error {
+	logger.L.Debug("move files requested", "opId", req.OpID, "sources", req.Sources, "destDir", req.DestDir)
 
 	opID := req.OpID
 	if opID == "" {
@@ -293,15 +307,15 @@ func MoveFiles(req MoveReq, cfg *config.CloudConfig) error {
 	tracker := util.NewProgressTracker()
 	state.SetProgress(opID, tracker)
 
-	submitAsyncJob(opID, "move", opName, tracker, false, req.DestDir, func(t *util.ProgressTracker) error {
+	submitAsyncJob(opID, "move", opName, tracker, false, req.DestDir, requestID, func(t *util.ProgressTracker) error {
 		return util.MoveFiles(t, safeSources, safeDestDir, opID)
 	})
 
 	return nil
 }
 
-func DeleteFiles(req DeleteReq, cfg *config.CloudConfig) error {
-	log.Printf("[OpID: %s] DeleteFiles: sources=%v", req.OpID, req.Sources)
+func DeleteFiles(req DeleteReq, cfg *config.CloudConfig, requestID string) error {
+	logger.L.Debug("delete files requested", "opId", req.OpID, "sources", req.Sources)
 
 	opID := req.OpID
 	if opID == "" {
@@ -331,7 +345,7 @@ func DeleteFiles(req DeleteReq, cfg *config.CloudConfig) error {
 	for _, source := range safeSources {
 		baseName := filepath.Base(source)
 		if baseName == ".cloud_reserve" || baseName == ".cloud_delete" {
-			log.Printf("Skipping deletion of protected folder: %s", source)
+			logger.L.Warn("skipping protected folder", "path", source)
 			continue
 		}
 		validSources = append(validSources, source)
@@ -344,7 +358,7 @@ func DeleteFiles(req DeleteReq, cfg *config.CloudConfig) error {
 	tracker := util.NewProgressTracker()
 	state.SetProgress(opID, tracker)
 
-	submitAsyncJob(opID, "delete", opName, tracker, false, "", func(t *util.ProgressTracker) error {
+	submitAsyncJob(opID, "delete", opName, tracker, false, "", requestID, func(t *util.ProgressTracker) error {
 		recycleBinDir := filepath.Join(cfg.Server.FileRoot, ".cloud_delete")
 		if _, err := os.Stat(recycleBinDir); os.IsNotExist(err) {
 			os.MkdirAll(recycleBinDir, 0755)
@@ -355,8 +369,8 @@ func DeleteFiles(req DeleteReq, cfg *config.CloudConfig) error {
 	return nil
 }
 
-func DeletePermanentFiles(req DeleteReq, cfg *config.CloudConfig) error {
-	log.Printf("[OpID: %s] DeletePermanentFiles: sources=%v", req.OpID, req.Sources)
+func DeletePermanentFiles(req DeleteReq, cfg *config.CloudConfig, requestID string) error {
+	logger.L.Debug("permanent delete requested", "opId", req.OpID, "sources", req.Sources)
 
 	opID := req.OpID
 	if opID == "" {
@@ -386,7 +400,7 @@ func DeletePermanentFiles(req DeleteReq, cfg *config.CloudConfig) error {
 	for _, source := range safeSources {
 		baseName := filepath.Base(source)
 		if baseName == ".cloud_reserve" || baseName == ".cloud_delete" {
-			log.Printf("Skipping permanent deletion of protected folder: %s", source)
+			logger.L.Warn("skipping protected folder", "path", source)
 			continue
 		}
 		validSources = append(validSources, source)
@@ -399,7 +413,7 @@ func DeletePermanentFiles(req DeleteReq, cfg *config.CloudConfig) error {
 	tracker := util.NewProgressTracker()
 	state.SetProgress(opID, tracker)
 
-	submitAsyncJob(opID, "delete_permanent", opName, tracker, false, "", func(t *util.ProgressTracker) error {
+	submitAsyncJob(opID, "delete_permanent", opName, tracker, false, "", requestID, func(t *util.ProgressTracker) error {
 		return util.DeleteFilesPermanent(t, validSources, opID, func(deletedSize int64) {
 			storage.SubtractUsage(deletedSize)
 		})
@@ -409,7 +423,7 @@ func DeletePermanentFiles(req DeleteReq, cfg *config.CloudConfig) error {
 }
 
 func RenameFile(req RenameReq, cfg *config.CloudConfig) error {
-	log.Printf("[OpID: %s] RenameFile: source=%s, newName=%s", req.OpID, req.Source, req.NewName)
+	logger.L.Debug("rename file requested", "opId", req.OpID, "source", req.Source, "newName", req.NewName)
 
 	safeSource, err := util.SanitizeRepoPath(cfg.Server.FileRoot, req.Source)
 	if err != nil {
@@ -433,7 +447,7 @@ func RenameFile(req RenameReq, cfg *config.CloudConfig) error {
 }
 
 func CreateFolder(req CreateFolderReq, cfg *config.CloudConfig) error {
-	log.Printf("[OpID: %s] CreateFolder: dir=%s, folderName=%s", req.OpID, req.Dir, req.FolderName)
+	logger.L.Debug("create folder requested", "opId", req.OpID, "dir", req.Dir, "folderName", req.FolderName)
 
 	safeDir, err := util.SanitizeRepoPath(cfg.Server.FileRoot, req.Dir)
 	if err != nil {
