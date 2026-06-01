@@ -80,7 +80,7 @@ func Load() *CloudConfig {
 			Hostname:                   getEnv("VIDEO_HOSTNAME", ""),    // optional override for public URL
 			AllowedOrigins:             origins,
 			VideoMode:                  getEnv("VIDEO_MODE", "normal"),
-			ThumbnailMaxConcurrent:     getEnvInt("THUMBNAIL_MAX_CONCURRENT", 2),
+			ThumbnailMaxConcurrent:     getEnvInt("THUMBNAIL_MAX_CONCURRENT", 1),
 			ThumbnailGenerationTimeout: getEnvDuration("THUMBNAIL_GENERATION_TIMEOUT", 30*time.Second),
 		},
 		Auth: AuthConfig{

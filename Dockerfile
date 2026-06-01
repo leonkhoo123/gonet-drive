@@ -46,7 +46,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 # ====== 3. Runtime stage ======
 FROM alpine:latest
 
-RUN apk add --no-cache ffmpeg ca-certificates
+RUN apk add --no-cache ffmpeg util-linux ca-certificates
 
 WORKDIR /root/
 
