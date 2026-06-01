@@ -276,7 +276,7 @@ export default function HomeFileList({
 
       {/* Content Layer - always visible underneath, dimmed during loading */}
       <div className={`min-h-full transition-opacity duration-300 ${isLoading ? 'opacity-40 pointer-events-none' : ''} ${swipeDir === 'right' ? 'animate-slide-out-right' : ''}`}>
-        {!displayItems?.items || displayItems.items.length === 0 ? (
+        {isLoading && !displayItems?.items ? null : !displayItems?.items || displayItems.items.length === 0 ? (
           <div className={`flex flex-col items-center justify-center h-full text-muted-foreground min-h-[50vh] transition-opacity duration-300 ${isLoading ? 'opacity-30 pointer-events-none' : 'opacity-60'}`}>
             <Folder className="h-16 w-16 mb-4 opacity-20" />
             <p>This folder is empty.</p>

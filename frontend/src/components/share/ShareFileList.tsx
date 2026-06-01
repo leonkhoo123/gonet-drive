@@ -270,7 +270,7 @@ export default function ShareFileList({
             <p className="text-red-500 mb-2">Failed to load directory.</p>
             <Button variant="outline" size="sm" onClick={onRefresh}>Try Again</Button>
           </div>
-        ) : !displayItems?.items || displayItems.items.length === 0 ? (
+        ) : isLoading && !displayItems?.items ? null : !displayItems?.items || displayItems.items.length === 0 ? (
           <div className={`flex flex-col items-center justify-center h-full text-muted-foreground min-h-[50vh] transition-opacity duration-300 ${isLoading ? 'opacity-30 pointer-events-none' : 'opacity-60'}`}>
             <Folder className="h-16 w-16 mb-4 opacity-20" />
             <p>This folder is empty.</p>
