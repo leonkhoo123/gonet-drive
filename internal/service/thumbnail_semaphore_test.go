@@ -127,6 +127,63 @@ func TestThumbnailSemaphore_LimitNotExceeded(t *testing.T) {
 	assert.Equal(t, 3, s.Available())
 }
 
+func TestGetThumbnailSemaphore_Singleton(t *testing.T) {
+	// Save and restore global state to avoid interference with other tests
+	prev := globalThumbnailSemaphore
+	globalThumbnailSemaphore = nil
+	semaphoreOnce = sync.Once{}
+	defer func() {
+		globalThumbnailSemaphore = prev
+		semaphoreOnce = sync.Once{}
+	}()
+
+	// Call from multiple goroutines concurrently — all must return the same pointer
+	var wg sync.WaitGroup
+	results := make([]*thumbnailSemaphore, 20)
+
+	for i := 0; i < 20; i++ {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			results[idx] = GetThumbnailSemaphore()
+		}(i)
+	}
+	wg.Wait()
+
+	first := results[0]
+	require.NotNil(t, first, "first semaphore should not be nil")
+	for i := 1; i < 20; i++ {
+		assert.Same(t, first, results[i], "GetThumbnailSemaphore must return the same singleton instance across concurrent calls (goroutine %d)", i)
+	}
+}
+
+func TestGetThumbnailSemaphore_PicksUpConfig(t *testing.T) {
+	// Save and restore global state
+	prev := globalThumbnailSemaphore
+	prevCfg := config.AppConfig
+	globalThumbnailSemaphore = nil
+	semaphoreOnce = sync.Once{}
+	defer func() {
+		globalThumbnailSemaphore = prev
+		semaphoreOnce = sync.Once{}
+		config.AppConfig = prevCfg
+	}()
+
+	config.AppConfig = &config.CloudConfig{
+		Server: config.ServerConfig{
+			ThumbnailMaxConcurrent: 7,
+		},
+	}
+
+	sem := GetThumbnailSemaphore()
+	assert.Equal(t, 7, sem.limit, "should use ThumbnailMaxConcurrent from config")
+
+	// Second call should return same instance with same limit
+	sem2 := GetThumbnailSemaphore()
+	assert.Same(t, sem, sem2, "second call must return the same instance")
+	assert.Equal(t, 7, sem2.limit, "limit should not change on second call")
+}
+
 func TestServeVideoThumbnail_WithSemaphore(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")

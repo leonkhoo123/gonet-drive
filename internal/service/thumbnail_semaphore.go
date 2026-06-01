@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"go-file-server/internal/config"
+	"go-file-server/internal/logger"
 )
 
 type thumbnailSemaphore struct {
@@ -17,11 +18,16 @@ var globalThumbnailSemaphore *thumbnailSemaphore
 var semaphoreOnce sync.Once
 
 func GetThumbnailSemaphore() *thumbnailSemaphore {
-	cfg := config.AppConfig
-	if cfg == nil {
-		return newThumbnailSemaphore(2)
-	}
-	return newThumbnailSemaphore(cfg.Server.ThumbnailMaxConcurrent)
+	semaphoreOnce.Do(func() {
+		cfg := config.AppConfig
+		if cfg == nil {
+			globalThumbnailSemaphore = newThumbnailSemaphore(2)
+		} else {
+			globalThumbnailSemaphore = newThumbnailSemaphore(cfg.Server.ThumbnailMaxConcurrent)
+		}
+		logger.L.Debug("thumbnail semaphore initialized", "limit", globalThumbnailSemaphore.limit)
+	})
+	return globalThumbnailSemaphore
 }
 
 func newThumbnailSemaphore(limit int) *thumbnailSemaphore {
@@ -39,6 +45,7 @@ func newThumbnailSemaphore(limit int) *thumbnailSemaphore {
 func (s *thumbnailSemaphore) Acquire(ctx context.Context) error {
 	select {
 	case s.ch <- struct{}{}:
+		logger.L.Debug("thumbnail semaphore acquired", "in_use", s.Acquiring(), "limit", s.limit)
 		return nil
 	case <-ctx.Done():
 		return ctx.Err()

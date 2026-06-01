@@ -12,6 +12,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Deprecated: ServeCompressVid proxies to an external video transcoder.
+// This service is no longer actively maintained and may be removed in a future release.
 func ServeCompressVid(c *gin.Context, cfg *config.CloudConfig) {
 	// Example:
 	// client requests: /play/compress/videos/sample.mp4?start=120

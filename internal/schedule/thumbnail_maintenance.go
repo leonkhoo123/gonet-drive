@@ -137,7 +137,12 @@ func preGenerateThumbnails(pending []fileNeedingThumbnail, repo repository.Thumb
 	for _, f := range pending {
 		if !state.IsIdle(idleThreshold) {
 			logger.L.Info("thumbnail maintenance pausing, API activity detected")
+			stuckAt := time.Now()
 			for !state.IsIdle(idleThreshold) {
+				if time.Since(stuckAt) > 10*time.Minute {
+					logger.L.Warn("thumbnail maintenance stuck waiting for idle, API has been active for 10+ minutes", "elapsed", time.Since(stuckAt).Round(time.Second))
+					stuckAt = time.Now()
+				}
 				time.Sleep(idleSleepDuration)
 			}
 			logger.L.Info("thumbnail maintenance resuming")

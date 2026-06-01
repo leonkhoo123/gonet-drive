@@ -26,6 +26,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"strings"
 	"syscall"
@@ -54,6 +55,9 @@ func main() {
 
 	// Initialize structured logger
 	logger.Init(parseLogLevel(cfg.Server.LogLevel), cfg.Server.AppEnv)
+
+	// Verify required external binaries exist
+	verifyExternalBinaries()
 
 	// Initialize database
 	config.InitDB(cfg.Server.FileRoot)
@@ -210,4 +214,13 @@ func parseLogLevel(level string) slog.Level {
 	default:
 		return slog.LevelInfo
 	}
+}
+
+func verifyExternalBinaries() {
+	for _, bin := range []string{"prlimit", "ffmpeg", "ffprobe"} {
+		if _, err := exec.LookPath(bin); err != nil {
+			logger.L.Fatal("required binary not found in PATH", "binary", bin, "err", err)
+		}
+	}
+	logger.L.Debug("required external binaries verified", "binaries", []string{"prlimit", "ffmpeg", "ffprobe"})
 }

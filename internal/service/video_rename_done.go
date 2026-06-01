@@ -62,7 +62,7 @@ func VideoRenameDone(c *gin.Context, cfg *config.CloudConfig) {
 
 	if req.RotateAngle != 0 {
 		logger.L.Debug("applying video rotation", "angle", req.RotateAngle, "file", newName)
-		rotatedPath, err := util.AdjustVideoRotationTemp(cfg.Server.FileRoot, srcPath, req.RotateAngle)
+		rotatedPath, err := util.AdjustVideoRotationTemp(c.Request.Context(), cfg.Server.FileRoot, srcPath, req.RotateAngle)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return

@@ -2,6 +2,7 @@ package util
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -13,7 +14,7 @@ import (
 	"go-file-server/internal/logger"
 )
 
-func AdjustVideoRotationTemp(fileRoot, srcPath string, rotateAngle int) (string, error) {
+func AdjustVideoRotationTemp(ctx context.Context, fileRoot, srcPath string, rotateAngle int) (string, error) {
 	tempDir := filepath.Join(fileRoot, ".cloud_reserve", "tmp_rotate")
 
 	// Ensure temp folder
@@ -29,11 +30,26 @@ func AdjustVideoRotationTemp(fileRoot, srcPath string, rotateAngle int) (string,
 		return "", fmt.Errorf("failed to move source to temp: %w", err)
 	}
 
-	// Get current rotation from both metadata and display matrix
-	cmd := exec.Command("ffprobe", "-v", "error", "-select_streams", "v:0",
+	// On failure, move the original file back to prevent data loss
+	restoreOnFail := true
+	defer func() {
+		if restoreOnFail {
+			if err := os.Rename(tempSrc, srcPath); err != nil {
+				logger.L.Error("failed to restore original video after rotation failure", "from", tempSrc, "to", srcPath, "err", err)
+			}
+		}
+	}()
+
+	// Use a context with timeout to prevent runaway ffprobe/ffmpeg
+	probeCtx, probeCancel := context.WithTimeout(ctx, 60*time.Second)
+	defer probeCancel()
+
+	cmd := exec.CommandContext(probeCtx,
+		"prlimit", "--as=524288000",
+		"ffprobe", "-v", "error", "-select_streams", "v:0",
 		"-show_entries", "stream_tags=rotate:stream_side_data=rotation",
 		"-of", "default=noprint_wrappers=1:nokey=1", tempSrc)
-	logger.L.Debug("running ffprobe", "cmd", cmd.String(), "input", tempSrc)
+	logger.L.Debug("running ffprobe", "input", tempSrc)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	if err := cmd.Run(); err != nil {
@@ -45,7 +61,6 @@ func AdjustVideoRotationTemp(fileRoot, srcPath string, rotateAngle int) (string,
 
 	current := 0
 	if s := strings.TrimSpace(ffprobeOutput); s != "" {
-		// Try to parse the first number found
 		if v, err := strconv.Atoi(strings.Split(s, "\n")[0]); err == nil {
 			current = v
 		}
@@ -61,14 +76,19 @@ func AdjustVideoRotationTemp(fileRoot, srcPath string, rotateAngle int) (string,
 	logger.L.Debug("video rotation calculation", "file", filename, "current", current, "adjust_by", rotateAngle, "new_angle", newAngle)
 
 	// Apply new rotation using display_rotation (as INPUT option) and metadata
+	ffmpegCtx, ffmpegCancel := context.WithTimeout(ctx, 120*time.Second)
+	defer ffmpegCancel()
+
 	tempOutput := filepath.Join(tempDir, fmt.Sprintf("%d_rotated_%s", time.Now().UnixNano(), filename))
-	cmd = exec.Command("ffmpeg",
+	cmd = exec.CommandContext(ffmpegCtx,
+		"prlimit", "--as=524288000",
+		"ffmpeg",
 		"-display_rotation", fmt.Sprintf("%d", newAngle),
 		"-i", tempSrc,
 		"-c", "copy",
 		"-metadata:s:v:0", fmt.Sprintf("rotate=%d", newAngle),
 		tempOutput)
-	logger.L.Debug("running ffmpeg for rotation", "cmd", cmd.String(), "new_angle", newAngle)
+	logger.L.Debug("running ffmpeg for rotation", "new_angle", newAngle)
 
 	var errBuf bytes.Buffer
 	cmd.Stderr = &errBuf
@@ -79,7 +99,10 @@ func AdjustVideoRotationTemp(fileRoot, srcPath string, rotateAngle int) (string,
 		return "", fmt.Errorf("ffmpeg error: %v: %s", err, ffmpegError)
 	}
 
-	// Defer cleanup of temp source file
+	// Success — prevent deferred restore
+	restoreOnFail = false
+
+	// Cleanup temp source file after successful rotation
 	defer func() {
 		if err := os.Remove(tempSrc); err != nil {
 			logger.L.Warn("failed to remove temp source file", "path", tempSrc, "err", err)
