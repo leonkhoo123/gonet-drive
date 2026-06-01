@@ -138,6 +138,60 @@ func TestTokenRepo_RevokeByUsername(t *testing.T) {
 	assert.Len(t, sessionsFrank, 1)
 }
 
+func TestTokenRepo_DeleteExpired_DeletesRevoked(t *testing.T) {
+	repo, _ := setupTokenRepo(t)
+
+	createTestToken(t, repo, "grace", "family-g0")
+	err := repo.RevokeByFamilyID("family-g0")
+	require.NoError(t, err)
+
+	deleted, err := repo.DeleteExpired()
+	require.NoError(t, err)
+	assert.Greater(t, deleted, int64(0))
+
+	sessions, err := repo.GetActiveSessions("grace")
+	require.NoError(t, err)
+	assert.Empty(t, sessions)
+}
+
+func TestTokenRepo_DeleteExpired_DeletesExpired(t *testing.T) {
+	repo, _ := setupTokenRepo(t)
+
+	token := &model.RefreshToken{
+		ID:         uuid.New().String(),
+		Username:   "expireduser",
+		TokenHash:  uuid.New().String(),
+		FamilyID:   "family-expired",
+		DeviceID:   "device-1",
+		DeviceInfo: "test-agent",
+		IPAddress:  "127.0.0.1",
+		ExpiresAt:  time.Now().Add(-24 * time.Hour),
+	}
+	err := repo.Create(token)
+	require.NoError(t, err)
+
+	deleted, err := repo.DeleteExpired()
+	require.NoError(t, err)
+	assert.Greater(t, deleted, int64(0))
+
+	_, err = repo.GetByTokenHash(token.TokenHash)
+	assert.ErrorIs(t, err, sql.ErrNoRows)
+}
+
+func TestTokenRepo_DeleteExpired_KeepsActive(t *testing.T) {
+	repo, _ := setupTokenRepo(t)
+
+	active := createTestToken(t, repo, "activeuser", "family-active")
+
+	deleted, err := repo.DeleteExpired()
+	require.NoError(t, err)
+
+	retrieved, err := repo.GetByTokenHash(active.TokenHash)
+	require.NoError(t, err)
+	assert.False(t, retrieved.IsRevoked)
+	_ = deleted
+}
+
 func TestTokenRepo_RevokeByUsernameAndFamilyID(t *testing.T) {
 	repo, _ := setupTokenRepo(t)
 

@@ -11,9 +11,7 @@ import (
 
 	"go-file-server/internal/config"
 	"go-file-server/internal/util"
-	"go-file-server/internal/util/imageutil"
 
-	"github.com/chai2010/webp"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/sync/singleflight"
 )
@@ -109,31 +107,17 @@ func ServePhotoThumbnail(c *gin.Context, cfg *config.CloudConfig) {
 		ctx, cancel := context.WithTimeout(c.Request.Context(), cfg.Server.ThumbnailGenerationTimeout)
 		defer cancel()
 
-		sem := getThumbnailSemaphore()
+		sem := GetThumbnailSemaphore()
 		if err := sem.Acquire(ctx); err != nil {
 			return nil, err
 		}
 		defer sem.Release()
 
-		// Open original image
-		src, err := imageutil.DecodeImage(fullPath)
-		if err != nil {
+		if err := GeneratePhotoThumbnail(fullPath, thumbPath); err != nil {
 			return nil, err
 		}
 
-		// Resize to 300px width, preserving aspect ratio
-		dst := imageutil.ResizeImage(src, 300)
-
-		// Save as WebP
-		out, err := os.Create(thumbPath)
-		if err != nil {
-			return nil, err
-		}
-		defer out.Close()
-
-		if err := webp.Encode(out, dst, &webp.Options{Lossless: false, Quality: 85}); err != nil {
-			return nil, err
-		}
+		UpsertThumbnailRecord(hashStr, fullPath, false)
 		return nil, nil
 	})
 

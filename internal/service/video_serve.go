@@ -9,7 +9,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"go-file-server/internal/config"
@@ -138,31 +137,17 @@ func ServeVideoThumbnail(c *gin.Context, cfg *config.CloudConfig) {
 		ctx, cancel := context.WithTimeout(c.Request.Context(), cfg.Server.ThumbnailGenerationTimeout)
 		defer cancel()
 
-		sem := getThumbnailSemaphore()
+		sem := GetThumbnailSemaphore()
 		if err := sem.Acquire(ctx); err != nil {
 			return nil, err
 		}
 		defer sem.Release()
 
-		cmd := exec.CommandContext(ctx,
-			"prlimit",
-			"--as=524288000",
-			"ffmpeg",
-			"-loglevel", "error",
-			"-threads", "1",
-			"-ss", "00:00:00.000",
-			"-i", fullPath,
-			"-an",
-			"-vframes", "1",
-			"-vf", "scale='min(300,iw)':'min(300,ih)':force_original_aspect_ratio=decrease",
-			"-c:v", "libwebp",
-			"-y",
-			thumbPath)
-
-		if err := cmd.Run(); err != nil {
-			os.Remove(thumbPath)
-			return nil, fmt.Errorf("failed to generate video thumbnail: %w", err)
+		if err := GenerateVideoThumbnail(ctx, fullPath, thumbPath); err != nil {
+			return nil, err
 		}
+
+		UpsertThumbnailRecord(hashStr, fullPath, true)
 		return nil, nil
 	})
 

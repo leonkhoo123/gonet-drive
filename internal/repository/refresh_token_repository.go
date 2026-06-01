@@ -13,6 +13,7 @@ type RefreshTokenRepository interface {
 	RevokeByFamilyID(familyID string) error
 	RevokeByUsername(username string) error
 	RevokeByUsernameAndFamilyID(username string, familyID string) (int64, error)
+	DeleteExpired() (int64, error)
 }
 
 type SQLiteRefreshTokenRepo struct {
@@ -85,6 +86,15 @@ func (r *SQLiteRefreshTokenRepo) RevokeByUsername(username string) error {
 
 func (r *SQLiteRefreshTokenRepo) RevokeByUsernameAndFamilyID(username string, familyID string) (int64, error) {
 	result, err := r.DB.Exec("UPDATE refresh_tokens SET is_revoked = 1 WHERE username = ? AND family_id = ?", username, familyID)
+	if err != nil {
+		return 0, err
+	}
+	rowsAffected, err := result.RowsAffected()
+	return rowsAffected, err
+}
+
+func (r *SQLiteRefreshTokenRepo) DeleteExpired() (int64, error) {
+	result, err := r.DB.Exec("DELETE FROM refresh_tokens WHERE is_revoked = 1 OR expires_at <= CURRENT_TIMESTAMP")
 	if err != nil {
 		return 0, err
 	}

@@ -235,7 +235,7 @@ func TestVideoThumbnail_SingleflightStillWorks(t *testing.T) {
 				ctx, cancel := context.WithTimeout(context.Background(), cfg.Server.ThumbnailGenerationTimeout)
 				defer cancel()
 
-				sem := getThumbnailSemaphore()
+				sem := GetThumbnailSemaphore()
 				if err := sem.Acquire(ctx); err != nil {
 					return nil, err
 				}

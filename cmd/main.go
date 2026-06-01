@@ -35,7 +35,9 @@ import (
 	"go-file-server/internal/config"
 	"go-file-server/internal/controller"
 	"go-file-server/internal/repository"
+	"go-file-server/internal/schedule"
 	"go-file-server/internal/service"
+	"go-file-server/internal/state"
 	"go-file-server/internal/storage"
 	"go-file-server/internal/ws"
 	"go-file-server/ui"
@@ -73,6 +75,13 @@ func main() {
 
 	router.GET("/api/health", healthHandler)
 
+	router.Use(func(c *gin.Context) {
+		if strings.HasPrefix(c.Request.URL.Path, "/api/") && c.Request.URL.Path != "/api/health" {
+			state.RecordAPIRequest()
+		}
+		c.Next()
+	})
+
 	repo := repository.NewSQLiteUserRepo(config.DB)
 	tokenRepo := repository.NewSQLiteRefreshTokenRepo(config.DB)
 	userService := service.NewUserService(repo, tokenRepo)
@@ -86,11 +95,20 @@ func main() {
 
 	configRepo := repository.NewSQLiteCloudConfigRepo(config.DB)
 
+	thumbnailRepo := repository.NewSQLiteThumbnailRepo(config.DB)
+	service.SetThumbnailRepo(thumbnailRepo)
+
 	// Start WebSocket manager
 	go ws.Manager.Start()
 
 	// Start sequential file operation worker
 	service.StartFileOperationWorker()
+
+	// Start daily token cleanup scheduler (runs at 3:00 AM)
+	schedule.StartCleanupScheduler(tokenRepo)
+
+	// Start daily thumbnail maintenance scheduler (runs at 4:30 AM)
+	schedule.StartThumbnailMaintenanceScheduler(cfg.Server.FileRoot, thumbnailRepo)
 
 	// Public routes
 	controller.SetupPublicAuthRoutes(router, cfg, userService)

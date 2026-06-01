@@ -16,7 +16,7 @@ type thumbnailSemaphore struct {
 var globalThumbnailSemaphore *thumbnailSemaphore
 var semaphoreOnce sync.Once
 
-func getThumbnailSemaphore() *thumbnailSemaphore {
+func GetThumbnailSemaphore() *thumbnailSemaphore {
 	cfg := config.AppConfig
 	if cfg == nil {
 		return newThumbnailSemaphore(2)
