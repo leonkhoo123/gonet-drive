@@ -257,27 +257,26 @@ export default function HomeFileList({
       onTouchEnd={handleSwipeEnd}
       className="flex-1 min-h-0 relative overflow-y-scroll overscroll-y-none p-0 md:p-3 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar scrollbar-thumb-black/20 dark:scrollbar-thumb-white/20 scrollbar-track-transparent"
     >
-      {/* Loading Overlay */}
-      <div 
-        className={`absolute inset-0 pointer-events-none z-10 p-0 md:p-3 ${
-          isLoading && !items ? 'block' : 'hidden'
-        }`}
-      >
-        <FileListSkeleton viewMode={viewMode} />
-      </div>
+      {/* Error Overlay */}
+      {error && (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-background/80">
+          <p className="text-red-500 mb-2">Failed to load directory.</p>
+          <Button variant="outline" size="sm" onClick={onRefresh}>Try Again</Button>
+        </div>
+      )}
 
-      {/* Content Layer */}
-      <div 
-        className={`min-h-full ${
-          isLoading && !items ? 'hidden' : swipeDir === 'right' ? 'animate-slide-out-right' : 'animate-in fade-in duration-200'
-        }`}
-      >
-        {error ? (
-          <div className="flex flex-col items-center justify-center h-full text-muted-foreground min-h-[50vh]">
-            <p className="text-red-500 mb-2">Failed to load directory.</p>
-            <Button variant="outline" size="sm" onClick={onRefresh}>Try Again</Button>
+      {/* Loading Overlay - shown on top of dimmed content to indicate refresh in progress */}
+      {isLoading && !error && (
+        <div className="absolute inset-0 z-10 pointer-events-none p-0 md:p-3">
+          <div className="bg-background/50 rounded-lg">
+            <FileListSkeleton viewMode={viewMode} />
           </div>
-        ) : !displayItems?.items || displayItems.items.length === 0 ? (
+        </div>
+      )}
+
+      {/* Content Layer - always visible underneath, dimmed during loading */}
+      <div className={`min-h-full transition-opacity duration-300 ${isLoading ? 'opacity-40 pointer-events-none' : ''} ${swipeDir === 'right' ? 'animate-slide-out-right' : ''}`}>
+        {!displayItems?.items || displayItems.items.length === 0 ? (
           <div className={`flex flex-col items-center justify-center h-full text-muted-foreground min-h-[50vh] transition-opacity duration-300 ${isLoading ? 'opacity-30 pointer-events-none' : 'opacity-60'}`}>
             <Folder className="h-16 w-16 mb-4 opacity-20" />
             <p>This folder is empty.</p>
