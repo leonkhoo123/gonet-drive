@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Menu, LogOut, RefreshCcw, Settings, Sun, Moon, Monitor, Eye, EyeOff, ArrowLeft, MoreVertical, Info, Sliders, Trash2, Download, Share2, FolderPlus } from "lucide-react";
+import { Menu, LogOut, RefreshCcw, Settings, Sun, Moon, Monitor, Eye, EyeOff, ArrowLeft, MoreVertical, Info, Sliders, Trash2, Download, Share2, FolderPlus, ScanSearch } from "lucide-react";
 import { encodePathToUrl } from "@/utils/utils";
 import { logout, getMe } from "@/api/api-auth";
 import { useTheme } from "@/components/theme-provider";
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DevicesModal } from "@/components/custom/DevicesModal";
 import { MonitorSmartphone } from "lucide-react";
+import { VideoIntegrityModal } from "@/components/custom/VideoIntegrityModal";
 
 interface HomeBreadcrumbProps {
   currentPath: string;
@@ -55,6 +56,7 @@ export default function HomeBreadcrumb({
   const { showHidden, setShowHidden } = usePreferences();
   const [isAdmin, setIsAdmin] = useState(false);
   const [devicesModalOpen, setDevicesModalOpen] = useState(false);
+  const [integrityModalOpen, setIntegrityModalOpen] = useState(false);
 
   useEffect(() => {
     getMe().then((res) => {
@@ -253,6 +255,15 @@ export default function HomeBreadcrumb({
                 </DropdownMenuItem>
               )}
 
+              {isAdmin && (
+                <DropdownMenuItem onClick={() => { setIntegrityModalOpen(true); }}>
+                  <ScanSearch className="mr-2 h-4 w-4" />
+                  <span>Video Integrity Check</span>
+                </DropdownMenuItem>
+              )}
+
+              <DropdownMenuSeparator />
+
               <DropdownMenuItem onClick={() => { void handleReload(); }}>
                 <RefreshCcw className="mr-2 h-4 w-4" />
                 <span>Reload App</span>
@@ -312,9 +323,14 @@ export default function HomeBreadcrumb({
         </div>
       </div>
 
-      <DevicesModal 
+      <DevicesModal
         open={devicesModalOpen} 
         onOpenChange={setDevicesModalOpen} 
+      />
+
+      <VideoIntegrityModal
+        open={integrityModalOpen}
+        onOpenChange={setIntegrityModalOpen}
       />
     </div>
   );

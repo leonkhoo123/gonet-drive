@@ -3,9 +3,10 @@ import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { useOperationProgress } from '../../context/OperationProgressContext';
 import { Progress } from '../ui/progress';
 import { Button } from '../ui/button';
-import { X, ChevronDown, CheckCircle2, Files, Trash2, Edit, Scissors, Copy, UploadCloud, CircleEllipsis, Loader2 } from 'lucide-react';
+import { X, ChevronDown, CheckCircle2, Files, Trash2, Edit, Scissors, Copy, UploadCloud, CircleEllipsis, Loader2, ScanSearch } from 'lucide-react';
 import type { OperationMessage } from '@/api/wsClient';
 import { cancelOperation, uploadControllers, cancelledUploads } from '@/api/api-file';
+import { stopScan } from '@/api/api-video-integrity';
 
 export function OperationQueueProgress() {
     const { operations, clearCompleted, dismissOperation } = useOperationProgress();
@@ -108,6 +109,7 @@ export function OperationQueueProgress() {
             case 'delete_permanent': return <Trash2 className="w-4 h-4 text-red-500" />;
             case 'rename': return <Edit className="w-4 h-4" />;
             case 'upload': return <UploadCloud className="w-4 h-4" />;
+            case 'integrity-scan': return <ScanSearch className="w-4 h-4" />;
             default: return <Files className="w-4 h-4" />;
         }
     };
@@ -151,13 +153,15 @@ export function OperationQueueProgress() {
                                 void (async () => {
                                     try {
                                         if (op.opType === 'upload') {
-                                            cancelledUploads.add(op.opId); // Mark as cancelled for queued uploads
+                                            cancelledUploads.add(op.opId);
                                             const controller = uploadControllers.get(op.opId);
                                             if (controller) {
                                                 controller.abort();
                                             } else {
                                                 await cancelOperation(op.opId);
                                             }
+                                        } else if (op.opType === 'integrity-scan') {
+                                            await stopScan();
                                         } else {
                                             await cancelOperation(op.opId);
                                         }

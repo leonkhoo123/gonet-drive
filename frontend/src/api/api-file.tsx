@@ -26,6 +26,7 @@ export interface FileInterface {
   media_type?: string;
   path: string;
   isShared?: boolean;
+  integrity_status?: string;
 }
 
 

@@ -1,6 +1,8 @@
 package service
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"go-file-server/internal/config"
 	"go-file-server/internal/storage"
@@ -218,6 +220,32 @@ func FileList(c *gin.Context, cfg *config.CloudConfig) {
 		}
 		return less
 	})
+
+	// Enrich video items with container integrity status
+	if videoIntegrityRepo != nil && len(result) > 0 {
+		videoHashes := make([]string, 0)
+		hashToIdx := make(map[string]int)
+		for i, item := range result {
+			if mt, _ := item["media_type"].(string); mt == "video" {
+				p, _ := item["path"].(string)
+				absPath := filepath.Join(cfg.Server.FileRoot, p)
+				h := md5.Sum([]byte(absPath))
+				hs := hex.EncodeToString(h[:])
+				videoHashes = append(videoHashes, hs)
+				hashToIdx[hs] = i
+			}
+		}
+		if len(videoHashes) > 0 {
+			corruptSet, err := videoIntegrityRepo.GetCorruptHashes(videoHashes)
+			if err == nil {
+				for h, idx := range hashToIdx {
+					if corruptSet[h] {
+						result[idx]["integrity_status"] = "corrupt"
+					}
+				}
+			}
+		}
+	}
 
 	var limit int64 = 0
 	if config.AppCloudConfig != nil {

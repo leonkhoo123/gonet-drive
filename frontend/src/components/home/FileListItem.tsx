@@ -1,5 +1,5 @@
 import { memo, useState } from "react";
-import { Trash2, Folder, Pencil, Trash2 as TrashIcon, Download, Info, Share2, MoreVertical, Scissors, Copy, Clipboard, Users, ExternalLink } from "lucide-react";
+import { Trash2, Folder, Pencil, Trash2 as TrashIcon, Download, Info, Share2, MoreVertical, Scissors, Copy, Clipboard, Users, ExternalLink, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatBytes, formatLastModified } from "@/utils/utils";
 import type { FileInterface } from "@/api/api-file";
@@ -138,6 +138,9 @@ export const FileListItem = memo(function FileListItem({
         <div className={`w-full flex flex-col items-center text-center ${isHidden ? 'opacity-60' : ''}`}>
           <div className="flex items-center justify-center space-x-1 w-full px-1 relative">
             <TruncatedText className="text-sm font-medium text-foreground w-full" text={file.name === ".cloud_delete" ? "Recycle Bin" : file.name} />
+            {file.media_type === "video" && file.integrity_status === "corrupt" && (
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+            )}
           </div>
           {file.type !== "dir" && (
             <div className="text-xs text-muted-foreground mt-1 opacity-80">
@@ -268,6 +271,9 @@ export const FileListItem = memo(function FileListItem({
                 <div className="flex items-center space-x-2 min-w-0 w-full">
                   <TruncatedText className="text-foreground" text={file.name} />
                   {file.isShared && <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+                  {file.media_type === "video" && file.integrity_status === "corrupt" && (
+                    <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                  )}
                 </div>
                 <TruncatedText className="text-xs mt-0.5 lg:hidden text-muted-foreground" text={`${formatBytes(file.size)} • ${formatLastModified(file.modified)}`} />
               </div>
@@ -450,6 +456,7 @@ export const FileListItem = memo(function FileListItem({
     prevProps.currentPath === nextProps.currentPath &&
     prevProps.selectedItemsSize === nextProps.selectedItemsSize &&
     prevProps.hasSelectedDelete === nextProps.hasSelectedDelete &&
-    prevProps.index === nextProps.index
+    prevProps.index === nextProps.index &&
+    prevProps.file.integrity_status === nextProps.file.integrity_status
   );
 });

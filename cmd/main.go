@@ -107,6 +107,9 @@ func main() {
 	thumbnailRepo := repository.NewSQLiteThumbnailRepo(config.DB)
 	service.SetThumbnailRepo(thumbnailRepo)
 
+	videoIntegrityRepo := repository.NewSQLiteVideoIntegrityRepo(config.DB)
+	service.SetVideoIntegrityRepo(videoIntegrityRepo)
+
 	// Start WebSocket manager
 	go ws.Manager.Start()
 

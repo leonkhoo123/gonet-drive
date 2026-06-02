@@ -100,6 +100,8 @@ func SetupAuthenticatedRoutes(router *gin.Engine, cfg *config.CloudConfig, userS
 			adminRouter.POST("/users/:id/revoke", userService.RevokeSessions)
 			adminRouter.DELETE("/users/:id", userService.DeleteUser)
 			adminRouter.PUT("/config/logo", UpdateLogo)
+
+			RegisterVideoIntegrityAdminRoutes(adminRouter, cfg)
 		}
 	}
 }
@@ -167,6 +169,7 @@ func SetupAdminRoutes(router *gin.Engine, cfg *config.CloudConfig, userService *
 		adminRouter.POST("/users/:id/revoke", userService.RevokeSessions)
 		adminRouter.DELETE("/users/:id", userService.DeleteUser)
 		adminRouter.PUT("/config/logo", UpdateLogo)
+		RegisterVideoIntegrityAdminRoutes(adminRouter, cfg)
 	}
 }
 
