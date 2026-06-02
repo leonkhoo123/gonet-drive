@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { getShares, toggleShareBlock, deleteShare, isNeverExpires } from "@/api/api-share";
 import type { ShareItem } from "@/api/api-share";
 import { toast } from "sonner";
@@ -64,17 +64,12 @@ export default function ManageSharesPage() {
   const [expandedPaths, setExpandedPaths] = useState<Record<string, boolean>>({});
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 1024);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [storageUsage, setStorageUsage] = useState<StorageUsageResponse | undefined>(undefined);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [shareToDelete, setShareToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleAppRefresh = useCallback(() => {
-    setRefreshTrigger(prev => prev + 1);
-  }, []);
-
-  const { healthData, isWsConnected, isHealthConnected } = useAppHealth(handleAppRefresh);
+  const { healthData, isWsConnected, isHealthConnected } = useAppHealth();
 
   useEffect(() => {
     const fetchStorage = async () => {
@@ -86,7 +81,7 @@ export default function ManageSharesPage() {
       }
     };
     void fetchStorage();
-  }, [refreshTrigger]);
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {

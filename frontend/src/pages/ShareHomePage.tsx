@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Plus, FolderPlus, Upload, FolderUp, Loader2 } from "lucide-react";
 import DefaultLayout from "@/layouts/DefaultLayout";
@@ -40,13 +40,8 @@ export default function ShareHomePage() {
   const navigate = useNavigate();
 
   const [authority, setAuthority] = useState<string | null>(null);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  const handleAppRefresh = useCallback(() => {
-    setRefreshTrigger(prev => prev + 1);
-  }, []);
-
-  const { healthData, isWsConnected, isHealthConnected } = useAppHealth(handleAppRefresh);
+  const { healthData, isWsConnected, isHealthConnected } = useAppHealth();
 
   const { setTheme } = useTheme();
 
@@ -135,13 +130,6 @@ export default function ShareHomePage() {
     confirmRename,
     itemToRename,
   } = useFileManager({ baseRoute: `/share/${id ?? ''}/home`, uploadChunkSize: healthData?.upload_chunk_size });
-
-  // Hook up the refresh trigger to actually call handleRefresh
-  useEffect(() => {
-    if (refreshTrigger > 0) {
-      void handleRefresh();
-    }
-  }, [refreshTrigger, handleRefresh]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, lazy, Suspense } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import DefaultLayout from "@/layouts/DefaultLayout";
 import VersionTag from "@/components/custom/versionTag";
 
@@ -31,15 +31,8 @@ import { MobileFloatingActionButton } from "@/components/home/MobileFloatingActi
 
 export default function HomePage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 1024);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // We need a stable handleRefresh for useAppHealth, but useFileManager needs healthData
-  // We'll use a refresh trigger trick or just pass a wrapper
-  const handleAppRefresh = useCallback(() => {
-    setRefreshTrigger(prev => prev + 1);
-  }, []);
-
-  const { healthData, isWsConnected, isHealthConnected } = useAppHealth(handleAppRefresh);
+  const { healthData, isWsConnected, isHealthConnected } = useAppHealth();
   
   const {
     items,
@@ -114,13 +107,6 @@ export default function HomePage() {
     setSortOrder,
     handleSortChange,
   } = useFileManager({ uploadChunkSize: healthData?.upload_chunk_size });
-
-  // Hook up the refresh trigger to actually call handleRefresh
-  useEffect(() => {
-    if (refreshTrigger > 0) {
-      void handleRefresh();
-    }
-  }, [refreshTrigger, handleRefresh]);
 
   useEffect(() => {
     const handleResize = () => {
