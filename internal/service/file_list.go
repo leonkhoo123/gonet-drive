@@ -228,8 +228,7 @@ func FileList(c *gin.Context, cfg *config.CloudConfig) {
 		for i, item := range result {
 			if mt, _ := item["media_type"].(string); mt == "video" {
 				p, _ := item["path"].(string)
-				absPath := filepath.Join(cfg.Server.FileRoot, p)
-				h := md5.Sum([]byte(absPath))
+				h := md5.Sum([]byte(p))
 				hs := hex.EncodeToString(h[:])
 				videoHashes = append(videoHashes, hs)
 				hashToIdx[hs] = i

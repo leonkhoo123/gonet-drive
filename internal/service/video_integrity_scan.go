@@ -117,16 +117,9 @@ func ScanVideoIntegrity(rootPath string) (*ScanResult, error) {
 			return nil
 		}
 		if info.IsDir() {
-			if path != filepath.Join(rootPath, ".Trash") &&
-				strings.HasPrefix(path, filepath.Join(rootPath, ".Trash")+string(filepath.Separator)) {
-				return filepath.SkipDir
-			}
-			if path != filepath.Join(rootPath, ".clodedelete") &&
-				strings.HasPrefix(path, filepath.Join(rootPath, ".clodedelete")+string(filepath.Separator)) {
-				return filepath.SkipDir
-			}
-			if path != filepath.Join(rootPath, ".cloud_reserve") &&
-				strings.HasPrefix(path, filepath.Join(rootPath, ".cloud_reserve")+string(filepath.Separator)) {
+			name := info.Name()
+			switch name {
+			case ".cloud_delete", ".cloud_reserve", ".Trash-1000", "#recycle":
 				return filepath.SkipDir
 			}
 			return nil
@@ -175,7 +168,9 @@ func ScanVideoIntegrity(rootPath string) (*ScanResult, error) {
 			return result, nil
 		}
 
-		hash := md5.Sum([]byte(path))
+		relPath := strings.TrimPrefix(path, rootPath)
+		relPath = strings.TrimPrefix(relPath, string(filepath.Separator))
+		hash := md5.Sum([]byte(relPath))
 		hashStr := hex.EncodeToString(hash[:])
 
 		mimeCodec, codecName, err := probeVideoStream(path)
@@ -188,7 +183,7 @@ func ScanVideoIntegrity(rootPath string) (*ScanResult, error) {
 		logger.L.Debug("video integrity probe", "file", filepath.Base(path), "codec", codecName, "mime", mimeCodec)
 
 		if codecName == "h264" && strings.HasPrefix(mimeCodec, "avc1.00") {
-			if err := videoIntegrityRepo.Upsert(hashStr, path, "corrupt_avcC", mimeCodec); err != nil {
+			if err := videoIntegrityRepo.Upsert(hashStr, relPath, "corrupt_avcC", mimeCodec); err != nil {
 				logger.L.Error("video integrity upsert failed", "path", path, "err", err)
 			} else {
 				result.CorruptCount++

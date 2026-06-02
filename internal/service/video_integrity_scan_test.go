@@ -12,12 +12,18 @@ import (
 
 	"go-file-server/database"
 	"go-file-server/internal/repository"
+	"go-file-server/internal/ws"
 
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestMain(m *testing.M) {
+	go ws.Manager.Start()
+	os.Exit(m.Run())
+}
 
 func openTestDB(t *testing.T) *sql.DB {
 	t.Helper()
@@ -306,8 +312,8 @@ func TestScanVideoIntegrity_StopsMidScan(t *testing.T) {
 	}()
 
 	dir := t.TempDir()
-	// Create several MP4 files so the scan runs long enough to be stopped mid-way
-	for i := range 5 {
+	// Create enough MP4 files so the scan runs long enough to be stopped mid-way
+	for i := range 20 {
 		createTestMP4(t, filepath.Join(dir, fmt.Sprintf("video%d.mp4", i)))
 		_ = i
 	}
@@ -329,8 +335,8 @@ func TestScanVideoIntegrity_StopsMidScan(t *testing.T) {
 	<-done
 	assert.NoError(t, scanErr)
 	require.NotNil(t, result)
-	// With 5 files and stop requested after ~1s, we should not have scanned all 5
-	assert.Less(t, result.TotalScanned, 5)
+	// With 20 files and stop requested after ~1s, we should not have scanned all 20
+	assert.Less(t, result.TotalScanned, 20)
 }
 
 func TestScanVideoIntegrity_StopFlagResetOnStart(t *testing.T) {
