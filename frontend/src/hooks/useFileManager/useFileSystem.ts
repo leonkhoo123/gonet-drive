@@ -26,6 +26,7 @@ export function useFileSystem(baseRoute = "/home") {
   const fetchIdRef = useRef<number>(0);
   const lastRefreshTimeRef = useRef<number>(0);
   const throttledTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wakeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentPathRef = useRef<string>("/");
   currentPathRef.current = currentPath;
 
@@ -47,6 +48,10 @@ export function useFileSystem(baseRoute = "/home") {
     if (throttledTimerRef.current !== null) {
       clearTimeout(throttledTimerRef.current);
       throttledTimerRef.current = null;
+    }
+    if (wakeTimerRef.current !== null) {
+      clearTimeout(wakeTimerRef.current);
+      wakeTimerRef.current = null;
     }
     lastRefreshTimeRef.current = Date.now();
 
@@ -109,6 +114,10 @@ export function useFileSystem(baseRoute = "/home") {
       
       // Clear items to show skeleton ONLY on directory change
       if (path !== prevPathRef.current) {
+        if (wakeTimerRef.current !== null) {
+          clearTimeout(wakeTimerRef.current);
+          wakeTimerRef.current = null;
+        }
         setItems(undefined);
         setCurrentPath(path); // Immediately update currentPath so handleRefresh uses the new path
         prevPathRef.current = path;
@@ -166,12 +175,20 @@ export function useFileSystem(baseRoute = "/home") {
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        void handleRefresh();
+        if (wakeTimerRef.current) clearTimeout(wakeTimerRef.current);
+        wakeTimerRef.current = setTimeout(() => {
+          wakeTimerRef.current = null;
+          void handleRefresh();
+        }, 500);
       }
     };
 
     const handleFocus = () => {
-      void handleRefresh();
+      if (wakeTimerRef.current) clearTimeout(wakeTimerRef.current);
+      wakeTimerRef.current = setTimeout(() => {
+        wakeTimerRef.current = null;
+        void handleRefresh();
+      }, 500);
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -188,6 +205,10 @@ export function useFileSystem(baseRoute = "/home") {
       if (throttledTimerRef.current !== null) {
         clearTimeout(throttledTimerRef.current);
         throttledTimerRef.current = null;
+      }
+      if (wakeTimerRef.current !== null) {
+        clearTimeout(wakeTimerRef.current);
+        wakeTimerRef.current = null;
       }
     };
   }, []);
