@@ -46,7 +46,10 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 # ====== 3. Runtime stage ======
 FROM alpine:latest
 
-RUN apk add --no-cache ffmpeg util-linux ca-certificates
+RUN echo -e "https://dl-cdn.alpinelinux.org/alpine/edge/main\nhttps://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories && \
+    apk add --no-cache ffmpeg=8.1.1-r0 && \
+    sed -i '/edge/d' /etc/apk/repositories && \
+    apk add --no-cache util-linux ca-certificates
 
 WORKDIR /root/
 
