@@ -26,7 +26,7 @@ type WsManager struct {
 var (
 	Manager = &WsManager{
 		clients:    make(map[*websocket.Conn]bool),
-		broadcast:  make(chan interface{}, 64),
+		broadcast:  make(chan interface{}),
 		register:   make(chan *websocket.Conn),
 		unregister: make(chan *websocket.Conn),
 	}
