@@ -94,6 +94,8 @@ func ScanVideoIntegrity(rootPath string) (*ScanResult, error) {
 	scanStop.Store(false)
 
 	logger.L.Info("video integrity scan started", "root", rootPath)
+	// Log ffprobe version for debugging version-specific behavior
+	logFFprobeVersion()
 
 	startTime := time.Now()
 	result := &ScanResult{StartTime: startTime.Unix()}
@@ -237,14 +239,22 @@ func probeVideoStream(path string) (mimeCodec, codecName string, err error) {
 	)
 
 	var stdout strings.Builder
+	var stderr strings.Builder
 	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
+		if stderr.Len() > 0 {
+			logger.L.Debug("ffprobe stderr", "file", filepath.Base(path), "stderr", strings.TrimSpace(stderr.String()))
+		}
 		return "", "", fmt.Errorf("ffprobe: %w", err)
 	}
 
+	rawJSON := stdout.String()
+	logger.L.Debug("ffprobe raw output", "file", filepath.Base(path), "json", rawJSON)
+
 	var output ffprobeOutput
-	if err := json.Unmarshal([]byte(stdout.String()), &output); err != nil {
+	if err := json.Unmarshal([]byte(rawJSON), &output); err != nil {
 		return "", "", fmt.Errorf("ffprobe json parse: %w", err)
 	}
 
@@ -253,4 +263,18 @@ func probeVideoStream(path string) (mimeCodec, codecName string, err error) {
 	}
 
 	return output.Streams[0].MimeCodecString, output.Streams[0].CodecName, nil
+}
+
+func logFFprobeVersion() {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "ffprobe", "-version")
+	out, err := cmd.Output()
+	if err != nil {
+		logger.L.Warn("ffprobe version check failed", "err", err)
+		return
+	}
+	// First line contains version
+	firstLine := strings.SplitN(string(out), "\n", 2)[0]
+	logger.L.Info("ffprobe version", "version", firstLine)
 }
