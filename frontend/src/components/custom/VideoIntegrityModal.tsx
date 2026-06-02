@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   ShieldCheck,
   Play,
+  Square,
   List,
   Info,
   Clock,
@@ -20,6 +21,7 @@ import {
 } from "lucide-react";
 import {
   startScan,
+  stopScan,
   getStatus,
   type VideoIntegrityStatus,
 } from "@/api/api-video-integrity";
@@ -35,6 +37,7 @@ export function VideoIntegrityModal({ open, onOpenChange }: Props) {
   const [status, setStatus] = useState<VideoIntegrityStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [stopping, setStopping] = useState(false);
   const [listOpen, setListOpen] = useState(false);
 
   const fetchStatus = useCallback(async () => {
@@ -69,6 +72,23 @@ export function VideoIntegrityModal({ open, onOpenChange }: Props) {
       })
       .finally(() => {
         setStarting(false);
+      });
+  };
+
+  const handleStopScan = () => {
+    setStopping(true);
+    stopScan()
+      .then(() => {
+        toast.success("Scan stopped");
+      })
+      .catch((err: unknown) => {
+        const msg =
+          err instanceof Error ? err.message : "Failed to stop scan";
+        toast.error(msg);
+      })
+      .finally(() => {
+        setStopping(false);
+        void fetchStatus();
       });
   };
 
@@ -115,12 +135,18 @@ export function VideoIntegrityModal({ open, onOpenChange }: Props) {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Clock className="h-4 w-4" />
-                    <span>Last scan: {lastScanText}</span>
+                    {status?.scan_running ? (
+                      <span className="text-primary font-medium">
+                        Scan in progress&hellip;
+                      </span>
+                    ) : (
+                      <span>Last scan: {lastScanText}</span>
+                    )}
                   </div>
                   {status?.scan_running && (
                     <div className="flex items-center gap-2 text-sm text-primary">
                       <span className="inline-block h-2 w-2 rounded-full bg-primary animate-pulse" />
-                      Scan in progress — check the progress panel
+                      Check the progress panel for details
                     </div>
                   )}
                 </div>
@@ -161,7 +187,7 @@ export function VideoIntegrityModal({ open, onOpenChange }: Props) {
 
           <Separator />
 
-          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             {(status?.corrupt_count ?? 0) > 0 && (
               <Button
                 variant="outline"
@@ -179,13 +205,19 @@ export function VideoIntegrityModal({ open, onOpenChange }: Props) {
               Close
             </Button>
             <Button
-              onClick={handleStartScan}
-              disabled={starting || status?.scan_running}
+              onClick={status?.scan_running ? handleStopScan : handleStartScan}
+              disabled={starting || stopping}
+              variant={status?.scan_running ? "destructive" : "default"}
             >
-              {starting ? (
+              {starting || stopping ? (
                 <>
                   <span className="inline-block h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin mr-2" />
-                  Starting...
+                  {starting ? "Starting..." : "Stopping..."}
+                </>
+              ) : status?.scan_running ? (
+                <>
+                  <Square className="mr-2 h-4 w-4" />
+                  Stop Scanning
                 </>
               ) : (
                 <>
