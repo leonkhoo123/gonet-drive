@@ -117,6 +117,14 @@ func ScanVideoIntegrity(rootPath string) (*ScanResult, error) {
 			return nil
 		}
 		if info.IsDir() {
+			if path != filepath.Join(rootPath, ".Trash") &&
+				strings.HasPrefix(path, filepath.Join(rootPath, ".Trash")+string(filepath.Separator)) {
+				return filepath.SkipDir
+			}
+			if path != filepath.Join(rootPath, ".clodedelete") &&
+				strings.HasPrefix(path, filepath.Join(rootPath, ".clodedelete")+string(filepath.Separator)) {
+				return filepath.SkipDir
+			}
 			if path != filepath.Join(rootPath, ".cloud_reserve") &&
 				strings.HasPrefix(path, filepath.Join(rootPath, ".cloud_reserve")+string(filepath.Separator)) {
 				return filepath.SkipDir
@@ -251,7 +259,6 @@ func probeVideoStream(path string) (mimeCodec, codecName string, err error) {
 	}
 
 	rawJSON := stdout.String()
-	logger.L.Debug("ffprobe raw output", "file", filepath.Base(path), "json", rawJSON)
 
 	var output ffprobeOutput
 	if err := json.Unmarshal([]byte(rawJSON), &output); err != nil {
