@@ -47,6 +47,7 @@ func GeneratePhotoThumbnail(fullPath, thumbPath string) error {
 	logger.L.Debug("generating photo thumbnail", "input", fullPath, "output", thumbPath)
 	src, err := imageutil.DecodeImage(fullPath)
 	if err != nil {
+		logger.L.Error("photo thumbnail decode failed", "file", fullPath, "err", err)
 		return fmt.Errorf("decode: %w", err)
 	}
 

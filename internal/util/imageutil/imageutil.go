@@ -6,6 +6,11 @@ import (
 	"image"
 	"os"
 
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
+
+	_ "golang.org/x/image/bmp"
 	"golang.org/x/image/draw"
 )
 

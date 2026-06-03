@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"image"
 	"image/color"
+	"image/gif"
+	"image/jpeg"
 	"image/png"
 	"os"
 	"path/filepath"
@@ -45,6 +47,36 @@ func TestGeneratePhotoThumbnail(t *testing.T) {
 
 	srcPath := filepath.Join(dir, "test.png")
 	createTestPNG(t, srcPath, 800, 600)
+
+	thumbPath := filepath.Join(dir, "thumb.webp")
+	err := service.GeneratePhotoThumbnail(srcPath, thumbPath)
+	require.NoError(t, err)
+
+	stat, err := os.Stat(thumbPath)
+	require.NoError(t, err)
+	assert.True(t, stat.Size() > 0)
+}
+
+func TestGeneratePhotoThumbnail_JPEG(t *testing.T) {
+	dir := t.TempDir()
+
+	srcPath := filepath.Join(dir, "test.jpg")
+	createTestJPEG(t, srcPath, 800, 600)
+
+	thumbPath := filepath.Join(dir, "thumb.webp")
+	err := service.GeneratePhotoThumbnail(srcPath, thumbPath)
+	require.NoError(t, err)
+
+	stat, err := os.Stat(thumbPath)
+	require.NoError(t, err)
+	assert.True(t, stat.Size() > 0)
+}
+
+func TestGeneratePhotoThumbnail_GIF(t *testing.T) {
+	dir := t.TempDir()
+
+	srcPath := filepath.Join(dir, "test.gif")
+	createTestGIF(t, srcPath, 800, 600)
 
 	thumbPath := filepath.Join(dir, "thumb.webp")
 	err := service.GeneratePhotoThumbnail(srcPath, thumbPath)
@@ -388,6 +420,33 @@ func createTestPNG(t *testing.T, path string, w, h int) {
 func createTestPNGFile(t *testing.T, path string) {
 	t.Helper()
 	createTestPNG(t, path, 100, 100)
+}
+
+func createTestJPEG(t *testing.T, path string, w, h int) {
+	t.Helper()
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			img.Set(x, y, color.RGBA{R: uint8(x % 256), G: uint8(y % 256), B: 128, A: 255})
+		}
+	}
+	f, err := os.Create(path)
+	require.NoError(t, err)
+	defer f.Close()
+	require.NoError(t, jpeg.Encode(f, img, &jpeg.Options{Quality: 90}))
+}
+
+func createTestGIF(t *testing.T, path string, w, h int) {
+	t.Helper()
+	img := image.NewPaletted(image.Rect(0, 0, w, h), color.Palette{
+		color.RGBA{0, 0, 0, 255},
+		color.RGBA{255, 255, 255, 255},
+		color.RGBA{255, 0, 0, 255},
+	})
+	f, err := os.Create(path)
+	require.NoError(t, err)
+	defer f.Close()
+	require.NoError(t, gif.Encode(f, img, nil))
 }
 
 func thumbnailHash(path string) string {

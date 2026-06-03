@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"go-file-server/internal/config"
+	"go-file-server/internal/logger"
 	"go-file-server/internal/util"
 
 	"github.com/gin-gonic/gin"
@@ -127,6 +128,7 @@ func ServePhotoThumbnail(c *gin.Context, cfg *config.CloudConfig) {
 			c.JSON(http.StatusTooManyRequests, gin.H{"error": "thumbnail generation is busy, retry after a few seconds"})
 			return
 		}
+		logger.L.Error("photo thumbnail generation failed", "file", fullPath, "err", err)
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
