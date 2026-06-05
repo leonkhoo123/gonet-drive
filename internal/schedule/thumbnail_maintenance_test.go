@@ -49,12 +49,14 @@ func TestGeneratePhotoThumbnail(t *testing.T) {
 	createTestPNG(t, srcPath, 800, 600)
 
 	thumbPath := filepath.Join(dir, "thumb.webp")
-	err := service.GeneratePhotoThumbnail(srcPath, thumbPath)
+	err := service.GeneratePhotoThumbnail(context.Background(), srcPath, thumbPath)
 	require.NoError(t, err)
 
-	stat, err := os.Stat(thumbPath)
+	data, err := os.ReadFile(thumbPath)
 	require.NoError(t, err)
-	assert.True(t, stat.Size() > 0)
+	assert.True(t, len(data) > 0)
+	assert.True(t, len(data) >= 4 && string(data[0:4]) == "RIFF",
+		"thumbnail should be a valid WebP file (RIFF header)")
 }
 
 func TestGeneratePhotoThumbnail_JPEG(t *testing.T) {
@@ -64,12 +66,14 @@ func TestGeneratePhotoThumbnail_JPEG(t *testing.T) {
 	createTestJPEG(t, srcPath, 800, 600)
 
 	thumbPath := filepath.Join(dir, "thumb.webp")
-	err := service.GeneratePhotoThumbnail(srcPath, thumbPath)
+	err := service.GeneratePhotoThumbnail(context.Background(), srcPath, thumbPath)
 	require.NoError(t, err)
 
-	stat, err := os.Stat(thumbPath)
+	data, err := os.ReadFile(thumbPath)
 	require.NoError(t, err)
-	assert.True(t, stat.Size() > 0)
+	assert.True(t, len(data) > 0)
+	assert.True(t, len(data) >= 4 && string(data[0:4]) == "RIFF",
+		"JPEG thumbnail should be a valid WebP file")
 }
 
 func TestGeneratePhotoThumbnail_GIF(t *testing.T) {
@@ -79,12 +83,25 @@ func TestGeneratePhotoThumbnail_GIF(t *testing.T) {
 	createTestGIF(t, srcPath, 800, 600)
 
 	thumbPath := filepath.Join(dir, "thumb.webp")
-	err := service.GeneratePhotoThumbnail(srcPath, thumbPath)
+	err := service.GeneratePhotoThumbnail(context.Background(), srcPath, thumbPath)
 	require.NoError(t, err)
 
-	stat, err := os.Stat(thumbPath)
+	data, err := os.ReadFile(thumbPath)
 	require.NoError(t, err)
-	assert.True(t, stat.Size() > 0)
+	assert.True(t, len(data) > 0)
+	assert.True(t, len(data) >= 4 && string(data[0:4]) == "RIFF",
+		"GIF thumbnail should be a valid WebP file")
+}
+
+func TestGeneratePhotoThumbnail_InvalidFile(t *testing.T) {
+	dir := t.TempDir()
+
+	srcPath := filepath.Join(dir, "corrupt.png")
+	require.NoError(t, os.WriteFile(srcPath, []byte("not an image"), 0644))
+
+	thumbPath := filepath.Join(dir, "thumb.webp")
+	err := service.GeneratePhotoThumbnail(context.Background(), srcPath, thumbPath)
+	assert.Error(t, err, "should fail on corrupt/invalid image file")
 }
 
 func TestGenerateVideoThumbnail_InvalidFile(t *testing.T) {

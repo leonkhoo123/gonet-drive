@@ -8,10 +8,9 @@ import (
 
 	"go-file-server/internal/logger"
 	"go-file-server/internal/repository"
-	"go-file-server/internal/util/imageutil"
-
-	"github.com/chai2010/webp"
 )
+
+const ffmpegMemoryLimit = "524288000"
 
 var thumbRepo repository.ThumbnailRepository
 
@@ -23,7 +22,7 @@ func GenerateVideoThumbnail(ctx context.Context, fullPath, thumbPath string) err
 	logger.L.Debug("generating video thumbnail", "input", fullPath, "output", thumbPath)
 	cmd := exec.CommandContext(ctx,
 		"prlimit",
-		"--as=524288000",
+		"--as="+ffmpegMemoryLimit,
 		"ffmpeg",
 		"-loglevel", "error",
 		"-threads", "1",
@@ -43,24 +42,24 @@ func GenerateVideoThumbnail(ctx context.Context, fullPath, thumbPath string) err
 	return nil
 }
 
-func GeneratePhotoThumbnail(fullPath, thumbPath string) error {
+func GeneratePhotoThumbnail(ctx context.Context, fullPath, thumbPath string) error {
 	logger.L.Debug("generating photo thumbnail", "input", fullPath, "output", thumbPath)
-	src, err := imageutil.DecodeImage(fullPath)
-	if err != nil {
-		logger.L.Error("photo thumbnail decode failed", "file", fullPath, "err", err)
-		return fmt.Errorf("decode: %w", err)
-	}
+	cmd := exec.CommandContext(ctx,
+		"prlimit",
+		"--as="+ffmpegMemoryLimit,
+		"ffmpeg",
+		"-loglevel", "error",
+		"-threads", "1",
+		"-i", fullPath,
+		"-vf", "scale='min(300,iw)':'-1'",
+		"-c:v", "libwebp",
+		"-quality", "85",
+		"-y",
+		thumbPath)
 
-	dst := imageutil.ResizeImage(src, 300)
-
-	out, err := os.Create(thumbPath)
-	if err != nil {
-		return fmt.Errorf("create thumbnail file: %w", err)
-	}
-	defer out.Close()
-
-	if err := webp.Encode(out, dst, &webp.Options{Lossless: false, Quality: 85}); err != nil {
-		return fmt.Errorf("encode webp: %w", err)
+	if err := cmd.Run(); err != nil {
+		os.Remove(thumbPath)
+		return fmt.Errorf("ffmpeg: %w", err)
 	}
 	return nil
 }

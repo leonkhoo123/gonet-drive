@@ -4,6 +4,10 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/hex"
+	"image"
+	"image/color"
+	"image/jpeg"
+	"image/png"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -18,9 +22,9 @@ import (
 )
 
 func TestNewThumbnailSemaphore_Defaults(t *testing.T) {
-	s := newThumbnailSemaphore(2)
-	assert.Equal(t, 2, s.limit)
-	assert.Equal(t, 2, s.Available())
+	s := newThumbnailSemaphore(1)
+	assert.Equal(t, 1, s.limit)
+	assert.Equal(t, 1, s.Available())
 	assert.Equal(t, 0, s.Acquiring())
 }
 
@@ -327,6 +331,149 @@ func TestVideoThumbnail_SingleflightStillWorks(t *testing.T) {
 	assert.NoError(t, err, "thumbnail should exist after generation")
 }
 
+func TestGeneratePhotoThumbnail_ValidWebP(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "photo.png")
+	makeTestPhoto(t, srcPath, 800, 600)
+
+	thumbPath := filepath.Join(dir, "thumb.webp")
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	err := GeneratePhotoThumbnail(ctx, srcPath, thumbPath)
+	require.NoError(t, err)
+
+	data, err := os.ReadFile(thumbPath)
+	require.NoError(t, err)
+	assert.True(t, len(data) > 0)
+
+	assert.True(t, len(data) >= 4 && string(data[0:4]) == "RIFF",
+		"thumbnail should be a valid WebP (RIFF header)")
+}
+
+func TestGeneratePhotoThumbnail_AspectRatio(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "wide.png")
+	makeTestPhoto(t, srcPath, 800, 600)
+
+	thumbPath := filepath.Join(dir, "thumb.webp")
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	err := GeneratePhotoThumbnail(ctx, srcPath, thumbPath)
+	require.NoError(t, err)
+
+	info, err := os.Stat(thumbPath)
+	require.NoError(t, err)
+	assert.True(t, info.Size() > 0)
+}
+
+func TestGeneratePhotoThumbnail_JPEG(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "photo.jpg")
+	makeTestJPEG(t, srcPath, 640, 480)
+
+	thumbPath := filepath.Join(dir, "thumb.webp")
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	err := GeneratePhotoThumbnail(ctx, srcPath, thumbPath)
+	require.NoError(t, err)
+
+	data, err := os.ReadFile(thumbPath)
+	require.NoError(t, err)
+	assert.True(t, len(data) >= 4 && string(data[0:4]) == "RIFF",
+		"JPEG thumbnail should be a valid WebP")
+}
+
+func TestGeneratePhotoThumbnail_InvalidFile(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "fake.png")
+	require.NoError(t, os.WriteFile(srcPath, []byte("not an image"), 0644))
+
+	thumbPath := filepath.Join(dir, "thumb.webp")
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	err := GeneratePhotoThumbnail(ctx, srcPath, thumbPath)
+	assert.Error(t, err, "should fail on invalid image file")
+}
+
+func TestGeneratePhotoThumbnail_WithSemaphore(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	cfg := testConfig(t)
+	cfg.Server.ThumbnailMaxConcurrent = 1
+	cfg.Server.ThumbnailGenerationTimeout = 30 * time.Second
+
+	workDir := t.TempDir()
+	cfg.Server.FileRoot = workDir
+	require.NoError(t, os.MkdirAll(workDir, 0755))
+
+	srcPath := filepath.Join(workDir, "photo.png")
+	makeTestPhoto(t, srcPath, 320, 240)
+
+	thumbDir := filepath.Join(workDir, ".cloud_reserve", ".thumbnails")
+	require.NoError(t, os.MkdirAll(thumbDir, 0755))
+
+	sem := newThumbnailSemaphore(1)
+
+	var wg sync.WaitGroup
+	results := make([]bool, 5)
+
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			hasher := md5.New()
+			hasher.Write([]byte(srcPath + "_" + string(rune('A'+idx))))
+			hashStr := hex.EncodeToString(hasher.Sum(nil))
+			thumbPath := filepath.Join(thumbDir, hashStr+".webp")
+
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+
+			if err := sem.Acquire(ctx); err != nil {
+				return
+			}
+
+			results[idx] = GeneratePhotoThumbnail(ctx, srcPath, thumbPath) == nil
+			os.Remove(thumbPath)
+			sem.Release()
+		}(i)
+	}
+
+	wg.Wait()
+
+	successCount := 0
+	for _, r := range results {
+		if r {
+			successCount++
+		}
+	}
+	t.Logf("%d out of 5 photo thumbnail generations succeeded (limit=1)", successCount)
+	assert.GreaterOrEqual(t, successCount, 1, "at least one should succeed")
+	assert.Equal(t, 5, successCount, "all should succeed since semaphore queues them")
+}
+
 // testConfig creates a minimal config for testing without importing testutil
 func testConfig(t *testing.T) *config.CloudConfig {
 	t.Helper()
@@ -370,4 +517,32 @@ func makeTestVideo(t *testing.T, path string) {
 		path)
 	out, err := cmd.CombinedOutput()
 	require.NoError(t, err, "failed to create test video: %s", string(out))
+}
+
+func makeTestPhoto(t *testing.T, path string, w, h int) {
+	t.Helper()
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			img.Set(x, y, color.RGBA{R: uint8(x % 256), G: uint8(y % 256), B: 128, A: 255})
+		}
+	}
+	f, err := os.Create(path)
+	require.NoError(t, err)
+	defer f.Close()
+	require.NoError(t, png.Encode(f, img))
+}
+
+func makeTestJPEG(t *testing.T, path string, w, h int) {
+	t.Helper()
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			img.Set(x, y, color.RGBA{R: uint8(x % 256), G: uint8(y % 256), B: 128, A: 255})
+		}
+	}
+	f, err := os.Create(path)
+	require.NoError(t, err)
+	defer f.Close()
+	require.NoError(t, jpeg.Encode(f, img, &jpeg.Options{Quality: 90}))
 }

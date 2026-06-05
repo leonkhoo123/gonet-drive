@@ -114,7 +114,7 @@ func ServePhotoThumbnail(c *gin.Context, cfg *config.CloudConfig) {
 		}
 		defer sem.Release()
 
-		if err := GeneratePhotoThumbnail(fullPath, thumbPath); err != nil {
+		if err := GeneratePhotoThumbnail(ctx, fullPath, thumbPath); err != nil {
 			return nil, err
 		}
 

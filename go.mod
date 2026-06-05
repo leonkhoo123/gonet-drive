@@ -3,7 +3,6 @@ module go-file-server
 go 1.25.10
 
 require (
-	github.com/chai2010/webp v1.4.0
 	github.com/gin-contrib/cors v1.7.7
 	github.com/gin-gonic/gin v1.12.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
@@ -19,7 +18,6 @@ require (
 	github.com/swaggo/swag v1.16.6
 	github.com/tcolgate/mp3 v0.0.0-20170426193717-e79c5a46d300
 	golang.org/x/crypto v0.52.0
-	golang.org/x/image v0.41.0
 	golang.org/x/sync v0.20.0
 	golang.org/x/time v0.15.0
 )

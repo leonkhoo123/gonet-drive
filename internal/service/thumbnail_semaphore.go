@@ -21,7 +21,7 @@ func GetThumbnailSemaphore() *thumbnailSemaphore {
 	semaphoreOnce.Do(func() {
 		cfg := config.AppConfig
 		if cfg == nil {
-			globalThumbnailSemaphore = newThumbnailSemaphore(2)
+			globalThumbnailSemaphore = newThumbnailSemaphore(1)
 		} else {
 			globalThumbnailSemaphore = newThumbnailSemaphore(cfg.Server.ThumbnailMaxConcurrent)
 		}

@@ -175,7 +175,7 @@ func generateThumbnail(f fileNeedingThumbnail) error {
 	if f.isVideo {
 		return service.GenerateVideoThumbnail(ctx, f.fullPath, f.thumbPath)
 	}
-	return service.GeneratePhotoThumbnail(f.fullPath, f.thumbPath)
+	return service.GeneratePhotoThumbnail(ctx, f.fullPath, f.thumbPath)
 }
 
 func isVideoFile(name string) bool {
