@@ -169,7 +169,6 @@ func ScanVideoIntegrity(rootPath string) (*ScanResult, error) {
 		}
 
 		relPath := strings.TrimPrefix(path, rootPath)
-		relPath = strings.TrimPrefix(relPath, string(filepath.Separator))
 		hash := md5.Sum([]byte(relPath))
 		hashStr := hex.EncodeToString(hash[:])
 
