@@ -20,7 +20,7 @@ RUN npm run build
 # ====== 2. Backend Build Stage ======
 FROM golang:1.25.10-alpine AS backend-builder
 
-RUN apk add --no-cache git gcc musl-dev
+RUN apk add --no-cache git gcc musl-dev vips-dev
 
 WORKDIR /app
 
@@ -47,7 +47,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 FROM alpine:latest
 
 RUN echo -e "https://dl-cdn.alpinelinux.org/alpine/edge/main\nhttps://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories && \
-    apk add --no-cache ffmpeg=8.1.1-r0 && \
+    apk add --no-cache ffmpeg=8.1.1-r0 vips && \
     sed -i '/edge/d' /etc/apk/repositories && \
     apk add --no-cache util-linux ca-certificates
 

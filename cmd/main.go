@@ -32,6 +32,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/h2non/bimg"
+
 	_ "go-file-server/docs"
 	"go-file-server/internal/config"
 	"go-file-server/internal/controller"
@@ -58,6 +60,11 @@ func main() {
 
 	// Verify required external binaries exist
 	verifyExternalBinaries()
+
+	// Set libvips memory limit to prevent OOM on super-large photos
+	// 256 MB is safe for a 2 GB pod while handling any realistic photo size
+	bimg.VipsCacheSetMaxMem(256 * 1024 * 1024)
+	bimg.VipsCacheSetMax(100)
 
 	// Initialize database
 	config.InitDB(cfg.Server.FileRoot)

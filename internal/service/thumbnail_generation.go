@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/h2non/bimg"
+
 	"go-file-server/internal/logger"
 	"go-file-server/internal/repository"
 )
@@ -44,23 +46,33 @@ func GenerateVideoThumbnail(ctx context.Context, fullPath, thumbPath string) err
 
 func GeneratePhotoThumbnail(ctx context.Context, fullPath, thumbPath string) error {
 	logger.L.Debug("generating photo thumbnail", "input", fullPath, "output", thumbPath)
-	cmd := exec.CommandContext(ctx,
-		"prlimit",
-		"--as="+ffmpegMemoryLimit,
-		"ffmpeg",
-		"-loglevel", "error",
-		"-threads", "1",
-		"-i", fullPath,
-		"-vf", "scale='min(300,iw)':'-1'",
-		"-c:v", "libwebp",
-		"-quality", "85",
-		"-y",
-		thumbPath)
 
-	if err := cmd.Run(); err != nil {
-		os.Remove(thumbPath)
-		return fmt.Errorf("ffmpeg: %w", err)
+	buffer, err := bimg.Read(fullPath)
+	if err != nil {
+		return fmt.Errorf("bimg read: %w", err)
 	}
+
+	options := bimg.Options{
+		Width:         300,
+		Height:        0,
+		Quality:       85,
+		StripMetadata: true,
+		Type:          bimg.WEBP,
+	}
+
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	newImage, err := bimg.NewImage(buffer).Process(options)
+	if err != nil {
+		return fmt.Errorf("bimg process: %w", err)
+	}
+
+	if err := bimg.Write(thumbPath, newImage); err != nil {
+		return fmt.Errorf("bimg write: %w", err)
+	}
+
 	return nil
 }
 
