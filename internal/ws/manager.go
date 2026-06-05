@@ -2,10 +2,7 @@ package ws
 
 import (
 	"encoding/json"
-	"fmt"
 	"go-file-server/internal/logger"
-	"go-file-server/internal/state"
-	"go-file-server/internal/util"
 	"net/http"
 	"sync"
 	"time"
@@ -136,42 +133,8 @@ func WsHandler(c *gin.Context) {
 			}
 
 			if msg.Type == "check_progress" && msg.OpID != "" {
-				if pt, found := state.GetProgress(msg.OpID); found {
-					// This handler is kept for backwards compatibility
-					// but ideally clients should rely on broadcasted messages
-					// Note: We don't know the opType here, so we can't populate it
-					// This is a limitation of the check_progress pattern
-					// Clients should track opType themselves or we need to store it with the tracker
-
-					percentage := 0.0
-					if pt.TotalFiles > 0 {
-						if pt.TotalBytes > 0 {
-							percentage = float64(pt.CopiedBytes) / float64(pt.TotalBytes) * 100
-						} else {
-							percentage = float64(pt.CopiedFiles) / float64(pt.TotalFiles) * 100
-						}
-					}
-
-					var speedStr *string
-					elapsed := time.Since(pt.StartTime).Seconds()
-					if elapsed > 0 && pt.CopiedBytes > 0 {
-						speed := float64(pt.CopiedBytes) / elapsed
-						s := util.FormatBytes(int64(speed)) + "/s"
-						speedStr = &s
-					}
-
-					fileCountStr := fmt.Sprintf("%d/%d", pt.CopiedFiles, pt.TotalFiles)
-
-					response := OperationMessage{
-						OpId:         msg.OpID,
-						OpType:       "", // Unknown in this context
-						OpStatus:     "in-progress",
-						OpPercentage: &percentage,
-						OpSpeed:      speedStr,
-						OpFileCount:  &fileCountStr,
-					}
-
-					Broadcast(response)
+				if opMeta, found := GetOpMeta(msg.OpID); found {
+					Broadcast(opMeta)
 				}
 			}
 		}

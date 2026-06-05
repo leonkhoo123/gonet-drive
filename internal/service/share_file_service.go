@@ -34,7 +34,7 @@ func submitShareAsyncJob(opID, opType, opName string, tracker *util.ProgressTrac
 		requestIDPtr = &requestID
 	}
 
-	ws.Broadcast(ws.OperationMessage{
+	ws.BroadcastAndCache(ws.OperationMessage{
 		OpId:      opID,
 		OpType:    opType,
 		OpName:    opName,
@@ -46,7 +46,7 @@ func submitShareAsyncJob(opID, opType, opName string, tracker *util.ProgressTrac
 	JobQueue <- func() {
 		jobLog := logger.L.With("request_id", requestID, "opId", opID)
 
-		ws.Broadcast(ws.OperationMessage{
+		ws.BroadcastAndCache(ws.OperationMessage{
 			OpId:      opID,
 			OpType:    opType,
 			OpName:    opName,
@@ -75,7 +75,7 @@ func submitShareAsyncJob(opID, opType, opName string, tracker *util.ProgressTrac
 
 			fileCountStr := fmt.Sprintf("%d/%d", pt.CopiedFiles, pt.TotalFiles)
 
-			ws.Broadcast(ws.OperationMessage{
+			ws.BroadcastAndCache(ws.OperationMessage{
 				OpId:         opID,
 				OpType:       opType,
 				OpName:       opName,
@@ -99,7 +99,7 @@ func submitShareAsyncJob(opID, opType, opName string, tracker *util.ProgressTrac
 				status = "aborted"
 			}
 
-			ws.Broadcast(ws.OperationMessage{
+			ws.BroadcastAndCache(ws.OperationMessage{
 				OpId:      opID,
 				OpType:    opType,
 				OpName:    opName,
@@ -110,7 +110,7 @@ func submitShareAsyncJob(opID, opType, opName string, tracker *util.ProgressTrac
 			})
 		} else {
 			jobLog.Debug("share file operation completed", "opType", opType)
-			ws.Broadcast(ws.OperationMessage{
+			ws.BroadcastAndCache(ws.OperationMessage{
 				OpId:      opID,
 				OpType:    opType,
 				OpName:    opName,
@@ -134,7 +134,7 @@ func ShareCopyFiles(req CopyReq, cfg *config.CloudConfig, requestID string) erro
 
 	sendError := func(err error) error {
 		errMsg := err.Error()
-		ws.Broadcast(ws.OperationMessage{
+		ws.BroadcastAndCache(ws.OperationMessage{
 			OpId:     opID,
 			OpType:   "copy",
 			OpName:   opName,
@@ -201,7 +201,7 @@ func ShareMoveFiles(req MoveReq, cfg *config.CloudConfig, requestID string) erro
 
 	sendError := func(err error) error {
 		errMsg := err.Error()
-		ws.Broadcast(ws.OperationMessage{
+		ws.BroadcastAndCache(ws.OperationMessage{
 			OpId:     opID,
 			OpType:   "move",
 			OpName:   opName,
@@ -250,7 +250,7 @@ func ShareDeleteFiles(req DeleteReq, cfg *config.CloudConfig, requestID string) 
 
 	sendError := func(err error) error {
 		errMsg := err.Error()
-		ws.Broadcast(ws.OperationMessage{
+		ws.BroadcastAndCache(ws.OperationMessage{
 			OpId:     opID,
 			OpType:   "delete",
 			OpName:   opName,
@@ -305,7 +305,7 @@ func ShareDeletePermanentFiles(req DeleteReq, cfg *config.CloudConfig, requestID
 
 	sendError := func(err error) error {
 		errMsg := err.Error()
-		ws.Broadcast(ws.OperationMessage{
+		ws.BroadcastAndCache(ws.OperationMessage{
 			OpId:     opID,
 			OpType:   "delete_permanent",
 			OpName:   opName,

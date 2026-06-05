@@ -141,7 +141,7 @@ func ScanVideoIntegrity(rootPath string) (*ScanResult, error) {
 
 	if totalFiles == 0 {
 		result.EndTime = time.Now().Unix()
-		ws.Broadcast(ws.OperationMessage{
+		ws.BroadcastAndCache(ws.OperationMessage{
 			OpId:     "integrity-scan",
 			OpType:   "integrity-scan",
 			OpStatus: "completed",
@@ -155,7 +155,7 @@ func ScanVideoIntegrity(rootPath string) (*ScanResult, error) {
 			result.EndTime = time.Now().Unix()
 			completed := float64(i) / float64(totalFiles) * 100
 			fileCountStr := fmt.Sprintf("%d/%d", i, totalFiles)
-			ws.Broadcast(ws.OperationMessage{
+			ws.BroadcastAndCache(ws.OperationMessage{
 				OpId:         "integrity-scan",
 				OpType:       "integrity-scan",
 				OpStatus:     "aborted",
@@ -194,7 +194,7 @@ func ScanVideoIntegrity(rootPath string) (*ScanResult, error) {
 		percentage := float64(i+1) / float64(totalFiles) * 100
 		fileCountStr := fmt.Sprintf("%d/%d", i+1, totalFiles)
 
-		ws.Broadcast(ws.OperationMessage{
+		ws.BroadcastAndCache(ws.OperationMessage{
 			OpId:         "integrity-scan",
 			OpType:       "integrity-scan",
 			OpStatus:     "in-progress",
@@ -205,7 +205,7 @@ func ScanVideoIntegrity(rootPath string) (*ScanResult, error) {
 
 	result.EndTime = time.Now().Unix()
 
-	ws.Broadcast(ws.OperationMessage{
+	ws.BroadcastAndCache(ws.OperationMessage{
 		OpId:     "integrity-scan",
 		OpType:   "integrity-scan",
 		OpStatus: "completed",
