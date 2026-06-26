@@ -13,19 +13,15 @@ export function OperationQueueProgress() {
     const [isExpanded, setIsExpanded] = useState(false);
     const panelRef = useRef<HTMLDivElement>(null);
     const prevOpIdsRef = useRef<Set<string>>(new Set(Object.keys(operations)));
+    const scrollOpIdsRef = useRef<Set<string>>(new Set(Object.keys(operations)));
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [listRef] = useAutoAnimate<HTMLDivElement>();
-
-    useEffect(() => {
-        if (isExpanded && scrollContainerRef.current) {
-            scrollContainerRef.current.scrollTop = 0;
-        }
-    }, [operations, isExpanded]);
+    const lastAutoScrollRef = useRef<number>(0);
 
     useEffect(() => {
         const currentIds = Object.keys(operations);
         const prevIds = prevOpIdsRef.current;
-        
+
         let hasNewTargetOp = false;
         for (const id of currentIds) {
             if (!prevIds.has(id)) {
@@ -40,9 +36,27 @@ export function OperationQueueProgress() {
         if (hasNewTargetOp) {
             setIsExpanded(true);
         }
-        
+
         prevOpIdsRef.current = new Set(currentIds);
     }, [operations]);
+
+    useEffect(() => {
+        if (!isExpanded || !scrollContainerRef.current) return;
+
+        const currentIds = Object.keys(operations);
+        const prevIds = scrollOpIdsRef.current;
+        const hasNewOp = currentIds.some(id => !prevIds.has(id));
+
+        scrollOpIdsRef.current = new Set(currentIds);
+
+        if (hasNewOp) {
+            const now = Date.now();
+            if (now - lastAutoScrollRef.current >= 5000) {
+                scrollContainerRef.current.scrollTop = 0;
+                lastAutoScrollRef.current = now;
+            }
+        }
+    }, [operations, isExpanded]);
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent | TouchEvent) {
