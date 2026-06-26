@@ -1,5 +1,5 @@
 import { memo, useState } from "react";
-import { Trash2, Folder, Pencil, Trash2 as TrashIcon, Download, Info, Share2, MoreVertical, Scissors, Copy, Clipboard, Users, ExternalLink, AlertTriangle } from "lucide-react";
+import { Trash2, Folder, Pencil, Trash2 as TrashIcon, Download, Info, Share2, MoreVertical, Scissors, Copy, Clipboard, Users, ExternalLink, AlertTriangle, Pin, PinOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatBytes, formatLastModified } from "@/utils/utils";
 import type { FileInterface } from "@/api/api-file";
@@ -51,6 +51,9 @@ interface FileListItemProps {
   selectedItemsSize: number;
   hasSelectedDelete: boolean; // if selectedItems.has('.cloud_delete')
   viewMode?: 'list' | 'grid';
+  pinnedPaths?: Set<string>;
+  onPinFolder?: (path: string) => void;
+  onUnpinFolder?: (path: string) => void;
 }
 
 export const FileListItem = memo(function FileListItem({
@@ -85,8 +88,13 @@ export const FileListItem = memo(function FileListItem({
   selectedItemsSize,
   hasSelectedDelete,
   viewMode = 'list',
+  pinnedPaths,
+  onPinFolder,
+  onUnpinFolder,
 }: FileListItemProps) {
   const [imgErrorUrl, setImgErrorUrl] = useState<string | null>(null);
+  const fileFullPath = currentPath === "/" ? `/${file.name}` : `${currentPath}/${file.name}`;
+  const isFilePinned = pinnedPaths?.has(fileFullPath) ?? false;
 
   const fileContent = viewMode === 'grid' ? (
     <div id={`file-item-${String(index)}`} className="group h-full w-full">
@@ -188,6 +196,19 @@ export const FileListItem = memo(function FileListItem({
                     e.stopPropagation(); setOpenDropdownName(null); onShare?.(file.name, false);
                   }}>
                     <Share2 className="mr-2 h-4 w-4" /> Share
+                  </DropdownMenuItem>
+                )}
+                {!isRecycleBin && file.type === 'dir' && (
+                  <DropdownMenuItem onClick={(e) => {
+                    e.stopPropagation(); setOpenDropdownName(null);
+                    if (isFilePinned) {
+                      onUnpinFolder?.(fileFullPath);
+                    } else {
+                      onPinFolder?.(fileFullPath);
+                    }
+                  }}>
+                    {isFilePinned ? <PinOff className="mr-2 h-4 w-4" /> : <Pin className="mr-2 h-4 w-4" />}
+                    {isFilePinned ? 'Unpin' : 'Pin'}
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>
@@ -344,6 +365,20 @@ export const FileListItem = memo(function FileListItem({
                   }}>
                     <Share2 className="mr-2 h-4 w-4" />
                     Share
+                  </DropdownMenuItem>
+                )}
+                {!isRecycleBin && file.type === 'dir' && (
+                  <DropdownMenuItem onClick={(e) => {
+                    e.stopPropagation();
+                    setOpenDropdownName(null);
+                    if (isFilePinned) {
+                      onUnpinFolder?.(fileFullPath);
+                    } else {
+                      onPinFolder?.(fileFullPath);
+                    }
+                  }}>
+                    {isFilePinned ? <PinOff className="mr-2 h-4 w-4" /> : <Pin className="mr-2 h-4 w-4" />}
+                    {isFilePinned ? 'Unpin' : 'Pin'}
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>

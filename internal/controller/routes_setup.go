@@ -68,7 +68,7 @@ func SetupShareFileRoutes(router *gin.Engine, shareRepo repository.SharingReposi
 }
 
 // SetupAuthenticatedRoutes wires all /api/user/** routes with JWTAuthMiddleware.
-func SetupAuthenticatedRoutes(router *gin.Engine, cfg *config.CloudConfig, userService *service.UserService, sharingService *service.SharingService, audiobookService *service.AudiobookService, configRepo repository.CloudConfigRepository) {
+func SetupAuthenticatedRoutes(router *gin.Engine, cfg *config.CloudConfig, userService *service.UserService, sharingService *service.SharingService, audiobookService *service.AudiobookService, configRepo repository.CloudConfigRepository, pinnedFolderService *service.PinnedFolderService) {
 	authRouter := router.Group("/api/user")
 	if cfg.Auth.AppJwt != "OFF" {
 		authRouter.Use(middleware.JWTAuthMiddleware(cfg))
@@ -91,6 +91,7 @@ func SetupAuthenticatedRoutes(router *gin.Engine, cfg *config.CloudConfig, userS
 		FilesRoutes(authRouter, cfg)
 		ConfigRoutes(authRouter, configRepo)
 		ShareRoutes(authRouter, sharingService)
+		PinnedFolderRoutes(authRouter, pinnedFolderService)
 
 		adminRouter := authRouter.Group("/admin")
 		adminRouter.Use(userService.AdminMiddleware())

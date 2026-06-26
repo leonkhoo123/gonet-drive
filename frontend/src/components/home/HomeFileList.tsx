@@ -57,6 +57,9 @@ interface HomeFileListProps {
   sortOrder?: 'asc' | 'desc';
   setSortOrder?: (order: 'asc' | 'desc') => void;
   onSortChange?: (field: 'name' | 'size' | 'modified') => void;
+  pinnedPaths?: Set<string>;
+  onPinFolder?: (path: string) => void;
+  onUnpinFolder?: (path: string) => void;
 }
 
 import { Skeleton } from "@/components/ui/skeleton";
@@ -139,6 +142,9 @@ export default function HomeFileList({
   sortOrder,
   setSortOrder,
   onSortChange,
+  pinnedPaths,
+  onPinFolder,
+  onUnpinFolder,
 }: HomeFileListProps) {
   const [openDropdownName, setOpenDropdownName] = useState<string | null>(null);
   const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
@@ -325,6 +331,9 @@ export default function HomeFileList({
                         selectedItemsSize={selectedItems.size}
                         hasSelectedDelete={selectedItems.has('.cloud_delete')}
                         viewMode={viewMode}
+                        pinnedPaths={pinnedPaths}
+                        onPinFolder={onPinFolder}
+                        onUnpinFolder={onUnpinFolder}
                       />
                     );
                   })}
@@ -392,6 +401,9 @@ export default function HomeFileList({
                           selectedItemsSize={selectedItems.size}
                           hasSelectedDelete={selectedItems.has('.cloud_delete')}
                           viewMode={viewMode}
+                          pinnedPaths={pinnedPaths}
+                          onPinFolder={onPinFolder}
+                          onUnpinFolder={onUnpinFolder}
                         />
                       </div>
                     );

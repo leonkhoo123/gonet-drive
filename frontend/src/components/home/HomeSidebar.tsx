@@ -1,12 +1,21 @@
-import { useRef, useEffect } from "react";
-import { X, Trash2, Cloud, BookAudio, Share2, House } from "lucide-react";
+import { useRef, useEffect, useState, useCallback } from "react";
+import { X, Trash2, Cloud, Share2, House, Pin, Pencil, Check, GripVertical, FolderOpen } from "lucide-react";
 import { type StorageUsageResponse } from "@/api/api-file";
 import { formatBytes } from "@/utils/utils";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useNavigate, useLocation } from "react-router-dom";
-import { decodeUrlToPath } from "@/utils/utils";
+import { decodeUrlToPath, encodePathToUrl } from "@/utils/utils";
 import { Logo } from "@/components/Logo";
+import type { PinnedFolder } from "@/api/api-pinned";
 
 function StorageIndicator({ 
   usage, 
@@ -107,11 +116,77 @@ interface HomeSidebarProps {
   isHealthConnected: boolean;
   titleName?: string;
   storageUsage?: StorageUsageResponse;
+  pinnedFolders?: PinnedFolder[];
+  isPinnedEditMode?: boolean;
+  onTogglePinnedEditMode?: () => void;
+  onUnpinFolder?: (path: string) => void;
+  onReorderPinned?: (paths: string[]) => void;
 }
 
-export default function HomeSidebar({ isOpen, onClose, isWsConnected, isHealthConnected, titleName, storageUsage }: HomeSidebarProps) {
+// eslint-disable-next-line @typescript-eslint/no-empty-function
+const noop = () => {};
+
+export default function HomeSidebar({ isOpen, onClose, isWsConnected, isHealthConnected, titleName, storageUsage, pinnedFolders = [], isPinnedEditMode = false, onTogglePinnedEditMode = noop, onUnpinFolder = noop, onReorderPinned = noop }: HomeSidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
+
+  const [isUnpinDialogOpen, setIsUnpinDialogOpen] = useState(false);
+  const [unpinTarget, setUnpinTarget] = useState<string | null>(null);
+  const [unpinLabel, setUnpinLabel] = useState('');
+
+  useEffect(() => {
+    if (!isOpen && isPinnedEditMode) {
+      onTogglePinnedEditMode();
+    }
+  }, [isOpen, isPinnedEditMode, onTogglePinnedEditMode]);
+
+  const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const touchDrag = useRef<{ index: number; startY: number; currentIndex: number } | null>(null);
+  const [touchOverIndex, setTouchOverIndex] = useState<number | null>(null);
+
+  const getItemIndexFromY = useCallback((clientY: number): number | null => {
+    for (let i = 0; i < pinnedFolders.length; i++) {
+      const el = itemRefs.current.get(pinnedFolders[i].path);
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        if (clientY >= rect.top && clientY <= rect.bottom) {
+          return i;
+        }
+      }
+    }
+    return null;
+  }, [pinnedFolders]);
+
+  const handleTouchStart = useCallback((index: number, e: React.TouchEvent) => {
+    if (!isPinnedEditMode) return;
+    const touch = e.touches[0];
+    touchDrag.current = { index, startY: touch.clientY, currentIndex: index };
+    setTouchOverIndex(index);
+  }, [isPinnedEditMode]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!touchDrag.current) return;
+    const touch = e.touches[0];
+    touchDrag.current.currentIndex = touchDrag.current.index;
+    const overIndex = getItemIndexFromY(touch.clientY);
+    if (overIndex !== null && overIndex !== touchDrag.current.currentIndex) {
+      setTouchOverIndex(overIndex);
+    }
+  }, [getItemIndexFromY]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (!touchDrag.current) return;
+    const { index, currentIndex: startIdx } = touchDrag.current;
+    const endIndex = touchOverIndex;
+    touchDrag.current = null;
+    setTouchOverIndex(null);
+    if (endIndex !== null && endIndex !== startIdx && endIndex !== index) {
+      const reordered = [...pinnedFolders];
+      const [moved] = reordered.splice(startIdx, 1);
+      reordered.splice(endIndex, 0, moved);
+      onReorderPinned(reordered.map((f) => f.path));
+    }
+  }, [pinnedFolders, onReorderPinned, touchOverIndex]);
 
   const handleNavigate = (path: string) => {
     if (window.innerWidth < 1024) {
@@ -203,7 +278,107 @@ export default function HomeSidebar({ isOpen, onClose, isWsConnected, isHealthCo
               <span className="truncate">Manage Shares</span>
             </div>
 
-            <div 
+            {pinnedFolders.length > 0 && (
+              <>
+                <div className="h-px bg-border mx-3 my-3" />
+                <div className="flex items-center gap-2 px-3 pb-1">
+                  <Pin className="h-4 w-4 text-gray-500 shrink-0" />
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Pinned</span>
+                  <div className="flex-1" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={onTogglePinnedEditMode}
+                    title={isPinnedEditMode ? "Done editing" : "Edit pinned folders"}
+                  >
+                    {isPinnedEditMode ? <Check className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
+                  </Button>
+                </div>
+                {pinnedFolders.map((folder, index) => {
+                  const basename = folder.path.split('/').filter(Boolean).pop() ?? folder.path;
+                  const navPath = `/home${encodePathToUrl(folder.path)}`;
+                  const isTouchOver = touchOverIndex === index;
+                  return (
+                    <div key={folder.path}
+                      ref={(el) => {
+                        if (el) itemRefs.current.set(folder.path, el);
+                        else itemRefs.current.delete(folder.path);
+                      }}
+                      className={`flex items-center gap-3 text-base md:text-sm px-3 py-3 md:py-2 rounded-md transition-colors
+                        ${!isPinnedEditMode ? 'cursor-pointer' : ''}
+                        ${isTouchOver ? 'ring-2 ring-primary/50 bg-primary/5' : ''}
+                        ${isActive(folder.path)
+                          ? "bg-primary/10 text-primary shadow-[inset_0_0_0_1px_rgba(84,104,255,0.12)]"
+                          : "text-foreground hover:bg-muted/50"
+                        }`}
+                      draggable={isPinnedEditMode}
+                      onDragStart={(e) => {
+                        if (!isPinnedEditMode) return;
+                        e.dataTransfer.setData('text/plain', String(index));
+                        e.dataTransfer.effectAllowed = 'move';
+                      }}
+                      onDragOver={(e) => {
+                        if (!isPinnedEditMode) return;
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                      }}
+                      onDragEnter={(e) => {
+                        if (!isPinnedEditMode) return;
+                        e.preventDefault();
+                        setTouchOverIndex(index);
+                      }}
+                      onDragLeave={() => {
+                        setTouchOverIndex(null);
+                      }}
+                      onDrop={(e) => {
+                        if (!isPinnedEditMode) return;
+                        e.preventDefault();
+                        const fromIndex = Number(e.dataTransfer.getData('text/plain'));
+                        if (fromIndex === index) return;
+                        const reordered = [...pinnedFolders];
+                        const [moved] = reordered.splice(fromIndex, 1);
+                        reordered.splice(index, 0, moved);
+                        onReorderPinned(reordered.map((f) => f.path));
+                        setTouchOverIndex(null);
+                      }}
+                      onTouchStart={(e) => { handleTouchStart(index, e); }}
+                      onTouchMove={handleTouchMove}
+                      onTouchEnd={handleTouchEnd}
+                      onClick={() => {
+                        if (isPinnedEditMode) return;
+                        handleNavigate(navPath);
+                      }}
+                    >
+                      <FolderOpen className={`h-5 w-5 md:h-4 md:w-4 shrink-0 ${isActive(folder.path) ? "text-primary" : "text-gray-500"}`} />
+                      <span className="truncate flex-1">{basename}</span>
+                      {isPinnedEditMode && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 shrink-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setUnpinTarget(folder.path);
+                              setUnpinLabel(basename);
+                              setIsUnpinDialogOpen(true);
+                            }}
+                            title="Unpin"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                          <GripVertical className="h-4 w-4 text-gray-400 cursor-grab active:cursor-grabbing shrink-0" />
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </>
+            )}
+
+            {/* Audio Books - temporarily hidden */}
+            {/* <div 
               className={`flex items-center gap-3 text-base md:text-sm px-3 py-3 md:py-2 rounded-md transition-colors cursor-pointer
                 ${isActive("/audio-book") 
                   ? "bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400" 
@@ -213,7 +388,7 @@ export default function HomeSidebar({ isOpen, onClose, isWsConnected, isHealthCo
             >
               <BookAudio className={`h-5 w-5 md:h-4 md:w-4 shrink-0 ${isActive("/audio-book") ? "text-purple-500" : "text-gray-500"}`} />
               <span className="truncate">Audio Books</span>
-            </div>
+            </div> */}
 
             {/* Placeholder Items */}
             {/* <div className="flex items-center gap-3 text-base md:text-sm text-muted-foreground px-3 py-3 md:py-2 rounded-md hover:bg-muted/50 cursor-not-allowed transition-colors" title="Feature coming soon">
@@ -231,6 +406,28 @@ export default function HomeSidebar({ isOpen, onClose, isWsConnected, isHealthCo
           </div>
         </div>
       </aside>
+
+      <Dialog open={isUnpinDialogOpen} onOpenChange={setIsUnpinDialogOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Unpin folder?</DialogTitle>
+            <DialogDescription>
+              Remove "{unpinLabel}" from pinned folders?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setIsUnpinDialogOpen(false); }}>Cancel</Button>
+            <Button variant="destructive" onClick={() => {
+              if (unpinTarget) {
+                onUnpinFolder(unpinTarget);
+              }
+              setIsUnpinDialogOpen(false);
+              setUnpinTarget(null);
+              setUnpinLabel('');
+            }}>Unpin</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

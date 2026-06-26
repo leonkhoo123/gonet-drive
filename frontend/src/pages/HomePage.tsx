@@ -28,6 +28,7 @@ import { useAppHealth } from "@/hooks/useAppHealth";
 import { useHomeKeyboardShortcuts } from "@/hooks/useHomeKeyboardShortcuts";
 import { MobileClipboardToast } from "@/components/home/MobileClipboardToast";
 import { MobileFloatingActionButton } from "@/components/home/MobileFloatingActionButton";
+import { usePinnedFolders } from "@/hooks/usePinnedFolders";
 
 export default function HomePage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 1024);
@@ -108,6 +109,25 @@ export default function HomePage() {
     handleSortChange,
   } = useFileManager({ uploadChunkSize: healthData?.upload_chunk_size });
 
+  const {
+    pinnedFolders,
+    isEditMode: isPinnedEditMode,
+    pinnedPaths,
+    pin: pinFolder,
+    unpin: unpinFolder,
+    reorder: reorderPins,
+    toggleEditMode: togglePinnedEditMode,
+  } = usePinnedFolders();
+
+  const selectedItemName = selectedItems.size === 1 ? [...selectedItems][0] : null;
+  const selectedFolderItem = selectedItemName
+    ? (items?.items ?? []).find(i => i.name === selectedItemName && i.type === 'dir')
+    : null;
+  const selectedFolderPath = selectedFolderItem
+    ? (currentPath === '/' ? `/${selectedFolderItem.name}` : `${currentPath}/${selectedFolderItem.name}`)
+    : null;
+  const isPinned = selectedFolderPath ? pinnedPaths.has(selectedFolderPath) : false;
+
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth < 1024) {
@@ -150,6 +170,11 @@ export default function HomePage() {
           isHealthConnected={isHealthConnected}
           titleName={healthData?.service_name}
           storageUsage={items?.storage}
+          pinnedFolders={pinnedFolders}
+          isPinnedEditMode={isPinnedEditMode}
+          onTogglePinnedEditMode={togglePinnedEditMode}
+          onUnpinFolder={(path: string) => { void unpinFolder(path); }}
+          onReorderPinned={(paths: string[]) => { void reorderPins(paths); }}
         />
 
         <div className="flex-1 flex flex-col min-w-0 bg-background overflow-hidden" onClick={(e) => {
@@ -230,6 +255,10 @@ export default function HomePage() {
               isRecycleBinSelected={selectedItems.has('.cloud_delete')}
               onEmptyRecycleBin={() => { handleEmptyRecycleBin((items?.items ?? []).map(i => i.name)); }}
               isRefreshing={isLoading}
+              selectedFolderPath={selectedFolderPath}
+              isPinned={isPinned}
+              onPinFolder={(path: string) => { void pinFolder(path); }}
+              onUnpinFolder={(path: string) => { void unpinFolder(path); }}
             />
           </div>
 
@@ -263,6 +292,9 @@ export default function HomePage() {
             sortOrder={sortOrder}
             setSortOrder={setSortOrder}
             onSortChange={handleSortChange}
+            pinnedPaths={pinnedPaths}
+            onPinFolder={(path: string) => { void pinFolder(path); }}
+            onUnpinFolder={(path: string) => { void unpinFolder(path); }}
           />
         </div>
 

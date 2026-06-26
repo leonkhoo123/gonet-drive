@@ -117,6 +117,9 @@ func main() {
 	videoIntegrityRepo := repository.NewSQLiteVideoIntegrityRepo(config.DB)
 	service.SetVideoIntegrityRepo(videoIntegrityRepo)
 
+	pinnedFolderRepo := repository.NewSQLitePinnedFolderRepo(config.DB)
+	pinnedFolderService := service.NewPinnedFolderService(pinnedFolderRepo)
+
 	// Start WebSocket manager
 	go ws.Manager.Start()
 
@@ -137,7 +140,7 @@ func main() {
 	controller.SetupShareFileRoutes(router, shareRepo)
 
 	// Authenticated routes
-	controller.SetupAuthenticatedRoutes(router, cfg, userService, sharingService, audiobookService, configRepo)
+	controller.SetupAuthenticatedRoutes(router, cfg, userService, sharingService, audiobookService, configRepo, pinnedFolderService)
 
 	distFS, err := fs.Sub(ui.ReactFiles, "dist")
 	if err != nil {

@@ -1,4 +1,4 @@
-import { ArrowLeft, CheckSquare, Scissors, Copy, Clipboard, Pencil, Trash2, Plus, RefreshCcw, FolderPlus, Upload, FolderUp, Download, LayoutGrid, List } from "lucide-react";
+import { ArrowLeft, CheckSquare, Scissors, Copy, Clipboard, Pencil, Trash2, Plus, RefreshCcw, FolderPlus, Upload, FolderUp, Download, LayoutGrid, List, Pin, PinOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRef } from "react";
 import {
@@ -30,6 +30,10 @@ interface HomeToolbarProps {
   isRecycleBinSelected?: boolean;
   onEmptyRecycleBin?: () => void;
   isRefreshing?: boolean;
+  selectedFolderPath: string | null;
+  isPinned: boolean;
+  onPinFolder: (path: string) => void;
+  onUnpinFolder: (path: string) => void;
 }
 
 export default function HomeToolbar({
@@ -53,6 +57,10 @@ export default function HomeToolbar({
   isRecycleBinSelected = false,
   isRefreshing = false,
   onEmptyRecycleBin,
+  selectedFolderPath,
+  isPinned,
+  onPinFolder,
+  onUnpinFolder,
 }: HomeToolbarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -114,6 +122,20 @@ export default function HomeToolbar({
       <Button variant="ghost" size="sm" onClick={onDownload} disabled={(selectedItemsSize === 0 && isFolderEmpty) || isRecycleBinSelected || isRecycleBin} className="h-8 w-8 p-0" title="Download">
         <Download className="h-4 w-4" />
       </Button>
+
+      {selectedFolderPath && (
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0"
+          onClick={() => {
+            if (isPinned) {
+              onUnpinFolder(selectedFolderPath);
+            } else {
+              onPinFolder(selectedFolderPath);
+            }
+          }}
+          title={isPinned ? "Unpin from sidebar" : "Pin to sidebar"}>
+          {isPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+        </Button>
+      )}
 
       <div className="h-4 w-[1px] bg-border mx-1" />
       <DropdownMenu>
