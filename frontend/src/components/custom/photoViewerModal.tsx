@@ -26,36 +26,51 @@ const ThumbnailItem = React.memo(
     isActive,
     index,
     onGoTo,
+    onLoad,
   }: {
     file: FileInterface;
     isActive: boolean;
     index: number;
     onGoTo: (idx: number) => void;
-  }) => (
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        onGoTo(index);
-      }}
-      className={`flex-shrink-0 h-16 transition-all focus:outline-none ${
-        isActive
-          ? "scale-105"
-          : "opacity-60 hover:opacity-100"
-      }`}
-    >
-      <img
-        src={thumbUrl(file)}
-        alt={file.name}
-        className={`h-full w-auto rounded-md ${
+    onLoad: (index: number) => void;
+  }) => {
+    const imgRef = useRef<HTMLImageElement>(null);
+
+    useEffect(() => {
+      const img = imgRef.current;
+      if (img && img.complete && img.naturalWidth > 0) {
+        onLoad(index);
+      }
+    }, [index, onLoad]);
+
+    return (
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onGoTo(index);
+        }}
+        className={`flex-shrink-0 h-16 transition-all focus:outline-none ${
           isActive
-            ? "ring-2 ring-white ring-offset-1 ring-offset-transparent"
-            : ""
+            ? "scale-105"
+            : "opacity-60 hover:opacity-100"
         }`}
-        loading="lazy"
-        decoding="async"
-      />
-    </button>
-  )
+      >
+        <img
+          ref={imgRef}
+          src={thumbUrl(file)}
+          alt={file.name}
+          className={`h-full w-auto rounded-md ${
+            isActive
+              ? "ring-2 ring-white ring-offset-1 ring-offset-transparent"
+              : ""
+          }`}
+          loading="lazy"
+          decoding="async"
+          onLoad={() => { onLoad(index); }}
+        />
+      </button>
+    );
+  }
 );
 
 ThumbnailItem.displayName = "ThumbnailItem";
@@ -85,6 +100,26 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
   const isProgrammaticScroll = useRef(false);
   const [flashSide, setFlashSide] = useState<"left" | "right" | null>(null);
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ---- Deferred thumbnail-strip centering ----
+  const loadedThumbRef = useRef<Set<number>>(new Set());
+  const [stripReady, setStripReady] = useState(false);
+  const handleThumbLoad = useRef<(idx: number) => void>(/* initial value */ undefined as unknown as (idx: number) => void);
+
+  const stableOnThumbLoad = useCallback((index: number) => {
+    handleThumbLoad.current(index);
+  }, []);
+
+  // Updated every render so it always sees the latest currentIndex
+  handleThumbLoad.current = (idx: number) => {
+    loadedThumbRef.current.add(idx);
+    const lo = Math.max(0, currentIndex - 5);
+    const hi = Math.min(photoFiles.length - 1, currentIndex + 5);
+    for (let i = lo; i <= hi; i++) {
+      if (!loadedThumbRef.current.has(i)) return;
+    }
+    setStripReady(true);
+  };
 
   useForceDarkStatusBar(isOpen);
 
@@ -143,6 +178,38 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
       closeAnimRef.current = false;
     }
   }, [isOpen, initialIndex]);
+
+  // Reset strip centering on open/navigate. Scan already-loaded thumbs,
+  // then start a 3s fallback timer so centering never hangs forever.
+  useEffect(() => {
+    if (!isOpen) return;
+    loadedThumbRef.current = new Set();
+    setStripReady(false);
+
+    const strip = thumbStripRef.current;
+    if (strip) {
+      const lo = Math.max(0, currentIndex - 5);
+      const hi = Math.min(photoFiles.length - 1, currentIndex + 5);
+      let allLoaded = true;
+      for (let i = lo; i <= hi; i++) {
+        const child = strip.children[i] as HTMLElement | undefined;
+        if (!child) { allLoaded = false; break; }
+        const img = child.querySelector("img");
+        if (!img || !(img.complete && img.naturalWidth > 0)) {
+          allLoaded = false;
+        } else {
+          loadedThumbRef.current.add(i);
+        }
+      }
+      if (allLoaded) {
+        setStripReady(true);
+        return;
+      }
+    }
+
+    const timer = setTimeout(() => { setStripReady(true); }, 3000);
+    return () => { clearTimeout(timer); };
+  }, [isOpen, currentIndex, photoFiles.length]);
 
   const currentFile = photoFiles[currentIndex] ?? initialFile;
 
@@ -226,6 +293,7 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
   // Scroll active thumbnail to center when currentIndex changes.
   useEffect(() => {
     if (isScrollingStrip.current) return;
+    if (!stripReady) return;
     const strip = thumbStripRef.current;
     if (!strip) return;
     const btn = strip.children[currentIndex] as HTMLElement | undefined;
@@ -233,7 +301,7 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
       isProgrammaticScroll.current = true;
       btn.scrollIntoView({ behavior: "auto", block: "nearest", inline: "center" });
     }
-  }, [currentIndex, showUI]);
+  }, [currentIndex, showUI, stripReady]);
 
   // ---- Swipe-down close (mobile) ----
   const triggerSwipeClose = useCallback(() => {
@@ -558,6 +626,7 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
                 isActive={idx === currentIndex}
                 index={idx}
                 onGoTo={goTo}
+                onLoad={stableOnThumbLoad}
               />
             ))}
           </div>
