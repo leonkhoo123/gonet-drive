@@ -104,6 +104,7 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
   // ---- Deferred thumbnail-strip centering ----
   const loadedThumbRef = useRef<Set<number>>(new Set());
   const [stripReady, setStripReady] = useState(false);
+  const stabilityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleThumbLoad = useRef<(idx: number) => void>(/* initial value */ undefined as unknown as (idx: number) => void);
 
   const stableOnThumbLoad = useCallback((index: number) => {
@@ -118,7 +119,8 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
     for (let i = lo; i <= hi; i++) {
       if (!loadedThumbRef.current.has(i)) return;
     }
-    setStripReady(true);
+    if (stabilityTimerRef.current) clearTimeout(stabilityTimerRef.current);
+    stabilityTimerRef.current = setTimeout(() => { setStripReady(true); }, 2000);
   };
 
   useForceDarkStatusBar(isOpen);
@@ -180,11 +182,16 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
   }, [isOpen, initialIndex]);
 
   // Reset strip centering on open/navigate. Scan already-loaded thumbs,
-  // then start a 3s fallback timer so centering never hangs forever.
+  // then start a 2s stability delay. A 10s fallback ensures centering never hangs.
   useEffect(() => {
     if (!isOpen) return;
     loadedThumbRef.current = new Set();
     setStripReady(false);
+
+    if (stabilityTimerRef.current) {
+      clearTimeout(stabilityTimerRef.current);
+      stabilityTimerRef.current = null;
+    }
 
     const strip = thumbStripRef.current;
     if (strip) {
@@ -202,12 +209,12 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
         }
       }
       if (allLoaded) {
-        setStripReady(true);
+        stabilityTimerRef.current = setTimeout(() => { setStripReady(true); }, 2000);
         return;
       }
     }
 
-    const timer = setTimeout(() => { setStripReady(true); }, 3000);
+    const timer = setTimeout(() => { setStripReady(true); }, 10_000);
     return () => { clearTimeout(timer); };
   }, [isOpen, currentIndex, photoFiles.length]);
 
