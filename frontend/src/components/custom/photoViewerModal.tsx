@@ -105,6 +105,7 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
   const loadedThumbRef = useRef<Set<number>>(new Set());
   const [stripReady, setStripReady] = useState(false);
   const stabilityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isInitialOpen = useRef(true);
   const handleThumbLoad = useRef<(idx: number) => void>(/* initial value */ undefined as unknown as (idx: number) => void);
 
   const stableOnThumbLoad = useCallback((index: number) => {
@@ -178,15 +179,20 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
       setImageError(false);
       setIsClosing(false);
       closeAnimRef.current = false;
+      isInitialOpen.current = true;
     }
   }, [isOpen, initialIndex]);
 
-  // Reset strip centering on open/navigate. Scan already-loaded thumbs,
-  // then start a 2s stability delay. A 10s fallback ensures centering never hangs.
+  // On navigation: strip is already visible, stripReady is true — just let
+  // useLayoutEffect fire scrollIntoView instantly on currentIndex change.
+  // On initial open: defer centering until ±5 thumbnails have settled.
   useEffect(() => {
     if (!isOpen) return;
+    if (!isInitialOpen.current) return;
+
     loadedThumbRef.current = new Set();
     setStripReady(false);
+    isInitialOpen.current = false;
 
     if (stabilityTimerRef.current) {
       clearTimeout(stabilityTimerRef.current);
