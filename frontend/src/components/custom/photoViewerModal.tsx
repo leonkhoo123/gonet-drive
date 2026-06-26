@@ -121,7 +121,7 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
       if (!loadedThumbRef.current.has(i)) return;
     }
     if (stabilityTimerRef.current) clearTimeout(stabilityTimerRef.current);
-    stabilityTimerRef.current = setTimeout(() => { setStripReady(true); }, 2000);
+    stabilityTimerRef.current = setTimeout(() => { setStripReady(true); }, 1000);
   };
 
   useForceDarkStatusBar(isOpen);
@@ -215,7 +215,7 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
         }
       }
       if (allLoaded) {
-        stabilityTimerRef.current = setTimeout(() => { setStripReady(true); }, 2000);
+        stabilityTimerRef.current = setTimeout(() => { setStripReady(true); }, 1000);
         return;
       }
     }
