@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import React, { useState, useCallback, useMemo, useEffect, useLayoutEffect, useRef } from "react";
 import { X, Download, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { type FileInterface, downloadFiles } from "@/api/api-file";
 import { useDialogHistory } from "@/hooks/useDialogHistory";
@@ -298,7 +298,7 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
   );
 
   // Scroll active thumbnail to center when currentIndex changes.
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (isScrollingStrip.current) return;
     if (!stripReady) return;
     const strip = thumbStripRef.current;
@@ -609,7 +609,11 @@ export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
       {/* Bottom Thumbnail Strip */}
       {hasMultiple && (
         <div
-          className={`absolute bottom-0 left-0 right-0 z-20 pt-3 pb-4 ${uiHidden}`}
+          className={`absolute bottom-0 left-0 right-0 z-20 pt-3 pb-4 ${
+            showUI
+              ? `transition-opacity duration-300 ${stripReady ? "opacity-100" : "opacity-0"}`
+              : "hidden"
+          }`}
           style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom, 8px))" }}
           onClick={(e) => { e.stopPropagation(); }}
           onTouchStart={(e) => { e.stopPropagation(); }}
