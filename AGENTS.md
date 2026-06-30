@@ -110,3 +110,32 @@ make test-race     # Race detection
 ## Temporary directory
 - If temporary directory is needed for testing purpose or anything else - create a /temp/ dir to perform all the action inside, and do a clean up afterward.
 - Try to not use Temporary directory outside project directory.
+
+## Updating gonet-auth dependency
+
+gonet-auth is a private GitHub module (`github.com/leonkhoo123/gonet-auth`). To bump the version:
+
+```bash
+# 1. Update the version in go.mod
+go mod edit -require github.com/leonkhoo123/gonet-auth@v0.2.0
+
+# 2. Drop the local replace so Go fetches from GitHub
+go mod edit -dropreplace github.com/leonkhoo123/gonet-auth
+
+# 3. Fetch from GitHub and regenerate go.sum
+GOPRIVATE=github.com/leonkhoo123 go mod tidy
+
+# 4. Restore the local replace for dev
+go mod edit -replace github.com/leonkhoo123/gonet-auth=../gonet-auth
+
+# 5. Commit the updated go.mod + go.sum
+git add go.mod go.sum && git commit -m "bump gonet-auth to v0.2.0"
+```
+
+Never commit the repo without the `replace` directive — it must be present in every commit so local dev works. The Docker pipeline drops it at build time.
+
+## Release pipeline
+
+Kaniko builds run via the `kaniko-build` Tekton pipeline in `infra-git`.
+The pipeline fetches a GitHub PAT from Vault and passes it as `--build-arg GITHUB_TOKEN`
+so Go can download private modules during `go mod download`.
