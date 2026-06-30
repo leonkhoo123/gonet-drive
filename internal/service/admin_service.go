@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"go-file-server/internal/config"
-	"go-file-server/internal/middleware"
 	"go-file-server/internal/model"
 
 	"github.com/gin-gonic/gin"
@@ -130,67 +129,11 @@ func (s *UserService) CreateUser(c *gin.Context) {
 	}
 
 	if err := s.UserRepo.Create(user); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "username may already exist"})
+		c.JSON(http.StatusConflict, gin.H{"error": "failed to create user"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"success": true, "id": id})
-}
-
-// RevokeSessions revokes all sessions for a user (admin only).
-// @Summary      Revoke User Sessions
-// @Description  Revoke all access tokens and refresh tokens for a specific user. Requires admin role.
-// @Tags         Admin
-// @Produce      json
-// @Security     BearerAuth
-// @Security     CookieAuth
-// @Param        id   path      string  true  "User ID"
-// @Success      200  {object}  map[string]interface{}
-// @Failure      400  {object}  map[string]interface{}
-// @Failure      403  {object}  map[string]interface{}
-// @Failure      404  {object}  map[string]interface{}
-// @Router       /api/user/admin/users/{id}/revoke [post]
-func (s *UserService) RevokeSessions(c *gin.Context) {
-	id := c.Param("id")
-	currentUsername := c.GetString("username")
-	superAdminUser := config.AppConfig.Auth.AdminUser
-
-	targetUser, err := s.UserRepo.GetByID(id)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
-		return
-	}
-
-	if targetUser.Username == superAdminUser {
-		c.JSON(http.StatusForbidden, gin.H{"error": "cannot revoke super admin"})
-		return
-	}
-
-	if targetUser.Role == "superadmin" && currentUsername != superAdminUser {
-		c.JSON(http.StatusForbidden, gin.H{"error": "only the main superadmin can revoke other superadmins"})
-		return
-	}
-
-	if targetUser.Role == "admin" && currentUsername != superAdminUser {
-		c.JSON(http.StatusForbidden, gin.H{"error": "only super admin can revoke an admin"})
-		return
-	}
-
-	// Increment token_version to invalidate all access tokens
-	if err := s.UserRepo.IncrementTokenVersionByID(id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to revoke access tokens"})
-		return
-	}
-
-	// Revoke refresh tokens
-	s.TokenRepo.RevokeByUsername(targetUser.Username)
-	middleware.ClearUserRoleCache(targetUser.Username)
-
-	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
 // DeleteUser deletes a user (admin only).
@@ -244,23 +187,6 @@ func (s *UserService) DeleteUser(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
 		return
 	}
-	middleware.ClearUserRoleCache(targetUser.Username)
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
-func (s *UserService) AdminMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		username := c.GetString("username")
-		if username == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-			return
-		}
-
-		user, err := s.UserRepo.GetByUsername(username)
-		if err != nil || (user.Role != "admin" && user.Role != "superadmin") {
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "admin access required"})
-			return
-		}
-		c.Next()
-	}
-}

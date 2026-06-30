@@ -1,17 +1,20 @@
 package controller
 
 import (
-	"go-file-server/internal/middleware"
 	"go-file-server/internal/service"
+	"github.com/leonkhoo123/gonet-auth/ratelimit"
+	authgin "github.com/leonkhoo123/gonet-auth/adapters/gin"
 
 	"github.com/gin-gonic/gin"
 )
+
+var shareVerifyLimiter = ratelimit.NewIPRateLimiter(5, 5)
 
 // PublicShareRoutes handles the initial PIN verification routes that don't need authentication
 func PublicShareRoutes(router *gin.Engine, sharingService *service.SharingService) {
 	api := router.Group("/api/share")
 	{
-		api.POST("/verify", middleware.ShareVerifyRateLimiter(), sharingService.VerifySharePINEndpoint)
+		api.POST("/verify", authgin.RateLimitMiddleware(shareVerifyLimiter), sharingService.VerifySharePINEndpoint)
 		api.GET("/check-permission/:id", sharingService.CheckSharePermissionEndpoint)
 	}
 }

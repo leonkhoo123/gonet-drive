@@ -2,20 +2,13 @@ package service
 
 import (
 	"net/http"
-	"time"
 
 	"go-file-server/internal/config"
-	"go-file-server/internal/middleware"
-	"go-file-server/internal/model"
-	"go-file-server/internal/util"
+
+	"github.com/leonkhoo123/gonet-auth/mfa"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
-	"github.com/patrickmn/go-cache"
-	"github.com/pquerna/otp/totp"
 )
-
-var mfaFailedCache = cache.New(15*time.Minute, 30*time.Minute)
 
 // SetupMFA generates a new TOTP secret for the current user.
 // @Summary      Setup MFA
@@ -40,17 +33,11 @@ func (s *UserService) SetupMFA(c *gin.Context, cfg *config.CloudConfig) {
 		return
 	}
 
-	key, err := totp.Generate(totp.GenerateOpts{
-		Issuer:      cfg.Defaults.ServiceName,
-		AccountName: username,
-	})
+	secret, url, err := mfa.GenerateSecret(cfg.Defaults.ServiceName, username)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate TOTP secret"})
 		return
 	}
-
-	secret := key.Secret()
-	url := key.URL()
 
 	if err := s.UserRepo.UpdateMFASecret(username, secret); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
@@ -96,8 +83,7 @@ func (s *UserService) EnableMFA(c *gin.Context) {
 		return
 	}
 
-	valid := totp.Validate(req.Code, *user.MFASecret)
-	if !valid {
+	if !mfa.ValidateCode(*user.MFASecret, req.Code) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid code"})
 		return
 	}
@@ -106,138 +92,6 @@ func (s *UserService) EnableMFA(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
-	middleware.ClearUserRoleCache(username)
 
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "MFA enabled successfully"})
-}
-
-// VerifyLoginMFA completes login by validating a TOTP code.
-// @Summary      Verify MFA Code
-// @Description  Verify the TOTP code after receiving a pre-auth token from /api/login. On success, full auth cookies are set.
-// @Tags         Auth
-// @Accept       json
-// @Produce      json
-// @Param        body  body      MFAVerifyRequest  true  "MFA verification"
-// @Success      200   {object}  map[string]interface{}
-// @Failure      400   {object}  map[string]interface{}
-// @Failure      401   {object}  map[string]interface{}
-// @Router       /api/mfa/verify [post]
-func (s *UserService) VerifyLoginMFA(c *gin.Context, cfg *config.CloudConfig) {
-	// The user should have an mfa_pending cookie, which is just an access token but we must validate it carefully
-	tokenStr, err := util.GetMfaPendingToken(c, cfg)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing pre-auth token"})
-		return
-	}
-
-	token, err := middleware.ValidateTokenString(tokenStr, cfg)
-	if err != nil || !token.Valid {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid pre-auth token"})
-		return
-	}
-
-	claims, ok := token.Claims.(*middleware.AccessTokenClaims)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token claims"})
-		return
-	}
-
-	if !claims.IsPreAuth {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid pre-auth token"})
-		return
-	}
-
-	jti := claims.ID
-	if jti != "" {
-		if _, used := mfaFailedCache.Get("used_jti_" + jti); used {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "pre-auth token already used"})
-			return
-		}
-	}
-
-	username := claims.Username
-
-	var req MFAVerifyRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
-		return
-	}
-
-	user, err := s.UserRepo.GetByUsername(username)
-	if err != nil || !user.MFAEnabled || user.MFASecret == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid state"})
-		return
-	}
-
-	cacheKey := "mfa_lock_" + username
-	if _, locked := mfaFailedCache.Get(cacheKey); locked {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Account is locked due to too many failed attempts. Try again later."})
-		return
-	}
-
-	attemptsKey := "mfa_attempts_" + username
-
-	valid := totp.Validate(req.Code, *user.MFASecret)
-	if !valid {
-		attempts, err := mfaFailedCache.IncrementInt(attemptsKey, 1)
-		if err != nil {
-			mfaFailedCache.Set(attemptsKey, 1, cache.DefaultExpiration)
-			attempts = 1
-		}
-
-		if attempts >= 5 {
-			mfaFailedCache.Set(cacheKey, true, 15*time.Minute)
-			mfaFailedCache.Delete(attemptsKey)
-			c.JSON(http.StatusForbidden, gin.H{"error": "Too many failed attempts. Account locked for 15 minutes."})
-			return
-		}
-
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid code"})
-		return
-	}
-
-	// Success, reset failed attempts
-	mfaFailedCache.Delete(attemptsKey)
-
-	if jti != "" {
-		mfaFailedCache.Set("used_jti_"+jti, true, 15*time.Minute)
-	}
-
-	familyID := uuid.New().String()
-
-	newAccessToken, err := middleware.GenerateAccessToken(username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, false, familyID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate token"})
-		return
-	}
-
-	refreshToken := middleware.GenerateRefreshToken()
-	hashedRefreshToken := middleware.HashToken(refreshToken)
-	tokenID := uuid.New().String()
-	expiresAt := time.Now().Add(cfg.Auth.RefreshTokenMaxAge)
-
-	userAgent := c.Request.UserAgent()
-	ipAddress := c.ClientIP()
-
-	rt := &model.RefreshToken{
-		ID:         tokenID,
-		Username:   username,
-		TokenHash:  hashedRefreshToken,
-		FamilyID:   familyID,
-		DeviceID:   req.DeviceID,
-		DeviceInfo: userAgent,
-		IPAddress:  ipAddress,
-		ExpiresAt:  expiresAt,
-	}
-
-	if err := s.TokenRepo.Create(rt); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to store refresh token"})
-		return
-	}
-
-	util.ClearMfaPendingToken(c, cfg)
-	util.SetAccessToken(c, cfg, newAccessToken)
-	util.SetRefreshToken(c, cfg, refreshToken)
-
-	c.JSON(http.StatusOK, gin.H{"message": "Login successful"})
 }

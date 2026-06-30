@@ -9,29 +9,29 @@ import (
 
 	"go-file-server/internal/config"
 	"go-file-server/internal/controller"
-	"go-file-server/internal/middleware"
-	"go-file-server/internal/service"
 	"go-file-server/internal/testutil"
+
+	"github.com/leonkhoo123/gonet-auth/auth"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func setupAdminRouter(t *testing.T) (*gin.Engine, *config.CloudConfig, *service.UserService, *sql.DB) {
+func setupAdminRouter(t *testing.T) (*gin.Engine, *config.CloudConfig, *auth.Auth, *sql.DB) {
 	t.Helper()
 	db := testutil.SetupTestDB(t)
 	cfg := config.AppConfig
 	workDir := cfg.Server.FileRoot
-	userService, _, _ := testutil.SetupServices(t, db, workDir)
+	userService, _, _, authInstance, authCfg := testutil.SetupServices(t, db, workDir)
 
-	middleware.ResetLoginLimiter()
+	controller.ResetLoginLimiterForTest()
 
 	router := gin.New()
-	controller.SetupPublicAuthRoutes(router, cfg, userService)
-	controller.SetupAdminRoutes(router, cfg, userService)
+	controller.SetupPublicAuthRoutes(router, cfg, authInstance, authCfg)
+	controller.SetupAuthenticatedRoutes(router, cfg, authInstance, authCfg, userService, nil, nil, nil, nil)
 
-	return router, cfg, userService, db
+	return router, cfg, authInstance, db
 }
 
 func mustUnmarshal(t *testing.T, body []byte) map[string]interface{} {
@@ -176,9 +176,9 @@ func TestCreateUser_DuplicateUsername(t *testing.T) {
 
 	rec2 := testutil.MakeAuthRequestJSON(t, router, http.MethodPost, "/api/user/admin/users", body, accessCookie)
 
-	assert.Equal(t, http.StatusInternalServerError, rec2.Code)
+	assert.Equal(t, http.StatusConflict, rec2.Code)
 	resp := mustUnmarshal(t, rec2.Body.Bytes())
-	assert.Equal(t, "username may already exist", resp["error"])
+	assert.Equal(t, "failed to create user", resp["error"])
 }
 
 func TestCreateUser_SuperadminOnlySuperadmin(t *testing.T) {

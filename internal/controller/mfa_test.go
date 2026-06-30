@@ -11,9 +11,13 @@ import (
 
 	"go-file-server/internal/config"
 	"go-file-server/internal/controller"
-	"go-file-server/internal/middleware"
 	"go-file-server/internal/service"
 	"go-file-server/internal/testutil"
+
+	gonetauth "github.com/leonkhoo123/gonet-auth"
+	"github.com/leonkhoo123/gonet-auth/auth"
+	"github.com/leonkhoo123/gonet-auth/ratelimit"
+	authgin "github.com/leonkhoo123/gonet-auth/adapters/gin"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pquerna/otp/totp"
@@ -21,23 +25,27 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func setupMFARouter(t *testing.T) (*gin.Engine, *config.CloudConfig, *service.UserService, *sql.DB) {
+var loginLimiter = ratelimit.NewIPRateLimiter(1, 5)
+
+
+func setupMFARouter(t *testing.T) (*gin.Engine, *gonetauth.AuthConfig, *auth.Auth, *service.UserService, *sql.DB) {
 	t.Helper()
 	db := testutil.SetupTestDB(t)
 	cfg := config.AppConfig
 	workDir := cfg.Server.FileRoot
-	userService, _, _ := testutil.SetupServices(t, db, workDir)
+	userService, _, _, authInstance, authCfg := testutil.SetupServices(t, db, workDir)
 
-	middleware.ResetLoginLimiter()
+	controller.ResetLoginLimiterForTest()
+	loginLimiter = ratelimit.NewIPRateLimiter(1, 5)
 
 	router := gin.New()
-	controller.SetupPublicAuthRoutes(router, cfg, userService)
+	controller.SetupPublicAuthRoutes(router, cfg, authInstance, authCfg)
 
 	authRouter := router.Group("/api/user")
-	authRouter.Use(middleware.JWTAuthMiddleware(cfg))
+	authRouter.Use(authgin.JWTAuthMiddleware(authInstance, []string{"/api/user/me", "/api/user/mfa/setup", "/api/user/mfa/enable", "/api/logout"}))
 	{
-		authRouter.GET("/mfa/setup", middleware.LoginRateLimiter(), func(c *gin.Context) { userService.SetupMFA(c, cfg) })
-		authRouter.POST("/mfa/enable", middleware.LoginRateLimiter(), userService.EnableMFA)
+		authRouter.GET("/mfa/setup", authgin.RateLimitMiddleware(loginLimiter), func(c *gin.Context) { userService.SetupMFA(c, cfg) })
+		authRouter.POST("/mfa/enable", authgin.RateLimitMiddleware(loginLimiter), userService.EnableMFA)
 		authRouter.GET("/me", func(c *gin.Context) {
 			username := c.GetString("username")
 			c.JSON(http.StatusOK, gin.H{"username": username})
@@ -50,7 +58,7 @@ func setupMFARouter(t *testing.T) (*gin.Engine, *config.CloudConfig, *service.Us
 		})
 	}
 
-	return router, cfg, userService, db
+	return router, authCfg, authInstance, userService, db
 }
 
 
@@ -60,14 +68,14 @@ func setupMFARouter(t *testing.T) (*gin.Engine, *config.CloudConfig, *service.Us
 // ---------- 3.4 MFA Setup Tests ----------
 
 func TestMFASetup_Success(t *testing.T) {
-	router, cfg, _, db := setupMFARouter(t)
+	router, cfg, authInstance, _, db := setupMFARouter(t)
 	user := testutil.CreateTestUser(t, db, "mfasetupuser", "pass123", "user")
 
-	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, false, "family-setup")
+	token, err := authInstance.JWT.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.SuperAdminUsername, false, "family-setup")
 	require.NoError(t, err)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/user/mfa/setup", nil)
-	req.AddCookie(&http.Cookie{Name: cfg.Auth.CookieAccessToken, Value: token, Path: "/"})
+	req.AddCookie(&http.Cookie{Name: cfg.CookieAccessToken, Value: token, Path: "/"})
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -79,16 +87,16 @@ func TestMFASetup_Success(t *testing.T) {
 }
 
 func TestMFASetup_AlreadyEnabled(t *testing.T) {
-	router, cfg, _, db := setupMFARouter(t)
+	router, cfg, authInstance, _, db := setupMFARouter(t)
 	user := testutil.CreateTestUser(t, db, "mfasetupuser2", "pass123", "user")
 	_, dbErr := db.Exec("UPDATE users SET mfa_enabled = 1, mfa_secret = ? WHERE id = ?", "JBSWY3DPEHPK3PXP", user.ID)
 	require.NoError(t, dbErr)
 
-	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, false, "family-setup2")
+	token, err := authInstance.JWT.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.SuperAdminUsername, false, "family-setup2")
 	require.NoError(t, err)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/user/mfa/setup", nil)
-	req.AddCookie(&http.Cookie{Name: cfg.Auth.CookieAccessToken, Value: token, Path: "/"})
+	req.AddCookie(&http.Cookie{Name: cfg.CookieAccessToken, Value: token, Path: "/"})
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -99,7 +107,7 @@ func TestMFASetup_AlreadyEnabled(t *testing.T) {
 }
 
 func TestMFASetup_Unauthenticated(t *testing.T) {
-	router, _, _, _ := setupMFARouter(t)
+	router, _, _, _, _ := setupMFARouter(t)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/user/mfa/setup", nil)
 	rec := httptest.NewRecorder()
@@ -111,12 +119,12 @@ func TestMFASetup_Unauthenticated(t *testing.T) {
 // ---------- 3.4 MFA Enable Tests ----------
 
 func TestMFAEnable_Success(t *testing.T) {
-	router, cfg, _, db := setupMFARouter(t)
+	router, cfg, authInstance, _, db := setupMFARouter(t)
 	user := testutil.CreateTestUser(t, db, "mfaenableuser", "pass123", "user")
 
-	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, false, "family-enable")
+	token, err := authInstance.JWT.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.SuperAdminUsername, false, "family-enable")
 	require.NoError(t, err)
-	authCookie := &http.Cookie{Name: cfg.Auth.CookieAccessToken, Value: token, Path: "/"}
+	authCookie := &http.Cookie{Name: cfg.CookieAccessToken, Value: token, Path: "/"}
 
 	setupReq := httptest.NewRequest(http.MethodGet, "/api/user/mfa/setup", nil)
 	setupReq.AddCookie(authCookie)
@@ -150,12 +158,12 @@ func TestMFAEnable_Success(t *testing.T) {
 }
 
 func TestMFAEnable_WrongCode(t *testing.T) {
-	router, cfg, _, db := setupMFARouter(t)
+	router, cfg, authInstance, _, db := setupMFARouter(t)
 	user := testutil.CreateTestUser(t, db, "mfaenableuser2", "pass123", "user")
 
-	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, false, "family-enable2")
+	token, err := authInstance.JWT.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.SuperAdminUsername, false, "family-enable2")
 	require.NoError(t, err)
-	authCookie := &http.Cookie{Name: cfg.Auth.CookieAccessToken, Value: token, Path: "/"}
+	authCookie := &http.Cookie{Name: cfg.CookieAccessToken, Value: token, Path: "/"}
 
 	setupReq := httptest.NewRequest(http.MethodGet, "/api/user/mfa/setup", nil)
 	setupReq.AddCookie(authCookie)
@@ -175,17 +183,17 @@ func TestMFAEnable_WrongCode(t *testing.T) {
 }
 
 func TestMFAEnable_NoSetupFirst(t *testing.T) {
-	router, cfg, _, db := setupMFARouter(t)
+	router, cfg, authInstance, _, db := setupMFARouter(t)
 	user := testutil.CreateTestUser(t, db, "mfaenableuser3", "pass123", "user")
 
-	token, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, false, "family-enable3")
+	token, err := authInstance.JWT.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.SuperAdminUsername, false, "family-enable3")
 	require.NoError(t, err)
 
 	enableBody := map[string]string{"code": "123456"}
 	enableJSON, _ := json.Marshal(enableBody)
 	req := httptest.NewRequest(http.MethodPost, "/api/user/mfa/enable", bytes.NewReader(enableJSON))
 	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(&http.Cookie{Name: cfg.Auth.CookieAccessToken, Value: token, Path: "/"})
+	req.AddCookie(&http.Cookie{Name: cfg.CookieAccessToken, Value: token, Path: "/"})
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -198,7 +206,7 @@ func TestMFAEnable_NoSetupFirst(t *testing.T) {
 // ---------- 3.4 MFA Verify Tests ----------
 
 func TestMFAVerify_Success(t *testing.T) {
-	router, _, _, db := setupMFARouter(t)
+	router, _, _, _, db := setupMFARouter(t)
 	user := testutil.CreateTestUser(t, db, "mfaverifyuser", "pass123", "user")
 	secret := "JBSWY3DPEHPK3PXP"
 	_, dbErr := db.Exec("UPDATE users SET mfa_enabled = 1, mfa_secret = ? WHERE id = ?", secret, user.ID)
@@ -253,7 +261,7 @@ func TestMFAVerify_Success(t *testing.T) {
 }
 
 func TestMFAVerify_WrongCode(t *testing.T) {
-	router, _, _, db := setupMFARouter(t)
+	router, _, _, _, db := setupMFARouter(t)
 	user := testutil.CreateTestUser(t, db, "mfaverifyuser2", "pass123", "user")
 	secret := "JBSWY3DPEHPK3PXP"
 	_, err := db.Exec("UPDATE users SET mfa_enabled = 1, mfa_secret = ? WHERE id = ?", secret, user.ID)
@@ -288,7 +296,7 @@ func TestMFAVerify_WrongCode(t *testing.T) {
 }
 
 func TestMFAVerify_NoPendingCookie(t *testing.T) {
-	router, _, _, _ := setupMFARouter(t)
+	router, _, _, _, _ := setupMFARouter(t)
 
 	verifyBody := map[string]string{"code": "123456"}
 	verifyJSON, _ := json.Marshal(verifyBody)
@@ -304,17 +312,17 @@ func TestMFAVerify_NoPendingCookie(t *testing.T) {
 }
 
 func TestMFAVerify_ExpiredPending(t *testing.T) {
-	router, cfg, _, db := setupMFARouter(t)
+	router, cfg, authInstance, _, db := setupMFARouter(t)
 	user := testutil.CreateTestUser(t, db, "mfaverifyuser3", "pass123", "user")
 	secret := "JBSWY3DPEHPK3PXP"
 	_, err := db.Exec("UPDATE users SET mfa_enabled = 1, mfa_secret = ? WHERE id = ?", secret, user.ID)
 	require.NoError(t, err)
 
-	origMfaMaxAge := cfg.Auth.MfaPendingMaxAge
-	cfg.Auth.MfaPendingMaxAge = -1 * time.Hour
-	preAuthToken, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, true, "")
+	origMfaMaxAge := cfg.MfaPendingMaxAge
+	cfg.MfaPendingMaxAge = -1 * time.Hour
+	preAuthToken, err := authInstance.JWT.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.SuperAdminUsername, true, "")
 	require.NoError(t, err)
-	cfg.Auth.MfaPendingMaxAge = origMfaMaxAge
+	cfg.MfaPendingMaxAge = origMfaMaxAge
 
 	verifyBody := map[string]string{"code": "123456"}
 	verifyJSON, _ := json.Marshal(verifyBody)
@@ -327,11 +335,11 @@ func TestMFAVerify_ExpiredPending(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, verifyRec.Code)
 	var resp map[string]interface{}
 	require.NoError(t, json.Unmarshal(verifyRec.Body.Bytes(), &resp))
-	assert.Equal(t, "invalid pre-auth token", resp["error"])
+	assert.Equal(t, "invalid token", resp["error"])
 }
 
 func TestMFAVerify_ReplayAttack(t *testing.T) {
-	router, _, _, db := setupMFARouter(t)
+	router, _, _, _, db := setupMFARouter(t)
 	user := testutil.CreateTestUser(t, db, "mfaverifyuser4", "pass123", "user")
 	secret := "JBSWY3DPEHPK3PXP"
 	_, err := db.Exec("UPDATE users SET mfa_enabled = 1, mfa_secret = ? WHERE id = ?", secret, user.ID)
@@ -376,17 +384,21 @@ func TestMFAVerify_ReplayAttack(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, verifyRec2.Code)
 	var resp map[string]interface{}
 	require.NoError(t, json.Unmarshal(verifyRec2.Body.Bytes(), &resp))
-	assert.Equal(t, "pre-auth token already used", resp["error"])
+	assert.Equal(t, "mfa code already used", resp["error"])
 }
 
 func TestMFAVerify_RateLimit(t *testing.T) {
-	router, cfg, _, db := setupMFARouter(t)
+	router, cfg, authInstance, _, db := setupMFARouter(t)
 	user := testutil.CreateTestUser(t, db, "mfaverifyuser5", "pass123", "user")
 	secret := "JBSWY3DPEHPK3PXP"
 	_, err := db.Exec("UPDATE users SET mfa_enabled = 1, mfa_secret = ? WHERE id = ?", secret, user.ID)
 	require.NoError(t, err)
 
-	preAuthToken, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, true, "")
+	// Temporarily raise MFA max attempts to prevent MFA lockout from interfering with IP rate limit test.
+	origMaxAttempts := cfg.MFAMaxAttempts
+	cfg.MFAMaxAttempts = 100
+
+	preAuthToken, err := authInstance.JWT.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.SuperAdminUsername, true, "")
 	require.NoError(t, err)
 	pendingCookie := &http.Cookie{Name: "mfa_pending", Value: preAuthToken, Path: "/"}
 
@@ -407,19 +419,21 @@ func TestMFAVerify_RateLimit(t *testing.T) {
 			assert.Equal(t, http.StatusTooManyRequests, verifyRec.Code, "request %d should be rate-limited", i+1)
 		}
 	}
+
+	cfg.MFAMaxAttempts = origMaxAttempts
 }
 
 // ---------- 3.4 MFA Mandatory Tests ----------
 
 func TestMFAMandatory_NotSetup(t *testing.T) {
-	router, cfg, _, db := setupMFARouter(t)
+	router, cfg, authInstance, _, db := setupMFARouter(t)
 	user := testutil.CreateTestUser(t, db, "mfamandatory", "pass123", "user")
 	_, err := db.Exec("UPDATE users SET mfa_mandatory = 1 WHERE id = ?", user.ID)
 	require.NoError(t, err)
 
-	token, tokenErr := middleware.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, false, "family-mfamand")
+	token, tokenErr := authInstance.JWT.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.SuperAdminUsername, false, "family-mfamand")
 	require.NoError(t, tokenErr)
-	authCookie := &http.Cookie{Name: cfg.Auth.CookieAccessToken, Value: token, Path: "/"}
+	authCookie := &http.Cookie{Name: cfg.CookieAccessToken, Value: token, Path: "/"}
 
 	fileReq := httptest.NewRequest(http.MethodGet, "/api/user/files/file-list", nil)
 	fileReq.AddCookie(authCookie)
@@ -444,14 +458,14 @@ func TestMFAMandatory_NotSetup(t *testing.T) {
 }
 
 func TestMFAMandatory_AfterSetup(t *testing.T) {
-	router, cfg, _, db := setupMFARouter(t)
+	router, cfg, authInstance, _, db := setupMFARouter(t)
 	user := testutil.CreateTestUser(t, db, "mfamandatory2", "pass123", "user")
 	_, err := db.Exec("UPDATE users SET mfa_mandatory = 1 WHERE id = ?", user.ID)
 	require.NoError(t, err)
 
-	token, tokenErr := middleware.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, false, "family-mfamand2")
+	token, tokenErr := authInstance.JWT.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.SuperAdminUsername, false, "family-mfamand2")
 	require.NoError(t, tokenErr)
-	authCookie := &http.Cookie{Name: cfg.Auth.CookieAccessToken, Value: token, Path: "/"}
+	authCookie := &http.Cookie{Name: cfg.CookieAccessToken, Value: token, Path: "/"}
 
 	setupReq := httptest.NewRequest(http.MethodGet, "/api/user/mfa/setup", nil)
 	setupReq.AddCookie(authCookie)
@@ -472,6 +486,8 @@ func TestMFAMandatory_AfterSetup(t *testing.T) {
 	enableRec := httptest.NewRecorder()
 	router.ServeHTTP(enableRec, enableReq)
 	require.Equal(t, http.StatusOK, enableRec.Code)
+
+	authInstance.ClearUserRoleCache(user.Username)
 
 	fileReq := httptest.NewRequest(http.MethodGet, "/api/user/files/file-list", nil)
 	fileReq.AddCookie(authCookie)

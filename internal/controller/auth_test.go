@@ -11,51 +11,53 @@ import (
 
 	"go-file-server/internal/config"
 	"go-file-server/internal/controller"
-	"go-file-server/internal/middleware"
-	"go-file-server/internal/service"
 	"go-file-server/internal/testutil"
+
+	"github.com/leonkhoo123/gonet-auth/auth"
+	authgin "github.com/leonkhoo123/gonet-auth/adapters/gin"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func setupAuthRouter(t *testing.T) (*gin.Engine, *config.CloudConfig, *service.UserService, *sql.DB) {
+
+func setupAuthRouter(t *testing.T) (*gin.Engine, *config.CloudConfig, *auth.Auth, *sql.DB) {
 	t.Helper()
 	db := testutil.SetupTestDB(t)
 	cfg := config.AppConfig
 	workDir := cfg.Server.FileRoot
-	userService, _, _ := testutil.SetupServices(t, db, workDir)
+	_, _, _, authInstance, authCfg := testutil.SetupServices(t, db, workDir)
 
-	middleware.ResetLoginLimiter()
+	controller.ResetLoginLimiterForTest()
 
 	router := gin.New()
-	controller.SetupPublicAuthRoutes(router, cfg, userService)
+	controller.SetupPublicAuthRoutes(router, cfg, authInstance, authCfg)
 
-	return router, cfg, userService, db
+	return router, cfg, authInstance, db
 }
 
-func setupAuthRouterWithAuthd(t *testing.T) (*gin.Engine, *config.CloudConfig, *service.UserService, *sql.DB) {
+func setupAuthRouterWithAuthd(t *testing.T) (*gin.Engine, *config.CloudConfig, *auth.Auth, *sql.DB) {
 	t.Helper()
 	db := testutil.SetupTestDB(t)
 	cfg := config.AppConfig
 	workDir := cfg.Server.FileRoot
-	userService, _, _ := testutil.SetupServices(t, db, workDir)
+	_, _, _, authInstance, authCfg := testutil.SetupServices(t, db, workDir)
 
-	middleware.ResetLoginLimiter()
+	controller.ResetLoginLimiterForTest()
 
 	router := gin.New()
-	controller.SetupPublicAuthRoutes(router, cfg, userService)
+	controller.SetupPublicAuthRoutes(router, cfg, authInstance, authCfg)
 
 	authRouter := router.Group("/api/user")
 	if cfg.Auth.AppJwt != "OFF" {
-		authRouter.Use(middleware.JWTAuthMiddleware(cfg))
+		authRouter.Use(authgin.JWTAuthMiddleware(authInstance, []string{"/api/user/me", "/api/user/mfa/setup", "/api/user/mfa/enable", "/api/logout"}))
 	}
 	authRouter.GET("/status", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok", "message": "authenticated"})
 	})
 
-	return router, cfg, userService, db
+	return router, cfg, authInstance, db
 }
 
 func loginJSON(t *testing.T, router *gin.Engine, username, password string) *httptest.ResponseRecorder {
@@ -394,7 +396,7 @@ func TestLoginRateLimiter_Burst(t *testing.T) {
 	assert.Equal(t, http.StatusTooManyRequests, rec.Code)
 	var resp map[string]interface{}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-	assert.Equal(t, "too many requests, please try again later", resp["error"])
+	assert.Equal(t, "too many requests", resp["error"])
 }
 
 func TestLoginRateLimiter_Recovery(t *testing.T) {

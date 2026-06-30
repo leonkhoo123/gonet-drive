@@ -17,6 +17,14 @@ import (
 	"go-file-server/internal/storage"
 )
 
+func untilNext(t time.Time, hour, minute int) time.Duration {
+	next := time.Date(t.Year(), t.Month(), t.Day(), hour, minute, 0, 0, t.Location())
+	if t.After(next) {
+		next = next.Add(24 * time.Hour)
+	}
+	return next.Sub(t)
+}
+
 const idleThreshold = 10 * time.Second
 
 type fileNeedingThumbnail struct {

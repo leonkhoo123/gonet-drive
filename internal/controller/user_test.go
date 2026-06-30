@@ -10,30 +10,32 @@ import (
 
 	"go-file-server/internal/config"
 	"go-file-server/internal/controller"
-	"go-file-server/internal/middleware"
 	"go-file-server/internal/service"
 	"go-file-server/internal/testutil"
+
+	"github.com/leonkhoo123/gonet-auth/auth"
+	authgin "github.com/leonkhoo123/gonet-auth/adapters/gin"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func setupUserRouter(t *testing.T) (*gin.Engine, *config.CloudConfig, *service.UserService, *sql.DB) {
+func setupUserRouter(t *testing.T) (*gin.Engine, *config.CloudConfig, *auth.Auth, *service.UserService, *sql.DB) {
 	t.Helper()
 	db := testutil.SetupTestDB(t)
 	cfg := config.AppConfig
 	workDir := cfg.Server.FileRoot
-	userService, _, _ := testutil.SetupServices(t, db, workDir)
+	userService, _, _, authInstance, authCfg := testutil.SetupServices(t, db, workDir)
 
-	middleware.ResetLoginLimiter()
+	controller.ResetLoginLimiterForTest()
 
 	router := gin.New()
-	controller.SetupPublicAuthRoutes(router, cfg, userService)
+	controller.SetupPublicAuthRoutes(router, cfg, authInstance, authCfg)
 
 	authRouter := router.Group("/api/user")
 	if cfg.Auth.AppJwt != "OFF" {
-		authRouter.Use(middleware.JWTAuthMiddleware(cfg))
+		authRouter.Use(authgin.JWTAuthMiddleware(authInstance, []string{"/api/user/me", "/api/user/mfa/setup", "/api/user/mfa/enable", "/api/logout"}))
 	}
 	authRouter.GET("/status", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok", "message": "authenticated"})
@@ -59,14 +61,35 @@ func setupUserRouter(t *testing.T) (*gin.Engine, *config.CloudConfig, *service.U
 			"mfa_setup_required": mfaSetupRequired,
 		})
 	})
-	authRouter.GET("/me/sessions", userService.GetSessions)
-	authRouter.DELETE("/me/sessions/:family_id", userService.RevokeSession)
+	authRouter.GET("/me/sessions", func(c *gin.Context) {
+		sessions, err := authInstance.GetSessions(c.GetString("username"))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
+			return
+		}
+		c.JSON(http.StatusOK, sessions)
+	})
+	authRouter.DELETE("/me/sessions/:family_id", func(c *gin.Context) {
+		var req struct {
+			Password string `json:"password"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "password required"})
+			return
+		}
+		err := authInstance.RevokeSession(c.Request.Context(), c.GetString("username"), c.Param("family_id"), req.Password)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"success": true})
+	})
 
-	return router, cfg, userService, db
+	return router, cfg, authInstance, userService, db
 }
 
 func TestGetMe_Success(t *testing.T) {
-	router, _, _, db := setupUserRouter(t)
+	router, _, _, _, db := setupUserRouter(t)
 	testutil.CreateTestUser(t, db, "meuser", "pass123", "user")
 
 	accessCookie := testutil.LoginAndGetCookie(t, router, "meuser", "pass123")
@@ -83,7 +106,7 @@ func TestGetMe_Success(t *testing.T) {
 }
 
 func TestGetMe_Unauthenticated(t *testing.T) {
-	router, _, _, _ := setupUserRouter(t)
+	router, _, _, _, _ := setupUserRouter(t)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/user/me", nil)
 	rec := httptest.NewRecorder()
@@ -94,7 +117,7 @@ func TestGetMe_Unauthenticated(t *testing.T) {
 }
 
 func TestGetStatus_Authenticated(t *testing.T) {
-	router, _, _, db := setupUserRouter(t)
+	router, _, _, _, db := setupUserRouter(t)
 	testutil.CreateTestUser(t, db, "statususer", "pass123", "user")
 
 	accessCookie := testutil.LoginAndGetCookie(t, router, "statususer", "pass123")
@@ -109,7 +132,7 @@ func TestGetStatus_Authenticated(t *testing.T) {
 }
 
 func TestGetStatus_Unauthenticated(t *testing.T) {
-	router, _, _, _ := setupUserRouter(t)
+	router, _, _, _, _ := setupUserRouter(t)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/user/status", nil)
 	rec := httptest.NewRecorder()
@@ -120,7 +143,7 @@ func TestGetStatus_Unauthenticated(t *testing.T) {
 }
 
 func TestGetSessions_Authenticated(t *testing.T) {
-	router, _, _, db := setupUserRouter(t)
+	router, _, _, _, db := setupUserRouter(t)
 	testutil.CreateTestUser(t, db, "sessuser", "pass123", "user")
 
 	accessCookie := testutil.LoginAndGetCookie(t, router, "sessuser", "pass123")
@@ -136,7 +159,7 @@ func TestGetSessions_Authenticated(t *testing.T) {
 }
 
 func TestRevokeSession_OwnSession(t *testing.T) {
-	router, _, _, db := setupUserRouter(t)
+	router, _, _, _, db := setupUserRouter(t)
 	testutil.CreateTestUser(t, db, "revokeusr", "pass123", "user")
 
 	accessCookie := testutil.LoginAndGetCookie(t, router, "revokeusr", "pass123")
@@ -168,7 +191,7 @@ func TestRevokeSession_OwnSession(t *testing.T) {
 }
 
 func TestRevokeSession_NotOwn(t *testing.T) {
-	router, _, _, db := setupUserRouter(t)
+	router, _, _, _, db := setupUserRouter(t)
 
 	testutil.CreateTestUser(t, db, "userA", "passA", "user")
 	testutil.CreateTestUser(t, db, "userB", "passB", "user")
@@ -195,7 +218,7 @@ func TestRevokeSession_NotOwn(t *testing.T) {
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
-	assert.Equal(t, http.StatusNotFound, rec.Code)
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
 
 	var resp map[string]interface{}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))

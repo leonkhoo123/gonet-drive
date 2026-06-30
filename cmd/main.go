@@ -33,8 +33,10 @@ import (
 	"time"
 
 	"github.com/h2non/bimg"
+	"github.com/patrickmn/go-cache"
 
 	_ "go-file-server/docs"
+	authpkg "go-file-server/internal/auth"
 	"go-file-server/internal/config"
 	"go-file-server/internal/controller"
 	"go-file-server/internal/logger"
@@ -45,6 +47,9 @@ import (
 	"go-file-server/internal/storage"
 	"go-file-server/internal/ws"
 	"go-file-server/ui"
+
+	"github.com/leonkhoo123/gonet-auth"
+	"github.com/leonkhoo123/gonet-auth/auth"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -126,21 +131,54 @@ func main() {
 	// Start sequential file operation worker
 	service.StartFileOperationWorker()
 
-	// Start daily token cleanup scheduler (runs at 3:00 AM)
-	schedule.StartCleanupScheduler(tokenRepo)
+	// Build gonet-auth configuration and instance
+	authCfg := &gonetauth.AuthConfig{
+		JwtSecret:              cfg.Auth.JwtSecret,
+		CookieAccessToken:      cfg.Auth.CookieAccessToken,
+		CookieRefreshToken:     cfg.Auth.CookieRefreshToken,
+		CookieMfaPending:       cfg.Auth.CookieMfaPending,
+		LegacyTokenName:        cfg.Auth.TokenName,
+		AccessTokenMaxAge:      cfg.Auth.AccessTokenMaxAge,
+		RefreshTokenMaxAge:     cfg.Auth.RefreshTokenMaxAge,
+		MfaPendingMaxAge:       cfg.Auth.MfaPendingMaxAge,
+		SecureMode:             cfg.Server.AppEnv != "local",
+		MFAIssuer:              "GoNet Drive",
+		MFAMaxAttempts:         5,
+		MFALockoutTime:         15 * time.Minute,
+		RevokedSessionCacheTTL: 20 * time.Minute,
+		UserRoleCacheTTL:       5 * time.Minute,
+		JWTOff:                 cfg.Auth.AppJwt == "OFF",
+		SuperAdminUsername:     cfg.Auth.AdminUser,
+	}
+	userStore := &authpkg.SQLiteUserStore{Repo: repo}
+	tokenStore := &authpkg.SQLiteTokenStore{Repo: tokenRepo}
+	cacheStore := cache.New(authCfg.RevokedSessionCacheTTL, 30*time.Minute)
+	authInstance := auth.NewAuth(authCfg, userStore, tokenStore, cacheStore)
+
+	// Start daily token cleanup scheduler (runs at 3:00 AM) via gonet-auth library
+	authInstance.Refresh.StartCleanupScheduler(3, 0, func(msg string, keyvals ...any) {
+		switch msg {
+		case "debug":
+			logger.L.Debug(keyvals[0].(string), keyvals[1:]...)
+		case "info":
+			logger.L.Info(keyvals[0].(string), keyvals[1:]...)
+		case "error":
+			logger.L.Error(keyvals[0].(string), keyvals[1:]...)
+		}
+	})
 
 	// Start daily thumbnail maintenance scheduler (runs at 4:30 AM)
 	schedule.StartThumbnailMaintenanceScheduler(cfg.Server.FileRoot, thumbnailRepo)
 
 	// Public routes
-	controller.SetupPublicAuthRoutes(router, cfg, userService)
-	controller.SetupMobileAuthRoutes(router, cfg, userService)
+	controller.SetupPublicAuthRoutes(router, cfg, authInstance, authCfg)
+	controller.SetupMobileAuthRoutes(router, cfg, authInstance, authCfg)
 	controller.SetupPublicConfigRoutes(router)
 	controller.SetupPublicShareRoutes(router, sharingService)
 	controller.SetupShareFileRoutes(router, shareRepo)
 
 	// Authenticated routes
-	controller.SetupAuthenticatedRoutes(router, cfg, userService, sharingService, audiobookService, configRepo, pinnedFolderService)
+	controller.SetupAuthenticatedRoutes(router, cfg, authInstance, authCfg, userService, sharingService, audiobookService, configRepo, pinnedFolderService)
 
 	distFS, err := fs.Sub(ui.ReactFiles, "dist")
 	if err != nil {

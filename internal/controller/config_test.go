@@ -13,42 +13,36 @@ import (
 
 	"go-file-server/internal/config"
 	"go-file-server/internal/controller"
-	"go-file-server/internal/middleware"
 	"go-file-server/internal/repository"
 	"go-file-server/internal/service"
 	"go-file-server/internal/testutil"
+
+	"github.com/leonkhoo123/gonet-auth/auth"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func setupConfigRouter(t *testing.T) (*gin.Engine, *config.CloudConfig, *service.UserService, repository.CloudConfigRepository, *sql.DB) {
+func setupConfigRouter(t *testing.T) (*gin.Engine, *config.CloudConfig, *service.UserService, *auth.Auth, repository.CloudConfigRepository, *sql.DB) {
 	t.Helper()
 	db := testutil.SetupTestDB(t)
 	cfg := config.AppConfig
 	workDir := cfg.Server.FileRoot
-	userService, _, configRepo := testutil.SetupServices(t, db, workDir)
+	userService, _, configRepo, authInstance, authCfg := testutil.SetupServices(t, db, workDir)
 
-	middleware.ResetLoginLimiter()
+	controller.ResetLoginLimiterForTest()
 
 	router := gin.New()
 
 	// Public config routes
 	controller.SetupPublicConfigRoutes(router)
 
-	// Authenticated config routes (with JWTAuthMiddleware)
-	authRouter := router.Group("/api/user")
-	if cfg.Auth.AppJwt != "OFF" {
-		authRouter.Use(middleware.JWTAuthMiddleware(cfg))
-	}
-	controller.ConfigRoutes(authRouter, configRepo)
+	// Auth routes (includes ConfigRoutes, admin, etc.)
+	controller.SetupPublicAuthRoutes(router, cfg, authInstance, authCfg)
+	controller.SetupAuthenticatedRoutes(router, cfg, authInstance, authCfg, userService, nil, nil, configRepo, nil)
 
-	// Admin routes
-	controller.SetupPublicAuthRoutes(router, cfg, userService)
-	controller.SetupAdminRoutes(router, cfg, userService)
-
-	return router, cfg, userService, configRepo, db
+	return router, cfg, userService, authInstance, configRepo, db
 }
 
 func createFakePNG() []byte {
@@ -90,7 +84,7 @@ func uploadLogoRequest(t *testing.T, router *gin.Engine, path, filename string, 
 // ---------- 7.2 Manifest ----------
 
 func TestGetManifest_Valid(t *testing.T) {
-	router, _, _, _, _ := setupConfigRouter(t)
+	router, _, _, _, _, _ := setupConfigRouter(t)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/config/manifest", nil)
 	rec := httptest.NewRecorder()
@@ -112,7 +106,7 @@ func TestGetManifest_Valid(t *testing.T) {
 // ---------- 7.2 Logo ----------
 
 func TestGetLogo_ReturnsImage(t *testing.T) {
-	router, _, _, _, _ := setupConfigRouter(t)
+	router, _, _, _, _, _ := setupConfigRouter(t)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/config/logo", nil)
 	rec := httptest.NewRecorder()
@@ -126,7 +120,7 @@ func TestGetLogo_ReturnsImage(t *testing.T) {
 // ---------- 7.2 Update Logo ----------
 
 func TestUpdateLogo_Success(t *testing.T) {
-	router, _, _, _, db := setupConfigRouter(t)
+	router, _, _, _, _, db := setupConfigRouter(t)
 	testutil.CreateTestUser(t, db, "adminlogo", "pass123", "admin")
 
 	accessCookie := testutil.LoginAndGetCookie(t, router, "adminlogo", "pass123")
@@ -148,7 +142,7 @@ func TestUpdateLogo_Success(t *testing.T) {
 }
 
 func TestUpdateLogo_NonPNG(t *testing.T) {
-	router, _, _, _, db := setupConfigRouter(t)
+	router, _, _, _, _, db := setupConfigRouter(t)
 	testutil.CreateTestUser(t, db, "adminlogo2", "pass123", "admin")
 
 	accessCookie := testutil.LoginAndGetCookie(t, router, "adminlogo2", "pass123")
@@ -163,7 +157,7 @@ func TestUpdateLogo_NonPNG(t *testing.T) {
 }
 
 func TestUpdateLogo_NonAdmin(t *testing.T) {
-	router, _, _, _, db := setupConfigRouter(t)
+	router, _, _, _, _, db := setupConfigRouter(t)
 	testutil.CreateTestUser(t, db, "regularlogo", "pass123", "user")
 
 	accessCookie := testutil.LoginAndGetCookie(t, router, "regularlogo", "pass123")
@@ -179,7 +173,7 @@ func TestUpdateLogo_NonAdmin(t *testing.T) {
 }
 
 func TestUpdateLogo_ExceedsSize(t *testing.T) {
-	router, _, _, _, db := setupConfigRouter(t)
+	router, _, _, _, _, db := setupConfigRouter(t)
 	testutil.CreateTestUser(t, db, "adminlogo3", "pass123", "admin")
 
 	accessCookie := testutil.LoginAndGetCookie(t, router, "adminlogo3", "pass123")
@@ -200,7 +194,7 @@ func TestUpdateLogo_ExceedsSize(t *testing.T) {
 // ---------- 7.2 List Configs ----------
 
 func TestListConfigs_Valid(t *testing.T) {
-	router, _, _, _, db := setupConfigRouter(t)
+	router, _, _, _, _, db := setupConfigRouter(t)
 	testutil.CreateTestUser(t, db, "configuser", "pass123", "user")
 
 	accessCookie := testutil.LoginAndGetCookie(t, router, "configuser", "pass123")
@@ -217,7 +211,7 @@ func TestListConfigs_Valid(t *testing.T) {
 // ---------- 7.2 Update Config ----------
 
 func TestUpdateConfig_Valid(t *testing.T) {
-	router, _, _, _, db := setupConfigRouter(t)
+	router, _, _, _, _, db := setupConfigRouter(t)
 	testutil.CreateTestUser(t, db, "configuser2", "pass123", "user")
 
 	accessCookie := testutil.LoginAndGetCookie(t, router, "configuser2", "pass123")
@@ -253,7 +247,7 @@ func TestUpdateConfig_Valid(t *testing.T) {
 }
 
 func TestUpdateConfig_InvalidID(t *testing.T) {
-	router, _, _, _, db := setupConfigRouter(t)
+	router, _, _, _, _, db := setupConfigRouter(t)
 	testutil.CreateTestUser(t, db, "configuser3", "pass123", "user")
 
 	accessCookie := testutil.LoginAndGetCookie(t, router, "configuser3", "pass123")
@@ -277,7 +271,7 @@ func TestUpdateConfig_InvalidID(t *testing.T) {
 }
 
 func TestUpdateConfig_NoAuth(t *testing.T) {
-	router, _, _, _, _ := setupConfigRouter(t)
+	router, _, _, _, _, _ := setupConfigRouter(t)
 
 	body := map[string]string{
 		"config_value": "test",
@@ -293,7 +287,7 @@ func TestUpdateConfig_NoAuth(t *testing.T) {
 }
 
 func TestUpdateConfig_NotFound(t *testing.T) {
-	router, _, _, _, db := setupConfigRouter(t)
+	router, _, _, _, _, db := setupConfigRouter(t)
 	testutil.CreateTestUser(t, db, "configuser4", "pass123", "user")
 
 	accessCookie := testutil.LoginAndGetCookie(t, router, "configuser4", "pass123")

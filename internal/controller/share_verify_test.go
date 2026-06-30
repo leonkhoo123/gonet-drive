@@ -10,7 +10,6 @@ import (
 
 	"go-file-server/internal/config"
 	"go-file-server/internal/controller"
-	"go-file-server/internal/middleware"
 	"go-file-server/internal/model"
 	"go-file-server/internal/repository"
 	"go-file-server/internal/service"
@@ -31,7 +30,7 @@ func setupShareVerifyRouter(t *testing.T) (*gin.Engine, *service.SharingService,
 	shareRepo := repository.NewSQLiteSharingRepo(db)
 	sharingService := service.NewSharingService(shareRepo, workDir)
 
-	middleware.ResetShareVerifyLimiter()
+	controller.ResetLoginLimiterForTest()
 
 	router := gin.New()
 	controller.SetupPublicShareRoutes(router, sharingService)

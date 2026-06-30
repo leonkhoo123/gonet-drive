@@ -10,7 +10,6 @@ import (
 
 	"go-file-server/internal/config"
 	"go-file-server/internal/controller"
-	"go-file-server/internal/middleware"
 	"go-file-server/internal/repository"
 	"go-file-server/internal/service"
 	"go-file-server/internal/testutil"
@@ -29,13 +28,13 @@ func setupVideoIntegrityRouter(t *testing.T) (*gin.Engine, *config.CloudConfig, 
 	viRepo := repository.NewSQLiteVideoIntegrityRepo(db)
 	service.SetVideoIntegrityRepo(viRepo)
 
-	userService, _, _ := testutil.SetupServices(t, db, workDir)
+	userService, _, _, authInstance, authCfg := testutil.SetupServices(t, db, workDir)
 
-	middleware.ResetLoginLimiter()
+	controller.ResetLoginLimiterForTest()
 
 	router := gin.New()
-	controller.SetupPublicAuthRoutes(router, cfg, userService)
-	controller.SetupAdminRoutes(router, cfg, userService)
+	controller.SetupPublicAuthRoutes(router, cfg, authInstance, authCfg)
+	controller.SetupAuthenticatedRoutes(router, cfg, authInstance, authCfg, userService, nil, nil, nil, nil)
 
 	return router, cfg, userService, db
 }

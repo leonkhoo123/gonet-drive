@@ -24,11 +24,28 @@ RUN apk add --no-cache git gcc musl-dev vips-dev
 
 WORKDIR /app
 
+# GOPRIVATE tells Go this module path is private (skip proxy, go direct to git)
+ENV GOPRIVATE=github.com/leonkhoo123
+# GONOSUMCHECK skips the public checksum database for private modules
+ENV GONOSUMCHECK=github.com/leonkhoo123
+# GONOSUMDB skips sum.golang.org for private modules
+ENV GONOSUMDB=github.com/leonkhoo123
+
+# Configure git to authenticate with GitHub token for private repos
+ARG GITHUB_TOKEN
+RUN git config --global url."https://${GITHUB_TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+
 # Copy go manifests first for layer caching
 COPY go.mod go.sum ./
 
+# Remove local replace directive so Go fetches the private module from GitHub
+RUN go mod edit -dropreplace github.com/leonkhoo123/gonet-auth
+
 # Cache Go modules
 RUN --mount=type=cache,target=/go/pkg/mod go mod download
+
+# Reset git config (don't leak token in image layers)
+RUN git config --global --unset url."https://${GITHUB_TOKEN}:x-oauth-basic@github.com/".insteadOf
 
 # Copy source last
 COPY . .
@@ -40,6 +57,7 @@ COPY --from=frontend-builder /app/dist ./ui/dist/
 # Build with BuildKit cache for Go build cache + modules, strip debug info
 RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg/mod \
+    go mod edit -dropreplace github.com/leonkhoo123/gonet-auth && \
     CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
     go build -ldflags="-s -w" -trimpath -o server ./cmd/main.go
 

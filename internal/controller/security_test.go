@@ -11,7 +11,6 @@ import (
 
 	"go-file-server/internal/config"
 	"go-file-server/internal/controller"
-	"go-file-server/internal/middleware"
 	"go-file-server/internal/service"
 	"go-file-server/internal/testutil"
 	"go-file-server/internal/ws"
@@ -29,17 +28,17 @@ func setupSecurityRouter(t *testing.T) (*gin.Engine, *config.CloudConfig) {
 	db := testutil.SetupTestDB(t)
 	cfg := config.AppConfig
 	workDir := cfg.Server.FileRoot
-	userService, _, _ := testutil.SetupServices(t, db, workDir)
+	userService, _, _, authInstance, authCfg := testutil.SetupServices(t, db, workDir)
+
+	controller.ResetLoginLimiterForTest()
 
 	service.JobQueue = make(chan service.Job, 100)
 	service.StartFileOperationWorker()
 	go ws.Manager.Start()
 
-	middleware.ResetLoginLimiter()
-
 	router := gin.New()
-	controller.SetupPublicAuthRoutes(router, cfg, userService)
-	controller.SetupFileRoutes(router, cfg)
+	controller.SetupPublicAuthRoutes(router, cfg, authInstance, authCfg)
+	controller.SetupAuthenticatedRoutes(router, cfg, authInstance, authCfg, userService, nil, nil, nil, nil)
 
 	return router, cfg
 }
@@ -49,9 +48,9 @@ func setupSecurityRouterWithCORS(t *testing.T) *gin.Engine {
 	db := testutil.SetupTestDB(t)
 	cfg := config.AppConfig
 	workDir := cfg.Server.FileRoot
-	userService, _, _ := testutil.SetupServices(t, db, workDir)
+	_, _, _, authInstance, authCfg := testutil.SetupServices(t, db, workDir)
 
-	middleware.ResetLoginLimiter()
+	controller.ResetLoginLimiterForTest()
 
 	router := gin.New()
 	router.Use(cors.New(cors.Config{
@@ -60,7 +59,7 @@ func setupSecurityRouterWithCORS(t *testing.T) *gin.Engine {
 		AllowMethods:     []string{"GET", "HEAD", "OPTIONS", "POST", "PUT", "DELETE"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "X-Share-Id"},
 	}))
-	controller.SetupPublicAuthRoutes(router, cfg, userService)
+	controller.SetupPublicAuthRoutes(router, cfg, authInstance, authCfg)
 
 	router.GET("/api/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "OK"})

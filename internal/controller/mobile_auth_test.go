@@ -12,9 +12,11 @@ import (
 
 	"go-file-server/internal/config"
 	"go-file-server/internal/controller"
-	"go-file-server/internal/middleware"
-	"go-file-server/internal/service"
 	"go-file-server/internal/testutil"
+
+	gonetauth "github.com/leonkhoo123/gonet-auth"
+	"github.com/leonkhoo123/gonet-auth/auth"
+	authgin "github.com/leonkhoo123/gonet-auth/adapters/gin"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pquerna/otp/totp"
@@ -22,42 +24,42 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func setupMobileAuthRouter(t *testing.T) (*gin.Engine, *config.CloudConfig, *service.UserService, *sql.DB) {
+func setupMobileAuthRouter(t *testing.T) (*gin.Engine, *gonetauth.AuthConfig, *auth.Auth, *sql.DB) {
 	t.Helper()
 	db := testutil.SetupTestDB(t)
 	cfg := config.AppConfig
 	workDir := cfg.Server.FileRoot
-	userService, _, _ := testutil.SetupServices(t, db, workDir)
+	_, _, _, authInstance, authCfg := testutil.SetupServices(t, db, workDir)
 
-	middleware.ResetLoginLimiter()
+	controller.ResetLoginLimiterForTest()
 
 	router := gin.New()
-	controller.SetupMobileAuthRoutes(router, cfg, userService)
+	controller.SetupMobileAuthRoutes(router, cfg, authInstance, authCfg)
 
-	return router, cfg, userService, db
+	return router, authCfg, authInstance, db
 }
 
-func setupMobileAuthRouterWithProtected(t *testing.T) (*gin.Engine, *config.CloudConfig, *service.UserService, *sql.DB) {
+func setupMobileAuthRouterWithProtected(t *testing.T) (*gin.Engine, *gonetauth.AuthConfig, *auth.Auth, *sql.DB) {
 	t.Helper()
 	db := testutil.SetupTestDB(t)
 	cfg := config.AppConfig
 	workDir := cfg.Server.FileRoot
-	userService, _, _ := testutil.SetupServices(t, db, workDir)
+	_, _, _, authInstance, authCfg := testutil.SetupServices(t, db, workDir)
 
-	middleware.ResetLoginLimiter()
+	controller.ResetLoginLimiterForTest()
 
 	router := gin.New()
-	controller.SetupMobileAuthRoutes(router, cfg, userService)
+	controller.SetupMobileAuthRoutes(router, cfg, authInstance, authCfg)
 
 	authRouter := router.Group("/api/user")
 	if cfg.Auth.AppJwt != "OFF" {
-		authRouter.Use(middleware.JWTAuthMiddleware(cfg))
+		authRouter.Use(authgin.JWTAuthMiddleware(authInstance, []string{"/api/user/me", "/api/user/mfa/setup", "/api/user/mfa/enable", "/api/logout"}))
 	}
 	authRouter.GET("/status", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok", "message": "authenticated"})
 	})
 
-	return router, cfg, userService, db
+	return router, authCfg, authInstance, db
 }
 
 func mobileLogin(t *testing.T, router *gin.Engine, username, password string) *httptest.ResponseRecorder {
@@ -113,7 +115,6 @@ func TestMobileLogin_Success(t *testing.T) {
 
 	var resp map[string]interface{}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-	assert.Equal(t, "Login successful", resp["message"])
 	assert.Equal(t, false, resp["mfa_required"])
 	assert.NotEmpty(t, resp["access_token"])
 	assert.NotEmpty(t, resp["refresh_token"])
@@ -134,7 +135,6 @@ func TestMobileLogin_WithDeviceID(t *testing.T) {
 
 	var resp map[string]interface{}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-	assert.Equal(t, "Login successful", resp["message"])
 	assert.NotEmpty(t, resp["access_token"])
 	assert.NotEmpty(t, resp["refresh_token"])
 }
@@ -205,7 +205,6 @@ func TestMobileLogin_MFA_Mandatory_NotSetup(t *testing.T) {
 	var resp map[string]interface{}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
 	assert.Equal(t, true, resp["mfa_setup_required"])
-	assert.Equal(t, "Login successful", resp["message"])
 	assert.NotEmpty(t, resp["access_token"])
 }
 
@@ -397,7 +396,7 @@ func TestMobileMFAVerify_WrongCode(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, rec.Code)
 	var resp map[string]interface{}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-	assert.Equal(t, "Invalid code", resp["error"])
+	assert.Equal(t, "invalid mfa code", resp["error"])
 }
 
 func TestMobileMFAVerify_NoTempToken(t *testing.T) {
@@ -430,14 +429,14 @@ func TestMobileMFAVerify_InvalidTempToken(t *testing.T) {
 }
 
 func TestMobileMFAVerify_Lockout(t *testing.T) {
-	router, cfg, _, db := setupMobileAuthRouter(t)
+	router, cfg, authInstance, db := setupMobileAuthRouter(t)
 	user := testutil.CreateTestUser(t, db, "mobilemfalock", "pass123", "user")
 	secret := "JBSWY3DPEHPK3PXP"
 	_, err := db.Exec("UPDATE users SET mfa_enabled = 1, mfa_secret = ? WHERE id = ?", secret, user.ID)
 	require.NoError(t, err)
 
 	// Generate pre-auth token directly to match web test pattern
-	preAuthToken, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, true, "")
+	preAuthToken, err := authInstance.JWT.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.SuperAdminUsername, true, "")
 	require.NoError(t, err)
 
 	wrongCode := "000000"
@@ -468,24 +467,24 @@ func TestMobileMFAVerify_Lockout(t *testing.T) {
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
-	assert.Equal(t, http.StatusForbidden, rec.Code)
+	assert.Equal(t, http.StatusTooManyRequests, rec.Code)
 	var resp map[string]interface{}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-	assert.Equal(t, "Account is locked due to too many failed attempts. Try again later.", resp["error"])
+	assert.Equal(t, "mfa verification locked out, try again later", resp["error"])
 }
 
 func TestMobileMFAVerify_ExpiredPending(t *testing.T) {
-	router, cfg, _, db := setupMobileAuthRouter(t)
+	router, cfg, authInstance, db := setupMobileAuthRouter(t)
 	user := testutil.CreateTestUser(t, db, "mobilemfaexp", "pass123", "user")
 	secret := "JBSWY3DPEHPK3PXP"
 	_, err := db.Exec("UPDATE users SET mfa_enabled = 1, mfa_secret = ? WHERE id = ?", secret, user.ID)
 	require.NoError(t, err)
 
-	origMfaMaxAge := cfg.Auth.MfaPendingMaxAge
-	cfg.Auth.MfaPendingMaxAge = -1 * time.Hour
-	preAuthToken, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, true, "")
+	origMfaMaxAge := cfg.MfaPendingMaxAge
+	cfg.MfaPendingMaxAge = -1 * time.Hour
+	preAuthToken, err := authInstance.JWT.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.SuperAdminUsername, true, "")
 	require.NoError(t, err)
-	cfg.Auth.MfaPendingMaxAge = origMfaMaxAge
+	cfg.MfaPendingMaxAge = origMfaMaxAge
 
 	verifyBody := map[string]string{
 		"code":       "123456",
@@ -607,10 +606,10 @@ func TestMobileAuth_BearerTokenWithDeviceID(t *testing.T) {
 }
 
 func TestMobileAuth_PreAuthTokenRejectedOnProtected(t *testing.T) {
-	router, cfg, _, db := setupMobileAuthRouterWithProtected(t)
+	router, cfg, authInstance, db := setupMobileAuthRouterWithProtected(t)
 	user := testutil.CreateTestUser(t, db, "mobilepreauthrej", "pass123", "user")
 
-	preAuthToken, err := middleware.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.Auth.AdminUser, cfg, true, "")
+	preAuthToken, err := authInstance.JWT.GenerateAccessToken(user.Username, user.TokenVersion, user.Role, user.Username == cfg.SuperAdminUsername, true, "")
 	require.NoError(t, err)
 
 	rec := makeMobileBearerRequest(t, router, http.MethodGet, "/api/user/status", preAuthToken, nil)

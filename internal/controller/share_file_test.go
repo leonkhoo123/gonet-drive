@@ -83,8 +83,6 @@ func setupShareFileRouter(t *testing.T, authority string) *shareFileFixture {
 	tokenStr, err := middleware.GenerateShareJWT(share.ID, share.Path, share.Authority, cfg.Auth.ShareJwtMaxAge, secret)
 	require.NoError(t, err)
 
-	middleware.ResetShareVerifyLimiter()
-
 	router := gin.New()
 	controller.SetupShareFileRoutes(router, shareRepo)
 

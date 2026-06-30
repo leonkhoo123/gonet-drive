@@ -7,14 +7,18 @@ import (
 	"time"
 
 	"go-file-server/database"
+	authpkg "go-file-server/internal/auth"
 	"go-file-server/internal/config"
-	"go-file-server/internal/middleware"
 	"go-file-server/internal/model"
 	"go-file-server/internal/repository"
 	"go-file-server/internal/service"
 	"go-file-server/internal/state"
 
+	gonetauth "github.com/leonkhoo123/gonet-auth"
+	"github.com/leonkhoo123/gonet-auth/auth"
+
 	"github.com/google/uuid"
+	"github.com/patrickmn/go-cache"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
@@ -100,14 +104,12 @@ func SetupTestDB(t *testing.T) *sql.DB {
 		StorageLimit:    20480 * 1024 * 1024,
 	}
 
-	middleware.RevokedSessionsCache.Flush()
 	state.ShareStatusCache.Flush()
 
 	t.Cleanup(func() {
 		config.DB = nil
 		config.AppConfig = nil
 		config.AppCloudConfig = nil
-		middleware.RevokedSessionsCache.Flush()
 		state.ShareStatusCache.Flush()
 		db.Close()
 	})
@@ -115,9 +117,11 @@ func SetupTestDB(t *testing.T) *sql.DB {
 	return db
 }
 
-// SetupServices constructs the three core service instances from the real constructors.
-func SetupServices(t *testing.T, db *sql.DB, workDir string) (*service.UserService, *service.SharingService, repository.CloudConfigRepository) {
+// SetupServices constructs the core service instances and the gonet-auth Auth instance.
+func SetupServices(t *testing.T, db *sql.DB, workDir string) (*service.UserService, *service.SharingService, repository.CloudConfigRepository, *auth.Auth, *gonetauth.AuthConfig) {
 	t.Helper()
+
+	cfg := config.AppConfig
 
 	userRepo := repository.NewSQLiteUserRepo(db)
 	tokenRepo := repository.NewSQLiteRefreshTokenRepo(db)
@@ -128,7 +132,35 @@ func SetupServices(t *testing.T, db *sql.DB, workDir string) (*service.UserServi
 
 	configRepo := repository.NewSQLiteCloudConfigRepo(db)
 
-	return userService, sharingService, configRepo
+	authCfg := AuthConfigFromApp(cfg)
+	userStore := &authpkg.SQLiteUserStore{Repo: userRepo}
+	tokenStore := &authpkg.SQLiteTokenStore{Repo: tokenRepo}
+	cacheStore := cache.New(authCfg.RevokedSessionCacheTTL, 30*time.Minute)
+	authInstance := auth.NewAuth(authCfg, userStore, tokenStore, cacheStore)
+
+	return userService, sharingService, configRepo, authInstance, authCfg
+}
+
+// AuthConfigFromApp converts the app CloudConfig into a gonetauth.AuthConfig.
+func AuthConfigFromApp(cfg *config.CloudConfig) *gonetauth.AuthConfig {
+	return &gonetauth.AuthConfig{
+		JwtSecret:              cfg.Auth.JwtSecret,
+		CookieAccessToken:      cfg.Auth.CookieAccessToken,
+		CookieRefreshToken:     cfg.Auth.CookieRefreshToken,
+		CookieMfaPending:       cfg.Auth.CookieMfaPending,
+		LegacyTokenName:        cfg.Auth.TokenName,
+		AccessTokenMaxAge:      cfg.Auth.AccessTokenMaxAge,
+		RefreshTokenMaxAge:     cfg.Auth.RefreshTokenMaxAge,
+		MfaPendingMaxAge:       cfg.Auth.MfaPendingMaxAge,
+		SecureMode:             cfg.Server.AppEnv != "local",
+		MFAIssuer:              "GoNet Drive Test",
+		MFAMaxAttempts:         5,
+		MFALockoutTime:         15 * time.Minute,
+		RevokedSessionCacheTTL: 20 * time.Minute,
+		UserRoleCacheTTL:       5 * time.Minute,
+		JWTOff:                 cfg.Auth.AppJwt == "OFF",
+		SuperAdminUsername:     cfg.Auth.AdminUser,
+	}
 }
 
 // CreateTestUser inserts a user with a bcrypt-hashed password. Returns the created user and raw password.

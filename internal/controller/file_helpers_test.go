@@ -9,7 +9,6 @@ import (
 
 	"go-file-server/internal/config"
 	"go-file-server/internal/controller"
-	"go-file-server/internal/middleware"
 	"go-file-server/internal/service"
 	"go-file-server/internal/testutil"
 	"go-file-server/internal/ws"
@@ -22,18 +21,18 @@ func setupFileRouter(t *testing.T) (*gin.Engine, *config.CloudConfig, *sql.DB) {
 	db := testutil.SetupTestDB(t)
 	cfg := config.AppConfig
 	workDir := cfg.Server.FileRoot
-	userService, _, _ := testutil.SetupServices(t, db, workDir)
+	userService, _, _, authInstance, authCfg := testutil.SetupServices(t, db, workDir)
+
+	controller.ResetLoginLimiterForTest()
 
 	service.JobQueue = make(chan service.Job, 100)
 	service.StartFileOperationWorker()
 
 	go ws.Manager.Start()
 
-	middleware.ResetLoginLimiter()
-
 	router := gin.New()
-	controller.SetupPublicAuthRoutes(router, cfg, userService)
-	controller.SetupFileRoutes(router, cfg)
+	controller.SetupPublicAuthRoutes(router, cfg, authInstance, authCfg)
+	controller.SetupAuthenticatedRoutes(router, cfg, authInstance, authCfg, userService, nil, nil, nil, nil)
 
 	return router, cfg, db
 }

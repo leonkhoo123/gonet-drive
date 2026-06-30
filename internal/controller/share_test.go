@@ -11,9 +11,10 @@ import (
 
 	"go-file-server/internal/config"
 	"go-file-server/internal/controller"
-	"go-file-server/internal/middleware"
 	"go-file-server/internal/model"
 	"go-file-server/internal/testutil"
+
+	authgin "github.com/leonkhoo123/gonet-auth/adapters/gin"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -26,16 +27,16 @@ func setupShareRouter(t *testing.T) (*gin.Engine, *sql.DB) {
 	cfg := config.AppConfig
 	workDir := cfg.Server.FileRoot
 
-	userService, sharingService, _ := testutil.SetupServices(t, db, workDir)
+	_, sharingService, _, authInstance, authCfg := testutil.SetupServices(t, db, workDir)
 
-	middleware.ResetLoginLimiter()
+	controller.ResetLoginLimiterForTest()
 
 	router := gin.New()
-	controller.SetupPublicAuthRoutes(router, cfg, userService)
+	controller.SetupPublicAuthRoutes(router, cfg, authInstance, authCfg)
 
 	authRouter := router.Group("/api/user")
 	if cfg.Auth.AppJwt != "OFF" {
-		authRouter.Use(middleware.JWTAuthMiddleware(cfg))
+		authRouter.Use(authgin.JWTAuthMiddleware(authInstance, []string{"/api/user/me", "/api/user/mfa/setup", "/api/user/mfa/enable", "/api/logout"}))
 	}
 	controller.ShareRoutes(authRouter, sharingService)
 

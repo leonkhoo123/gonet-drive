@@ -8,9 +8,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	gin "github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/leonkhoo123/gonet-auth/auth"
 )
 
 // AssertJSONResponse checks status code and unmarshalled JSON body.
@@ -110,4 +112,12 @@ func MakeAuthRequestJSON(t *testing.T, router *gin.Engine, method, path string,
 		body = bytes.NewReader(jsonBytes)
 	}
 	return MakeAuthRequest(t, router, method, path, body, accessCookie)
+}
+
+// GenerateTestAccessToken creates an access token for testing using the auth instance JWT service.
+func GenerateTestAccessToken(t *testing.T, authInstance *auth.Auth, username string, tokenVersion int, role string, isSuperAdmin bool) string {
+	t.Helper()
+	token, err := authInstance.JWT.GenerateAccessToken(username, tokenVersion, role, isSuperAdmin, false, "family-test-"+username)
+	require.NoError(t, err)
+	return token
 }
