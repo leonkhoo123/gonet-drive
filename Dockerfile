@@ -26,10 +26,6 @@ WORKDIR /app
 
 # GOPRIVATE tells Go this module path is private (skip proxy, go direct to git)
 ENV GOPRIVATE=github.com/leonkhoo123
-# GONOSUMCHECK skips the public checksum database for private modules
-ENV GONOSUMCHECK=github.com/leonkhoo123
-# GONOSUMDB skips sum.golang.org for private modules
-ENV GONOSUMDB=github.com/leonkhoo123
 
 # Configure git to authenticate with GitHub token for private repos
 ARG GITHUB_TOKEN
