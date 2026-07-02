@@ -125,7 +125,6 @@ func SetupServices(t *testing.T, db *sql.DB, workDir string) (*service.UserServi
 
 	userRepo := repository.NewSQLiteUserRepo(db)
 	tokenRepo := repository.NewSQLiteRefreshTokenRepo(db)
-	userService := service.NewUserService(userRepo, tokenRepo)
 
 	shareRepo := repository.NewSQLiteSharingRepo(db)
 	sharingService := service.NewSharingService(shareRepo, workDir)
@@ -137,6 +136,8 @@ func SetupServices(t *testing.T, db *sql.DB, workDir string) (*service.UserServi
 	tokenStore := &authpkg.SQLiteTokenStore{Repo: tokenRepo}
 	cacheStore := cache.New(authCfg.RevokedSessionCacheTTL, 30*time.Minute)
 	authInstance := auth.NewAuth(authCfg, userStore, tokenStore, cacheStore)
+
+	userService := service.NewUserService(userRepo, tokenRepo, authInstance)
 
 	return userService, sharingService, configRepo, authInstance, authCfg
 }

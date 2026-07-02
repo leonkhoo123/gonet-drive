@@ -2,6 +2,7 @@ package service
 
 import (
 	"net/http"
+	"net/url"
 
 	"go-file-server/internal/config"
 
@@ -33,7 +34,16 @@ func (s *UserService) SetupMFA(c *gin.Context, cfg *config.CloudConfig) {
 		return
 	}
 
-	secret, url, err := mfa.GenerateSecret(cfg.Defaults.ServiceName, username)
+	if user.MFASecret != nil && *user.MFASecret != "" {
+		provisioningURL := buildOTPAuthURL(cfg.Defaults.ServiceName, username, *user.MFASecret)
+		c.JSON(http.StatusOK, gin.H{
+			"secret": *user.MFASecret,
+			"url":    provisioningURL,
+		})
+		return
+	}
+
+	secret, provisioningURL, err := mfa.GenerateSecret(cfg.Defaults.ServiceName, username)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate TOTP secret"})
 		return
@@ -44,9 +54,13 @@ func (s *UserService) SetupMFA(c *gin.Context, cfg *config.CloudConfig) {
 		return
 	}
 
+	if s.AuthInstance != nil {
+		s.AuthInstance.ClearUserRoleCache(username)
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"secret": secret,
-		"url":    url,
+		"url":    provisioningURL,
 	})
 }
 
@@ -93,5 +107,15 @@ func (s *UserService) EnableMFA(c *gin.Context) {
 		return
 	}
 
+	if s.AuthInstance != nil {
+		s.AuthInstance.ClearUserRoleCache(username)
+	}
+
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "MFA enabled successfully"})
+}
+
+func buildOTPAuthURL(issuer, account, secret string) string {
+	return "otpauth://totp/" + url.PathEscape(issuer+":"+account) +
+		"?secret=" + secret +
+		"&issuer=" + url.QueryEscape(issuer)
 }

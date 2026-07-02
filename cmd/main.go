@@ -105,7 +105,7 @@ func main() {
 
 	repo := repository.NewSQLiteUserRepo(config.DB)
 	tokenRepo := repository.NewSQLiteRefreshTokenRepo(config.DB)
-	userService := service.NewUserService(repo, tokenRepo)
+	userService := service.NewUserService(repo, tokenRepo, nil)
 
 	shareRepo := repository.NewSQLiteSharingRepo(config.DB)
 	sharingService := service.NewSharingService(shareRepo, cfg.Server.FileRoot)
@@ -154,6 +154,7 @@ func main() {
 	tokenStore := &authpkg.SQLiteTokenStore{Repo: tokenRepo}
 	cacheStore := cache.New(authCfg.RevokedSessionCacheTTL, 30*time.Minute)
 	authInstance := auth.NewAuth(authCfg, userStore, tokenStore, cacheStore)
+	userService.AuthInstance = authInstance
 
 	// Start daily token cleanup scheduler (runs at 3:00 AM) via gonet-auth library
 	authInstance.Refresh.StartCleanupScheduler(3, 0, func(msg string, keyvals ...any) {

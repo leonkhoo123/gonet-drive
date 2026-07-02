@@ -72,6 +72,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-require github.com/leonkhoo123/gonet-auth v0.1.0
+require github.com/leonkhoo123/gonet-auth v0.1.1
 
 replace github.com/leonkhoo123/gonet-auth => ../gonet-auth
