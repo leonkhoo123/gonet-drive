@@ -81,153 +81,6 @@
                 }
             }
         },
-        "/api/login": {
-            "post": {
-                "description": "Authenticate with username and password. Returns JWT cookies. If MFA is enabled, a pre-auth token is returned and the client must call /api/mfa/verify.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Login",
-                "parameters": [
-                    {
-                        "description": "Login credentials",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/internal_service.LoginRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/api/logout": {
-            "post": {
-                "description": "Revoke the current session and clear all auth cookies.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Logout",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/api/mfa/verify": {
-            "post": {
-                "description": "Verify the TOTP code after receiving a pre-auth token from /api/login. On success, full auth cookies are set.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Verify MFA Code",
-                "parameters": [
-                    {
-                        "description": "MFA verification",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/internal_service.MFAVerifyRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/api/refresh": {
-            "post": {
-                "description": "Exchange a valid refresh token cookie for a new access/refresh token pair.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Refresh Token",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
         "/api/share/check-permission/{id}": {
             "get": {
                 "description": "Verify that a valid share JWT exists for the given share ID and the share is still active.",
@@ -296,7 +149,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/go-file-server_internal_service.CopyReq"
+                            "$ref": "#/definitions/service.CopyReq"
                         }
                     }
                 ],
@@ -335,7 +188,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/go-file-server_internal_service.CreateFolderReq"
+                            "$ref": "#/definitions/service.CreateFolderReq"
                         }
                     }
                 ],
@@ -374,7 +227,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/go-file-server_internal_service.DeleteReq"
+                            "$ref": "#/definitions/service.DeleteReq"
                         }
                     }
                 ],
@@ -413,7 +266,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/go-file-server_internal_service.DeleteReq"
+                            "$ref": "#/definitions/service.DeleteReq"
                         }
                     }
                 ],
@@ -588,7 +441,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/go-file-server_internal_service.MoveReq"
+                            "$ref": "#/definitions/service.MoveReq"
                         }
                     }
                 ],
@@ -640,7 +493,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/go-file-server_internal_service.PropertiesReq"
+                            "$ref": "#/definitions/service.PropertiesReq"
                         }
                     }
                 ],
@@ -648,7 +501,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/go-file-server_internal_service.PropertiesResponse"
+                            "$ref": "#/definitions/service.PropertiesResponse"
                         }
                     },
                     "403": {
@@ -685,7 +538,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/go-file-server_internal_service.RenameReq"
+                            "$ref": "#/definitions/service.RenameReq"
                         }
                     }
                 ],
@@ -873,7 +726,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_service.VerifyShareRequest"
+                            "$ref": "#/definitions/service.VerifyShareRequest"
                         }
                     }
                 ],
@@ -964,210 +817,6 @@
                 }
             }
         },
-        "/api/user/admin/users": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    },
-                    {
-                        "CookieAuth": []
-                    }
-                ],
-                "description": "Retrieve a list of all registered users. Requires admin role.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Admin"
-                ],
-                "summary": "List All Users",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/internal_service.UserInfo"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    },
-                    {
-                        "CookieAuth": []
-                    }
-                ],
-                "description": "Create a new user account. Requires admin role.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Admin"
-                ],
-                "summary": "Create User",
-                "parameters": [
-                    {
-                        "description": "User details",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/internal_service.CreateUserRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/api/user/admin/users/{id}": {
-            "delete": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    },
-                    {
-                        "CookieAuth": []
-                    }
-                ],
-                "description": "Delete a user account permanently. Requires admin role.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Admin"
-                ],
-                "summary": "Delete User",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "User ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/api/user/admin/users/{id}/revoke": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    },
-                    {
-                        "CookieAuth": []
-                    }
-                ],
-                "description": "Revoke all access tokens and refresh tokens for a specific user. Requires admin role.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Admin"
-                ],
-                "summary": "Revoke User Sessions",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "User ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
         "/api/user/audiobook/filelist": {
             "get": {
                 "security": [
@@ -1227,7 +876,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/internal_service.AudioBookItem"
+                                "$ref": "#/definitions/service.AudioBookItem"
                             }
                         }
                     }
@@ -1261,7 +910,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_service.PathReq"
+                            "$ref": "#/definitions/service.PathReq"
                         }
                     }
                 ],
@@ -1310,7 +959,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_service.PathReq"
+                            "$ref": "#/definitions/service.PathReq"
                         }
                     }
                 ],
@@ -1383,7 +1032,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/go-file-server_internal_model.AudioPath"
+                                "$ref": "#/definitions/model.AudioPath"
                             }
                         }
                     }
@@ -1417,7 +1066,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_service.ProgressReq"
+                            "$ref": "#/definitions/service.ProgressReq"
                         }
                     }
                 ],
@@ -1499,7 +1148,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/go-file-server_internal_model.CloudConfig"
+                                "$ref": "#/definitions/model.CloudConfig"
                             }
                         }
                     },
@@ -1548,7 +1197,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_controller.UpdateConfigRequest"
+                            "$ref": "#/definitions/controller.UpdateConfigRequest"
                         }
                     }
                 ],
@@ -1656,7 +1305,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/go-file-server_internal_service.CancelReq"
+                            "$ref": "#/definitions/service.CancelReq"
                         }
                     }
                 ],
@@ -1706,7 +1355,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_service.CheckDuplicateReq"
+                            "$ref": "#/definitions/service.CheckDuplicateReq"
                         }
                     }
                 ],
@@ -1756,7 +1405,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_service.CheckUploadDuplicateReq"
+                            "$ref": "#/definitions/service.CheckUploadDuplicateReq"
                         }
                     }
                 ],
@@ -1806,7 +1455,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/go-file-server_internal_service.CopyReq"
+                            "$ref": "#/definitions/service.CopyReq"
                         }
                     }
                 ],
@@ -1856,7 +1505,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/go-file-server_internal_service.CreateFolderReq"
+                            "$ref": "#/definitions/service.CreateFolderReq"
                         }
                     }
                 ],
@@ -1906,7 +1555,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/go-file-server_internal_service.DeleteReq"
+                            "$ref": "#/definitions/service.DeleteReq"
                         }
                     }
                 ],
@@ -1956,7 +1605,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/go-file-server_internal_service.DeleteReq"
+                            "$ref": "#/definitions/service.DeleteReq"
                         }
                     }
                 ],
@@ -2159,7 +1808,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/go-file-server_internal_service.MoveReq"
+                            "$ref": "#/definitions/service.MoveReq"
                         }
                     }
                 ],
@@ -2209,7 +1858,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/go-file-server_internal_service.PropertiesReq"
+                            "$ref": "#/definitions/service.PropertiesReq"
                         }
                     }
                 ],
@@ -2217,7 +1866,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/go-file-server_internal_service.PropertiesResponse"
+                            "$ref": "#/definitions/service.PropertiesResponse"
                         }
                     },
                     "400": {
@@ -2258,7 +1907,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/go-file-server_internal_service.RenameReq"
+                            "$ref": "#/definitions/service.RenameReq"
                         }
                     }
                 ],
@@ -2448,113 +2097,6 @@
                 }
             }
         },
-        "/api/user/me/sessions": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    },
-                    {
-                        "CookieAuth": []
-                    }
-                ],
-                "description": "List all active refresh token sessions for the authenticated user.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "User"
-                ],
-                "summary": "Get Active Sessions",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/internal_service.SessionInfo"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/api/user/me/sessions/{family_id}": {
-            "delete": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    },
-                    {
-                        "CookieAuth": []
-                    }
-                ],
-                "description": "Revoke a specific refresh token family. Requires password confirmation.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "User"
-                ],
-                "summary": "Revoke Session",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Session family ID",
-                        "name": "family_id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Password confirmation",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "password": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
         "/api/user/mfa/enable": {
             "post": {
                 "security": [
@@ -2583,7 +2125,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_service.MFAVerifyRequest"
+                            "$ref": "#/definitions/service.MFAVerifyRequest"
                         }
                     }
                 ],
@@ -2829,7 +2371,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_service.CreateShareRequest"
+                            "$ref": "#/definitions/service.CreateShareRequest"
                         }
                     }
                 ],
@@ -3284,7 +2826,21 @@
         }
     },
     "definitions": {
-        "go-file-server_internal_model.AudioPath": {
+        "controller.UpdateConfigRequest": {
+            "type": "object",
+            "properties": {
+                "config_value": {
+                    "type": "string"
+                },
+                "is_deleted": {
+                    "type": "boolean"
+                },
+                "is_enabled": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "model.AudioPath": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -3307,7 +2863,7 @@
                 }
             }
         },
-        "go-file-server_internal_model.CloudConfig": {
+        "model.CloudConfig": {
             "type": "object",
             "properties": {
                 "config_name": {
@@ -3333,187 +2889,7 @@
                 }
             }
         },
-        "go-file-server_internal_service.CancelReq": {
-            "type": "object",
-            "required": [
-                "opId"
-            ],
-            "properties": {
-                "cancel": {
-                    "description": "optional explicit cancel flag",
-                    "type": "boolean"
-                },
-                "opId": {
-                    "type": "string"
-                }
-            }
-        },
-        "go-file-server_internal_service.CopyReq": {
-            "type": "object",
-            "required": [
-                "destDir",
-                "sources"
-            ],
-            "properties": {
-                "destDir": {
-                    "type": "string"
-                },
-                "opId": {
-                    "description": "Optional: client provided operation ID",
-                    "type": "string"
-                },
-                "sources": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                }
-            }
-        },
-        "go-file-server_internal_service.CreateFolderReq": {
-            "type": "object",
-            "required": [
-                "folderName"
-            ],
-            "properties": {
-                "dir": {
-                    "type": "string"
-                },
-                "folderName": {
-                    "type": "string"
-                },
-                "opId": {
-                    "type": "string"
-                }
-            }
-        },
-        "go-file-server_internal_service.DeleteReq": {
-            "type": "object",
-            "required": [
-                "sources"
-            ],
-            "properties": {
-                "opId": {
-                    "type": "string"
-                },
-                "sources": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                }
-            }
-        },
-        "go-file-server_internal_service.MoveReq": {
-            "type": "object",
-            "required": [
-                "destDir",
-                "sources"
-            ],
-            "properties": {
-                "destDir": {
-                    "type": "string"
-                },
-                "opId": {
-                    "type": "string"
-                },
-                "sources": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                }
-            }
-        },
-        "go-file-server_internal_service.PropertiesContains": {
-            "type": "object",
-            "properties": {
-                "files": {
-                    "type": "integer"
-                },
-                "folders": {
-                    "type": "integer"
-                }
-            }
-        },
-        "go-file-server_internal_service.PropertiesReq": {
-            "type": "object",
-            "required": [
-                "sources"
-            ],
-            "properties": {
-                "sources": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                }
-            }
-        },
-        "go-file-server_internal_service.PropertiesResponse": {
-            "type": "object",
-            "properties": {
-                "accessedAt": {
-                    "type": "string"
-                },
-                "contains": {
-                    "$ref": "#/definitions/go-file-server_internal_service.PropertiesContains"
-                },
-                "createdAt": {
-                    "type": "string"
-                },
-                "location": {
-                    "type": "string"
-                },
-                "modifiedAt": {
-                    "type": "string"
-                },
-                "name": {
-                    "description": "null if multiple",
-                    "type": "string"
-                },
-                "totalSizeBytes": {
-                    "type": "integer"
-                },
-                "type": {
-                    "description": "\"file\", \"directory\", or \"multiple\"",
-                    "type": "string"
-                }
-            }
-        },
-        "go-file-server_internal_service.RenameReq": {
-            "type": "object",
-            "required": [
-                "newName",
-                "source"
-            ],
-            "properties": {
-                "newName": {
-                    "type": "string"
-                },
-                "opId": {
-                    "type": "string"
-                },
-                "source": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_controller.UpdateConfigRequest": {
-            "type": "object",
-            "properties": {
-                "config_value": {
-                    "type": "string"
-                },
-                "is_deleted": {
-                    "type": "boolean"
-                },
-                "is_enabled": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "internal_service.AudioBookItem": {
+        "service.AudioBookItem": {
             "type": "object",
             "properties": {
                 "last_modified": {
@@ -3540,7 +2916,22 @@
                 }
             }
         },
-        "internal_service.CheckDuplicateReq": {
+        "service.CancelReq": {
+            "type": "object",
+            "required": [
+                "opId"
+            ],
+            "properties": {
+                "cancel": {
+                    "description": "optional explicit cancel flag",
+                    "type": "boolean"
+                },
+                "opId": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.CheckDuplicateReq": {
             "type": "object",
             "required": [
                 "destDir",
@@ -3558,7 +2949,7 @@
                 }
             }
         },
-        "internal_service.CheckUploadDuplicateReq": {
+        "service.CheckUploadDuplicateReq": {
             "type": "object",
             "required": [
                 "destDir",
@@ -3571,12 +2962,51 @@
                 "files": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/internal_service.UploadFileDetail"
+                        "$ref": "#/definitions/service.UploadFileDetail"
                     }
                 }
             }
         },
-        "internal_service.CreateShareRequest": {
+        "service.CopyReq": {
+            "type": "object",
+            "required": [
+                "destDir",
+                "sources"
+            ],
+            "properties": {
+                "destDir": {
+                    "type": "string"
+                },
+                "opId": {
+                    "description": "Optional: client provided operation ID",
+                    "type": "string"
+                },
+                "sources": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "service.CreateFolderReq": {
+            "type": "object",
+            "required": [
+                "folderName"
+            ],
+            "properties": {
+                "dir": {
+                    "type": "string"
+                },
+                "folderName": {
+                    "type": "string"
+                },
+                "opId": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.CreateShareRequest": {
             "type": "object",
             "required": [
                 "description",
@@ -3598,45 +3028,24 @@
                 }
             }
         },
-        "internal_service.CreateUserRequest": {
+        "service.DeleteReq": {
             "type": "object",
             "required": [
-                "password",
-                "username"
+                "sources"
             ],
             "properties": {
-                "mfa_mandatory": {
-                    "type": "boolean"
-                },
-                "password": {
+                "opId": {
                     "type": "string"
                 },
-                "role": {
-                    "type": "string"
-                },
-                "storage_quota": {
-                    "type": "integer"
-                },
-                "username": {
-                    "type": "string"
+                "sources": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
-        "internal_service.LoginRequest": {
-            "type": "object",
-            "properties": {
-                "device_id": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_service.MFAVerifyRequest": {
+        "service.MFAVerifyRequest": {
             "type": "object",
             "properties": {
                 "code": {
@@ -3647,7 +3056,28 @@
                 }
             }
         },
-        "internal_service.PathReq": {
+        "service.MoveReq": {
+            "type": "object",
+            "required": [
+                "destDir",
+                "sources"
+            ],
+            "properties": {
+                "destDir": {
+                    "type": "string"
+                },
+                "opId": {
+                    "type": "string"
+                },
+                "sources": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "service.PathReq": {
             "type": "object",
             "properties": {
                 "is_enabled": {
@@ -3658,7 +3088,7 @@
                 }
             }
         },
-        "internal_service.ProgressReq": {
+        "service.ProgressReq": {
             "type": "object",
             "properties": {
                 "audiobook_name": {
@@ -3669,30 +3099,81 @@
                 }
             }
         },
-        "internal_service.SessionInfo": {
+        "service.PropertiesContains": {
             "type": "object",
             "properties": {
-                "created_at": {
+                "files": {
+                    "type": "integer"
+                },
+                "folders": {
+                    "type": "integer"
+                }
+            }
+        },
+        "service.PropertiesReq": {
+            "type": "object",
+            "required": [
+                "sources"
+            ],
+            "properties": {
+                "sources": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "service.PropertiesResponse": {
+            "type": "object",
+            "properties": {
+                "accessedAt": {
                     "type": "string"
                 },
-                "device_id": {
+                "contains": {
+                    "$ref": "#/definitions/service.PropertiesContains"
+                },
+                "createdAt": {
                     "type": "string"
                 },
-                "device_info": {
+                "location": {
                     "type": "string"
                 },
-                "expires_at": {
+                "modifiedAt": {
                     "type": "string"
                 },
-                "family_id": {
+                "name": {
+                    "description": "null if multiple",
                     "type": "string"
                 },
-                "ip_address": {
+                "totalSizeBytes": {
+                    "type": "integer"
+                },
+                "type": {
+                    "description": "\"file\", \"directory\", or \"multiple\"",
                     "type": "string"
                 }
             }
         },
-        "internal_service.UploadFileDetail": {
+        "service.RenameReq": {
+            "type": "object",
+            "required": [
+                "newName",
+                "source"
+            ],
+            "properties": {
+                "newName": {
+                    "type": "string"
+                },
+                "opId": {
+                    "type": "string"
+                },
+                "source": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.UploadFileDetail": {
             "type": "object",
             "properties": {
                 "modifiedAt": {
@@ -3707,39 +3188,7 @@
                 }
             }
         },
-        "internal_service.UserInfo": {
-            "type": "object",
-            "properties": {
-                "failed_attempts": {
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "is_super_admin": {
-                    "type": "boolean"
-                },
-                "locked_until": {
-                    "type": "string"
-                },
-                "mfa_enabled": {
-                    "type": "boolean"
-                },
-                "mfa_mandatory": {
-                    "type": "boolean"
-                },
-                "role": {
-                    "type": "string"
-                },
-                "storage_quota": {
-                    "type": "integer"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_service.VerifyShareRequest": {
+        "service.VerifyShareRequest": {
             "type": "object",
             "required": [
                 "id",

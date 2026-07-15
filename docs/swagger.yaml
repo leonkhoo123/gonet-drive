@@ -1,5 +1,14 @@
 definitions:
-  go-file-server_internal_model.AudioPath:
+  controller.UpdateConfigRequest:
+    properties:
+      config_value:
+        type: string
+      is_deleted:
+        type: boolean
+      is_enabled:
+        type: boolean
+    type: object
+  model.AudioPath:
     properties:
       created_at:
         type: string
@@ -14,7 +23,7 @@ definitions:
       username:
         type: string
     type: object
-  go-file-server_internal_model.CloudConfig:
+  model.CloudConfig:
     properties:
       config_name:
         type: string
@@ -31,127 +40,7 @@ definitions:
       is_enabled:
         type: boolean
     type: object
-  go-file-server_internal_service.CancelReq:
-    properties:
-      cancel:
-        description: optional explicit cancel flag
-        type: boolean
-      opId:
-        type: string
-    required:
-    - opId
-    type: object
-  go-file-server_internal_service.CopyReq:
-    properties:
-      destDir:
-        type: string
-      opId:
-        description: 'Optional: client provided operation ID'
-        type: string
-      sources:
-        items:
-          type: string
-        type: array
-    required:
-    - destDir
-    - sources
-    type: object
-  go-file-server_internal_service.CreateFolderReq:
-    properties:
-      dir:
-        description: Target directory path (defaults to root if empty).
-        type: string
-      folderName:
-        type: string
-      opId:
-        type: string
-    required:
-    - folderName
-    type: object
-  go-file-server_internal_service.DeleteReq:
-    properties:
-      opId:
-        type: string
-      sources:
-        items:
-          type: string
-        type: array
-    required:
-    - sources
-    type: object
-  go-file-server_internal_service.MoveReq:
-    properties:
-      destDir:
-        type: string
-      opId:
-        type: string
-      sources:
-        items:
-          type: string
-        type: array
-    required:
-    - destDir
-    - sources
-    type: object
-  go-file-server_internal_service.PropertiesContains:
-    properties:
-      files:
-        type: integer
-      folders:
-        type: integer
-    type: object
-  go-file-server_internal_service.PropertiesReq:
-    properties:
-      sources:
-        items:
-          type: string
-        type: array
-    required:
-    - sources
-    type: object
-  go-file-server_internal_service.PropertiesResponse:
-    properties:
-      accessedAt:
-        type: string
-      contains:
-        $ref: '#/definitions/go-file-server_internal_service.PropertiesContains'
-      createdAt:
-        type: string
-      location:
-        type: string
-      modifiedAt:
-        type: string
-      name:
-        description: null if multiple
-        type: string
-      totalSizeBytes:
-        type: integer
-      type:
-        description: '"file", "directory", or "multiple"'
-        type: string
-    type: object
-  go-file-server_internal_service.RenameReq:
-    properties:
-      newName:
-        type: string
-      opId:
-        type: string
-      source:
-        type: string
-    required:
-    - newName
-    - source
-    type: object
-  internal_controller.UpdateConfigRequest:
-    properties:
-      config_value:
-        type: string
-      is_deleted:
-        type: boolean
-      is_enabled:
-        type: boolean
-    type: object
-  internal_service.AudioBookItem:
+  service.AudioBookItem:
     properties:
       last_modified:
         type: string
@@ -169,7 +58,17 @@ definitions:
       url:
         type: string
     type: object
-  internal_service.CheckDuplicateReq:
+  service.CancelReq:
+    properties:
+      cancel:
+        description: optional explicit cancel flag
+        type: boolean
+      opId:
+        type: string
+    required:
+    - opId
+    type: object
+  service.CheckDuplicateReq:
     properties:
       destDir:
         type: string
@@ -181,19 +80,45 @@ definitions:
     - destDir
     - sources
     type: object
-  internal_service.CheckUploadDuplicateReq:
+  service.CheckUploadDuplicateReq:
     properties:
       destDir:
         type: string
       files:
         items:
-          $ref: '#/definitions/internal_service.UploadFileDetail'
+          $ref: '#/definitions/service.UploadFileDetail'
         type: array
     required:
     - destDir
     - files
     type: object
-  internal_service.CreateShareRequest:
+  service.CopyReq:
+    properties:
+      destDir:
+        type: string
+      opId:
+        description: 'Optional: client provided operation ID'
+        type: string
+      sources:
+        items:
+          type: string
+        type: array
+    required:
+    - destDir
+    - sources
+    type: object
+  service.CreateFolderReq:
+    properties:
+      dir:
+        type: string
+      folderName:
+        type: string
+      opId:
+        type: string
+    required:
+    - folderName
+    type: object
+  service.CreateShareRequest:
     properties:
       authority:
         type: string
@@ -208,68 +133,102 @@ definitions:
     - expires_in_hours
     - path
     type: object
-  internal_service.CreateUserRequest:
+  service.DeleteReq:
     properties:
-      mfa_mandatory:
-        type: boolean
-      password:
+      opId:
         type: string
-      role:
-        type: string
-      storage_quota:
-        type: integer
-      username:
-        type: string
+      sources:
+        items:
+          type: string
+        type: array
     required:
-    - password
-    - username
+    - sources
     type: object
-  internal_service.LoginRequest:
-    properties:
-      device_id:
-        type: string
-      password:
-        type: string
-      username:
-        type: string
-    type: object
-  internal_service.MFAVerifyRequest:
+  service.MFAVerifyRequest:
     properties:
       code:
         type: string
       device_id:
         type: string
     type: object
-  internal_service.PathReq:
+  service.MoveReq:
+    properties:
+      destDir:
+        type: string
+      opId:
+        type: string
+      sources:
+        items:
+          type: string
+        type: array
+    required:
+    - destDir
+    - sources
+    type: object
+  service.PathReq:
     properties:
       is_enabled:
         type: boolean
       path:
         type: string
     type: object
-  internal_service.ProgressReq:
+  service.ProgressReq:
     properties:
       audiobook_name:
         type: string
       progress_time:
         type: number
     type: object
-  internal_service.SessionInfo:
+  service.PropertiesContains:
     properties:
-      created_at:
+      files:
+        type: integer
+      folders:
+        type: integer
+    type: object
+  service.PropertiesReq:
+    properties:
+      sources:
+        items:
+          type: string
+        type: array
+    required:
+    - sources
+    type: object
+  service.PropertiesResponse:
+    properties:
+      accessedAt:
         type: string
-      device_id:
+      contains:
+        $ref: '#/definitions/service.PropertiesContains'
+      createdAt:
         type: string
-      device_info:
+      location:
         type: string
-      expires_at:
+      modifiedAt:
         type: string
-      family_id:
+      name:
+        description: null if multiple
         type: string
-      ip_address:
+      totalSizeBytes:
+        type: integer
+      type:
+        description: '"file", "directory", or "multiple"'
         type: string
     type: object
-  internal_service.UploadFileDetail:
+  service.RenameReq:
+    properties:
+      newName:
+        type: string
+      opId:
+        type: string
+      source:
+        type: string
+    required:
+    - newName
+    - source
+    type: object
+  service.UploadFileDetail:
     properties:
       modifiedAt:
         type: string
@@ -279,28 +238,7 @@ definitions:
       size:
         type: integer
     type: object
-  internal_service.UserInfo:
-    properties:
-      failed_attempts:
-        type: integer
-      id:
-        type: string
-      is_super_admin:
-        type: boolean
-      locked_until:
-        type: string
-      mfa_enabled:
-        type: boolean
-      mfa_mandatory:
-        type: boolean
-      role:
-        type: string
-      storage_quota:
-        type: integer
-      username:
-        type: string
-    type: object
-  internal_service.VerifyShareRequest:
+  service.VerifyShareRequest:
     properties:
       id:
         type: string
@@ -311,8 +249,6 @@ definitions:
     - pin
     type: object
 host: localhost:3333
-schemes:
-  - http
 info:
   contact:
     name: GoNet Drive Support
@@ -368,108 +304,6 @@ paths:
       summary: Health Check
       tags:
       - System
-  /api/login:
-    post:
-      consumes:
-      - application/json
-      description: Authenticate with username and password. Returns JWT cookies. If
-        MFA is enabled, a pre-auth token is returned and the client must call /api/mfa/verify.
-      parameters:
-      - description: Login credentials
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/internal_service.LoginRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Login
-      tags:
-      - Auth
-  /api/logout:
-    post:
-      description: Revoke the current session and clear all auth cookies.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Logout
-      tags:
-      - Auth
-  /api/mfa/verify:
-    post:
-      consumes:
-      - application/json
-      description: Verify the TOTP code after receiving a pre-auth token from /api/login.
-        On success, full auth cookies are set.
-      parameters:
-      - description: MFA verification
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/internal_service.MFAVerifyRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Verify MFA Code
-      tags:
-      - Auth
-  /api/refresh:
-    post:
-      description: Exchange a valid refresh token cookie for a new access/refresh
-        token pair.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Refresh Token
-      tags:
-      - Auth
   /api/share/check-permission/{id}:
     get:
       description: Verify that a valid share JWT exists for the given share ID and
@@ -501,86 +335,15 @@ paths:
       summary: Check Share Permission
       tags:
       - Share
-  /api/share/file/ws:
+  /api/share/file/{mediaType}/play/file/{filepath}:
     get:
-      description: Establish a WebSocket connection for real-time file operation progress
-        updates within a shared context.
-      parameters:
-      - description: Share ID
-        in: header
-        name: X-Share-Id
-        type: string
-      - description: Share ID (alternative)
-        in: query
-        name: share_id
-        type: string
-      responses:
-        "101":
-          description: Switching Protocols
-          schema:
-            type: string
-      security:
-      - ShareAuth: []
-      summary: Share WebSocket
-      tags:
-      - Share Files
-  /api/share/file/music/play/file/{filepath}:
-    get:
-      description: Stream a music/audio file from a shared path. Supports HTTP range
-        requests.
+      description: Serve media files (video, photo, music, document) from a shared
+        path.
       parameters:
       - description: Relative file path
         in: path
         name: filepath
         required: true
-        type: string
-      - description: Share ID
-        in: header
-        name: X-Share-Id
-        type: string
-      - description: Share ID (alternative)
-        in: query
-        name: share_id
-        type: string
-      produces:
-      - audio/*
-      responses:
-        "200":
-          description: OK
-          schema:
-            type: file
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - ShareAuth: []
-      summary: Serve Share Music
-      tags:
-      - Share Files
-  /api/share/file/video/play/file/{filepath}:
-    get:
-      description: Stream a video file from a shared path with HTTP range support
-        and optional transcoding.
-      parameters:
-      - description: Relative file path
-        in: path
-        name: filepath
-        required: true
-        type: string
-      - description: Share ID
-        in: header
-        name: X-Share-Id
-        type: string
-      - description: Share ID (alternative)
-        in: query
-        name: share_id
         type: string
       produces:
       - application/octet-stream
@@ -594,173 +357,9 @@ paths:
           schema:
             additionalProperties: true
             type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties: true
-            type: object
       security:
       - ShareAuth: []
-      summary: Serve Share Video
-      tags:
-      - Share Files
-  /api/share/file/video/thumbnail/file/{filepath}:
-    get:
-      description: Generate and serve a thumbnail image for a video file from a shared
-        path.
-      parameters:
-      - description: Relative file path
-        in: path
-        name: filepath
-        required: true
-        type: string
-      - description: Share ID
-        in: header
-        name: X-Share-Id
-        type: string
-      - description: Share ID (alternative)
-        in: query
-        name: share_id
-        type: string
-      produces:
-      - image/jpeg
-      responses:
-        "200":
-          description: OK
-          schema:
-            type: file
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - ShareAuth: []
-      summary: Share Video Thumbnail
-      tags:
-      - Share Files
-  /api/share/file/photo/play/file/{filepath}:
-    get:
-      description: Serve a photo/image file from a shared path.
-      parameters:
-      - description: Relative file path
-        in: path
-        name: filepath
-        required: true
-        type: string
-      - description: Share ID
-        in: header
-        name: X-Share-Id
-        type: string
-      - description: Share ID (alternative)
-        in: query
-        name: share_id
-        type: string
-      produces:
-      - image/*
-      responses:
-        "200":
-          description: OK
-          schema:
-            type: file
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - ShareAuth: []
-      summary: Serve Share Photo
-      tags:
-      - Share Files
-  /api/share/file/photo/thumbnail/file/{filepath}:
-    get:
-      description: Generate and serve a thumbnail for a photo/image file from a shared
-        path.
-      parameters:
-      - description: Relative file path
-        in: path
-        name: filepath
-        required: true
-        type: string
-      - description: Share ID
-        in: header
-        name: X-Share-Id
-        type: string
-      - description: Share ID (alternative)
-        in: query
-        name: share_id
-        type: string
-      produces:
-      - image/webp
-      responses:
-        "200":
-          description: OK
-          schema:
-            type: file
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - ShareAuth: []
-      summary: Share Photo Thumbnail
-      tags:
-      - Share Files
-  /api/share/file/document/read/file/{filepath}:
-    get:
-      description: Serve a text document file from a shared path with appropriate
-        MIME type.
-      parameters:
-      - description: Relative file path
-        in: path
-        name: filepath
-        required: true
-        type: string
-      - description: Share ID
-        in: header
-        name: X-Share-Id
-        type: string
-      - description: Share ID (alternative)
-        in: query
-        name: share_id
-        type: string
-      produces:
-      - text/plain
-      responses:
-        "200":
-          description: OK
-          schema:
-            type: file
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - ShareAuth: []
-      summary: Serve Share Document
+      summary: Serve Share Media
       tags:
       - Share Files
   /api/share/file/copy:
@@ -773,7 +372,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/go-file-server_internal_service.CopyReq'
+          $ref: '#/definitions/service.CopyReq'
       produces:
       - application/json
       responses:
@@ -797,7 +396,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/go-file-server_internal_service.CreateFolderReq'
+          $ref: '#/definitions/service.CreateFolderReq'
       produces:
       - application/json
       responses:
@@ -821,7 +420,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/go-file-server_internal_service.DeleteReq'
+          $ref: '#/definitions/service.DeleteReq'
       produces:
       - application/json
       responses:
@@ -845,7 +444,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/go-file-server_internal_service.DeleteReq'
+          $ref: '#/definitions/service.DeleteReq'
       produces:
       - application/json
       responses:
@@ -959,7 +558,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/go-file-server_internal_service.MoveReq'
+          $ref: '#/definitions/service.MoveReq'
       produces:
       - application/json
       responses:
@@ -992,14 +591,14 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/go-file-server_internal_service.PropertiesReq'
+          $ref: '#/definitions/service.PropertiesReq'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/go-file-server_internal_service.PropertiesResponse'
+            $ref: '#/definitions/service.PropertiesResponse'
         "403":
           description: Forbidden
           schema:
@@ -1020,7 +619,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/go-file-server_internal_service.RenameReq'
+          $ref: '#/definitions/service.RenameReq'
       produces:
       - application/json
       responses:
@@ -1122,7 +721,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_service.VerifyShareRequest'
+          $ref: '#/definitions/service.VerifyShareRequest'
       produces:
       - application/json
       responses:
@@ -1184,136 +783,6 @@ paths:
       summary: Update Logo
       tags:
       - Admin
-  /api/user/admin/users:
-    get:
-      description: Retrieve a list of all registered users. Requires admin role.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/internal_service.UserInfo'
-            type: array
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      - CookieAuth: []
-      summary: List All Users
-      tags:
-      - Admin
-    post:
-      consumes:
-      - application/json
-      description: Create a new user account. Requires admin role.
-      parameters:
-      - description: User details
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/internal_service.CreateUserRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      - CookieAuth: []
-      summary: Create User
-      tags:
-      - Admin
-  /api/user/admin/users/{id}:
-    delete:
-      description: Delete a user account permanently. Requires admin role.
-      parameters:
-      - description: User ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      - CookieAuth: []
-      summary: Delete User
-      tags:
-      - Admin
-  /api/user/admin/users/{id}/revoke:
-    post:
-      description: Revoke all access tokens and refresh tokens for a specific user.
-        Requires admin role.
-      parameters:
-      - description: User ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      - CookieAuth: []
-      summary: Revoke User Sessions
-      tags:
-      - Admin
   /api/user/audiobook/filelist:
     get:
       parameters:
@@ -1344,7 +813,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/internal_service.AudioBookItem'
+              $ref: '#/definitions/service.AudioBookItem'
             type: array
       security:
       - BearerAuth: []
@@ -1362,7 +831,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_service.PathReq'
+          $ref: '#/definitions/service.PathReq'
       produces:
       - application/json
       responses:
@@ -1413,7 +882,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_service.PathReq'
+          $ref: '#/definitions/service.PathReq'
       produces:
       - application/json
       responses:
@@ -1437,7 +906,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/go-file-server_internal_model.AudioPath'
+              $ref: '#/definitions/model.AudioPath'
             type: array
       security:
       - BearerAuth: []
@@ -1455,7 +924,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_service.ProgressReq'
+          $ref: '#/definitions/service.ProgressReq'
       produces:
       - application/json
       responses:
@@ -1506,7 +975,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/go-file-server_internal_model.CloudConfig'
+              $ref: '#/definitions/model.CloudConfig'
             type: array
         "500":
           description: Internal Server Error
@@ -1535,7 +1004,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_controller.UpdateConfigRequest'
+          $ref: '#/definitions/controller.UpdateConfigRequest'
       produces:
       - application/json
       responses:
@@ -1603,7 +1072,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/go-file-server_internal_service.CancelReq'
+          $ref: '#/definitions/service.CancelReq'
       produces:
       - application/json
       responses:
@@ -1634,7 +1103,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_service.CheckDuplicateReq'
+          $ref: '#/definitions/service.CheckDuplicateReq'
       produces:
       - application/json
       responses:
@@ -1665,7 +1134,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_service.CheckUploadDuplicateReq'
+          $ref: '#/definitions/service.CheckUploadDuplicateReq'
       produces:
       - application/json
       responses:
@@ -1696,7 +1165,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/go-file-server_internal_service.CopyReq'
+          $ref: '#/definitions/service.CopyReq'
       produces:
       - application/json
       responses:
@@ -1727,7 +1196,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/go-file-server_internal_service.CreateFolderReq'
+          $ref: '#/definitions/service.CreateFolderReq'
       produces:
       - application/json
       responses:
@@ -1758,7 +1227,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/go-file-server_internal_service.DeleteReq'
+          $ref: '#/definitions/service.DeleteReq'
       produces:
       - application/json
       responses:
@@ -1789,7 +1258,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/go-file-server_internal_service.DeleteReq'
+          $ref: '#/definitions/service.DeleteReq'
       produces:
       - application/json
       responses:
@@ -1918,7 +1387,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/go-file-server_internal_service.MoveReq'
+          $ref: '#/definitions/service.MoveReq'
       produces:
       - application/json
       responses:
@@ -1949,14 +1418,14 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/go-file-server_internal_service.PropertiesReq'
+          $ref: '#/definitions/service.PropertiesReq'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/go-file-server_internal_service.PropertiesResponse'
+            $ref: '#/definitions/service.PropertiesResponse'
         "400":
           description: Bad Request
           schema:
@@ -1979,7 +1448,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/go-file-server_internal_service.RenameReq'
+          $ref: '#/definitions/service.RenameReq'
       produces:
       - application/json
       responses:
@@ -2108,73 +1577,6 @@ paths:
       summary: Current User Info
       tags:
       - User
-  /api/user/me/sessions:
-    get:
-      description: List all active refresh token sessions for the authenticated user.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/internal_service.SessionInfo'
-            type: array
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      - CookieAuth: []
-      summary: Get Active Sessions
-      tags:
-      - User
-  /api/user/me/sessions/{family_id}:
-    delete:
-      consumes:
-      - application/json
-      description: Revoke a specific refresh token family. Requires password confirmation.
-      parameters:
-      - description: Session family ID
-        in: path
-        name: family_id
-        required: true
-        type: string
-      - description: Password confirmation
-        in: body
-        name: body
-        required: true
-        schema:
-          properties:
-            password:
-              type: string
-          type: object
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      - CookieAuth: []
-      summary: Revoke Session
-      tags:
-      - User
   /api/user/mfa/enable:
     post:
       consumes:
@@ -2186,7 +1588,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_service.MFAVerifyRequest'
+          $ref: '#/definitions/service.MFAVerifyRequest'
       produces:
       - application/json
       responses:
@@ -2225,11 +1627,6 @@ paths:
             type: object
         "400":
           description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
           schema:
             additionalProperties: true
             type: object
@@ -2413,7 +1810,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_service.CreateShareRequest'
+          $ref: '#/definitions/service.CreateShareRequest'
       produces:
       - application/json
       responses:

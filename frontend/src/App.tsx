@@ -10,6 +10,7 @@ import { AppHealthProvider } from './context/AppHealthContext';
 import { UpdateBanner } from './components/custom/UpdateBanner';
 import { AuthGate } from './components/auth/AuthGate';
 import { VerificationScreen } from './components/auth/VerificationScreen';
+import { getSetupStatus } from '@/api/api-auth';
 
 const HomePage = lazy(() => import('./pages/HomePage'));
 const ShareVerifyPage = lazy(() => import('./pages/ShareVerifyPage'));
@@ -20,6 +21,7 @@ const LoginPage = lazy(() => import('./pages/LoginPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const AudioBookPage = lazy(() => import('./pages/AudioBookPage'));
 const ManageSharesPage = lazy(() => import('./pages/ManageSharesPage'));
+const SetupPage = lazy(() => import('./pages/SetupPage'));
 
 function AppLoadingFallback() {
   return <VerificationScreen subtitle="Loading..." />;
@@ -32,12 +34,26 @@ function App() {
 
   useEffect(() => {
     const handleAuthUnauthorized = () => {
-      if (window.location.pathname !== '/login') {
+      if (window.location.pathname !== '/login' && window.location.pathname !== '/setup') {
         void navigateRef.current('/login', { replace: true });
       }
     };
     window.addEventListener('auth:unauthorized', handleAuthUnauthorized);
     return () => { window.removeEventListener('auth:unauthorized', handleAuthUnauthorized); };
+  }, []);
+
+  useEffect(() => {
+    if (window.location.pathname === '/setup') return;
+
+    getSetupStatus()
+      .then((res) => {
+        if (res.setup_required) {
+          void navigateRef.current('/setup', { replace: true });
+        }
+      })
+      .catch(() => {
+        // Setup check failed (e.g. backend not ready), continue normally
+      });
   }, []);
 
   useEffect(() => {
@@ -66,6 +82,7 @@ function App() {
                 <Route element={<ShareHomePage />} path="/share/:id/home/*" />
 
                 <Route element={<LoginPage />} path="/login" />
+                <Route element={<SetupPage />} path="/setup" />
                 <Route element={<AdminPage />} path="/admin" />
                 <Route element={<AudioBookPage />} path="/audio-book" />
 

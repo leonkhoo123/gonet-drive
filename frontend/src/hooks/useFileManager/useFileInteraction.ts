@@ -27,7 +27,7 @@ export function useFileInteraction({
     }
     // Set a timer for 500ms to trigger right-click (context menu) behavior
     touchTimer.current = window.setTimeout(() => {
-      navigator.vibrate?.([15]);
+      navigator.vibrate([15]);
       // In selection mode: show long-press preview instead of resetting selection
       if (selectedItems.size > 0 && onLongPressPreview) {
         onLongPressPreview(file, index);

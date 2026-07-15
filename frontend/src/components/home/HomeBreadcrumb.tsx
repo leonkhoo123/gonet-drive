@@ -60,7 +60,7 @@ export default function HomeBreadcrumb({
 
   useEffect(() => {
     getMe().then((res) => {
-      setIsAdmin(res.role === "admin" || res.role === "superadmin");
+      setIsAdmin(res.role === "admin");
     }).catch(console.error);
   }, []);
 

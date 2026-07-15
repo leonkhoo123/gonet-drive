@@ -68,9 +68,11 @@ export function useFileSystem(baseRoute = "/home") {
     } catch (err: unknown) {
       if (currentFetchId === fetchIdRef.current) {
         const error = err as { message?: string; response?: { status?: number } };
-        console.error("MyErr: ", err);
-        console.error("err.message: ", error.message);
-        console.error(" err.response.status: ", error.response?.status);
+        if (!import.meta.env.PROD) {
+          console.error("MyErr: ", err);
+          console.error("err.message: ", error.message);
+          console.error(" err.response.status: ", error.response?.status);
+        }
         if (error.response?.status === 401) {
           if (!baseRoute.includes("/share")) void navigate("/login");
         }

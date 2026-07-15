@@ -1,4 +1,5 @@
 import axiosLayer from './axiosLayer';
+import { unwrap, type ApiEnvelope } from './envelope';
 
 export interface VideoIntegrityEntry {
   hash: string;
@@ -22,30 +23,23 @@ export interface VideoIntegrityListResponse {
 }
 
 export const startScan = async (): Promise<{ opId: string; status: string }> => {
-  const response = await axiosLayer.post<{ opId: string; status: string }>(
-    '/user/admin/video-integrity/scan'
-  );
-  return response.data;
+  const response = await axiosLayer.post<ApiEnvelope<{ opId: string; status: string }>>('/user/admin/video-integrity/scan');
+  return unwrap<{ opId: string; status: string }>(response);
 };
 
 export const stopScan = async (): Promise<{ opId: string; status: string }> => {
-  const response = await axiosLayer.post<{ opId: string; status: string }>(
-    '/user/admin/video-integrity/scan',
-    { action: 'stop' }
-  );
-  return response.data;
+  const response = await axiosLayer.post<ApiEnvelope<{ opId: string; status: string }>>('/user/admin/video-integrity/scan', {
+    action: 'stop',
+  });
+  return unwrap<{ opId: string; status: string }>(response);
 };
 
 export const getStatus = async (): Promise<VideoIntegrityStatus> => {
-  const response = await axiosLayer.get<VideoIntegrityStatus>(
-    '/user/admin/video-integrity/status'
-  );
-  return response.data;
+  const response = await axiosLayer.get<ApiEnvelope<VideoIntegrityStatus>>('/user/admin/video-integrity/status');
+  return unwrap<VideoIntegrityStatus>(response);
 };
 
 export const getList = async (): Promise<VideoIntegrityListResponse> => {
-  const response = await axiosLayer.get<VideoIntegrityListResponse>(
-    '/user/admin/video-integrity/list'
-  );
-  return response.data;
+  const response = await axiosLayer.get<ApiEnvelope<VideoIntegrityListResponse>>('/user/admin/video-integrity/list');
+  return unwrap<VideoIntegrityListResponse>(response);
 };

@@ -126,5 +126,5 @@ func TestMoveFiles_SameDir(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	var resp map[string]interface{}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-	assert.Contains(t, resp["error"], "cannot move items to the same directory")
+	assert.Contains(t, resp["error"], "failed to start move operation")
 }

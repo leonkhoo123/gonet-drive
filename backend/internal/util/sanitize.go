@@ -92,8 +92,8 @@ func SanitizeFilename(name string) (string, error) {
 		return "", fmt.Errorf("invalid filename")
 	}
 
-	if baseName == ".cloud_delete" {
-		return "", fmt.Errorf("filename '.cloud_delete' is reserved")
+	if baseName == ".cloud_delete" || baseName == ".cloud_reserve" {
+		return "", fmt.Errorf("filename '%s' is reserved", baseName)
 	}
 
 	return baseName, nil

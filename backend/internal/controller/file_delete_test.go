@@ -57,7 +57,7 @@ func TestDeleteSoft_ProtectedDir(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	var resp map[string]interface{}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-	assert.Contains(t, resp["error"], "no valid files to delete")
+	assert.Contains(t, resp["error"], "failed to start delete operation")
 }
 
 func TestDeletePermanent_Success(t *testing.T) {
@@ -101,5 +101,5 @@ func TestDeletePermanent_ProtectedDir(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	var resp map[string]interface{}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-	assert.Contains(t, resp["error"], "no valid files to delete")
+	assert.Contains(t, resp["error"], "failed to start permanent delete operation")
 }

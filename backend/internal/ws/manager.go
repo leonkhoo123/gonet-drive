@@ -13,19 +13,25 @@ import (
 
 // WsManager handles websocket connections
 type WsManager struct {
-	clients    map[*websocket.Conn]bool
+	clients    map[*websocket.Conn]string // conn -> username
 	broadcast  chan interface{}
-	register   chan *websocket.Conn
+	register   chan *wsClient
 	unregister chan *websocket.Conn
-	mu         sync.Mutex
+	mu         sync.RWMutex
+}
+
+// wsClient pairs a connection with its authenticated username
+type wsClient struct {
+	conn     *websocket.Conn
+	username string
 }
 
 var (
 	Manager = &WsManager{
-		clients:    make(map[*websocket.Conn]bool),
-		broadcast:  make(chan interface{}),
-		register:   make(chan *websocket.Conn),
-		unregister: make(chan *websocket.Conn),
+		clients:    make(map[*websocket.Conn]string),
+		broadcast:  make(chan interface{}, 64),
+		register:   make(chan *wsClient, 8),
+		unregister: make(chan *websocket.Conn, 8),
 	}
 	upgrader = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
@@ -46,37 +52,63 @@ func (m *WsManager) Start() {
 		select {
 		case client := <-m.register:
 			m.mu.Lock()
-			m.clients[client] = true
+			m.clients[client.conn] = client.username
 			m.mu.Unlock()
-			logger.L.Info("websocket client connected")
+			logger.L.Info("websocket client connected", "username", client.username)
 
-		case client := <-m.unregister:
+		case conn := <-m.unregister:
 			m.mu.Lock()
-			if _, ok := m.clients[client]; ok {
-				delete(m.clients, client)
-				client.Close()
+			if _, ok := m.clients[conn]; ok {
+				delete(m.clients, conn)
+				conn.Close()
 				logger.L.Info("websocket client disconnected")
 			}
 			m.mu.Unlock()
 
 		case message := <-m.broadcast:
-			m.mu.Lock()
-			for client := range m.clients {
-				err := client.WriteJSON(message)
+			m.mu.RLock()
+			for conn, username := range m.clients {
+				_ = username
+				err := conn.WriteJSON(message)
 				if err != nil {
 					logger.L.Error("websocket write error", "err", err)
-					client.Close()
-					delete(m.clients, client)
+					conn.Close()
+					delete(m.clients, conn)
 				}
 			}
-			m.mu.Unlock()
+			m.mu.RUnlock()
 		}
 	}
 }
 
 // Broadcast sends a message to all connected clients
 func Broadcast(message interface{}) {
-	Manager.broadcast <- message
+	select {
+	case Manager.broadcast <- message:
+	default:
+		logger.L.Warn("websocket broadcast channel full, dropping message")
+	}
+}
+
+// BroadcastToUser sends a message only to connections belonging to a specific username.
+// Falls back to global broadcast if username is empty.
+func BroadcastToUser(username string, message interface{}) {
+	if username == "" {
+		Broadcast(message)
+		return
+	}
+	Manager.mu.RLock()
+	defer Manager.mu.RUnlock()
+	for conn, user := range Manager.clients {
+		if user == username {
+			err := conn.WriteJSON(message)
+			if err != nil {
+				logger.L.Error("websocket write error", "err", err)
+				conn.Close()
+				delete(Manager.clients, conn)
+			}
+		}
+	}
 }
 
 // WsHandler handles the websocket handshake and manages real-time operation progress.
@@ -94,7 +126,9 @@ func WsHandler(c *gin.Context) {
 		return
 	}
 
-	Manager.register <- conn
+	username := c.GetString("username")
+
+	Manager.register <- &wsClient{conn: conn, username: username}
 
 	// Keep connection alive/check for disconnection
 	go func() {
@@ -134,7 +168,7 @@ func WsHandler(c *gin.Context) {
 
 			if msg.Type == "check_progress" && msg.OpID != "" {
 				if opMeta, found := GetOpMeta(msg.OpID); found {
-					Broadcast(opMeta)
+					BroadcastToUser(username, opMeta)
 				}
 			}
 		}

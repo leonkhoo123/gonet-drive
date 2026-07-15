@@ -2,10 +2,10 @@
 
 ## Architecture
 
-- **Single binary**: Frontend (React/Vite) is embedded into the Go binary via `//go:embed` in `ui/embed.go:5`. The binary serves the SPA and the REST API from one process.
+- **Single binary**: Frontend (React/Vite) is embedded into the Go binary via `//go:embed` in `backend/ui/embed.go:5`. The binary serves the SPA and the REST API from one process.
 - **Go module name**: `go-file-server` (not `gonet-drive`). Import paths use `go-file-server/...`.
-- **Database**: SQLite via `mattn/go-sqlite3` (requires CGO). Migrations run automatically on startup from `database/migrations/*.sql`, which are embedded via `//go:embed`.
-- **Frontend SPA routing**: `cmd/main.go:96` — the `NoRoute` handler serves `index.html` for any non-`/api` path that does not match a file in the embedded dist.
+- **Database**: SQLite via `mattn/go-sqlite3` (requires CGO). Migrations run automatically on startup from `backend/database/migrations/*.sql`, which are embedded via `//go:embed`.
+- **Frontend SPA routing**: `backend/cmd/main.go:96` — the `NoRoute` handler serves `index.html` for any non-`/api` path that does not match a file in the embedded dist.
 
 ## Build
 
@@ -16,20 +16,20 @@
 cd frontend && npm run build
 
 # 2) Copy dist to the embed directory
-cp -r frontend/dist ui/dist
+cp -r frontend/dist backend/ui/dist
 
 # 3) Build Go binary (CGO required for SQLite)
-CGO_ENABLED=1 go build -o server ./cmd/main.go
+cd backend && CGO_ENABLED=1 go build -o ../server ./cmd/main.go
 ```
 
-- The `ui/dist/` directory is gitignored. It must exist before `go build` (even empty), because of `//go:embed all:dist`. If missing, create it: `mkdir -p ui/dist`.
+- The `backend/ui/dist/` directory is gitignored. It must exist before `go build` (even empty), because of `//go:embed all:dist`. If missing, create it: `mkdir -p backend/ui/dist`.
 - Docker build handles this sequence automatically (multi-stage Dockerfile).
 
 ### Dev — backend only (use Vite for frontend)
 
 ```bash
 # Backend (from repo root, reads .env)
-go run ./cmd/main.go
+cd backend && go run ./cmd/main.go
 
 # Frontend (separate terminal, from frontend/)
 cd frontend && npm run dev
@@ -48,7 +48,7 @@ cd frontend && npm run dev
 
 - **Test runner**: `go test` + `stretchr/testify`. Requires `CGO_ENABLED=1` for SQLite.
 - **Database**: Each test uses in-memory SQLite (`:memory:?_busy_timeout=5000`), isolated via `t.TempDir()`.
-- **Test helpers**: [`internal/testutil/setup.go`](internal/testutil/setup.go:65) — `SetupTestDB`, `SetupServices`, `CreateTestUser`, `TestConfig`.
+- **Test helpers**: [`backend/internal/testutil/setup.go`](backend/internal/testutil/setup.go:65) — `SetupTestDB`, `SetupServices`, `CreateTestUser`, `TestConfig`.
 - **Test files**: `*_test.go` files live alongside their production code in `internal/`.
 
 ```bash
@@ -68,23 +68,29 @@ make test-race     # Race detection
 
 ### Config and startup
 
-- Config is loaded from `.env` via `godotenv` (from cwd) at `internal/config/config.go:58`.
-- `APP_JWTSECRET` is **required** — startup fails if missing (`config.go:111`).
+- Config is loaded from `.env` via `godotenv` at `backend/internal/config/config.go:58`.
 - `WORK_DIR` (served files root) must **exist on disk** at startup or the process exits (`config.go:115`).
-- An admin user is auto-created on first run from `ADMIN_USER`/`ADMIN_PASS` env vars.
-- `APP_JWT=OFF` disables JWT auth middleware (`user_controller.go:39`).
+- The first admin is provisioned at runtime via the setup flow
+  (`GET /api/setup/status` → `POST /api/setup/admin`), not from env vars.
+  `ADMIN_USER`/`ADMIN_PASS`/`APP_JWTSECRET`/`TOKEN_NAME`/`COOKIE_*` are gone —
+  the gonet-auth library auto-generates and rotates its own JWT signing secret
+  via the `SecretStore` (`SQLiteSecretStore`, persisted in `app_settings`).
+- `APP_JWT=OFF` disables JWT auth middleware. It is rejected in production and
+  otherwise requires `ALLOW_UNSAFE_UNPROTECTED_MODE=true` (`cmd/main.go:148`).
+- Roles are `user` and `admin` only (the `superadmin` role is removed).
 
 ### Database location
 
-- `APP_ENV=dev` → DB defaults to `./db/config.db`
+- `APP_ENV=dev` → DB defaults to `../db/config.db` (repo root `db/` directory)
 - `APP_ENV=prod` or other → DB defaults to `/app/db/config.db`
 - Override with `DB_DIR` env var.
 
 ### Routing conventions
 
-- Public routes (no auth): `/api/login`, `/api/refresh`, `/api/mfa/verify`, `/api/logout`, `/api/config/*`, `/api/shares/*`, `/api/share-files/*`
-- Authenticated routes: `/api/user/*`, `/api/user/files/*`, `/api/user/video/*`, `/api/user/photo/*`, `/api/user/music/*`, `/api/user/documents/*`, `/api/user/share/*`, `/api/user/audiobooks/*`, `/api/user/config/*`
-- Admin-only: `/api/user/admin/*` (requires admin middleware)
+- Public routes (no auth): `/api/login`, `/api/refresh`, `/api/mfa/verify`, `/api/mfa/recovery`, `/api/logout`, `/api/setup/status`, `/api/setup/admin` (first-run admin provisioning), `/api/config/*`, `/api/shares/*`, `/api/share-files/*`
+- Authenticated routes: `/api/user/*`, `/api/user/files/*`, `/api/user/video/*`, `/api/user/photo/*`, `/api/user/music/*`, `/api/user/documents/*`, `/api/user/share/*`, `/api/user/audiobooks/*`, `/api/user/config/*`, `/api/user/me`, `/api/user/me/sessions`, `/api/user/me/sessions/revoke`
+- Admin-only: `/api/user/admin/*` (requires admin middleware), incl. `/api/user/admin/users` (create/list), `/api/user/admin/users/:id` (delete), `/api/user/admin/users/:id/revoke-all`
+- Mobile (custom, token-in-body): `/api/mobile/login`, `/api/mobile/refresh`, `/api/mobile/mfa/verify`, `/api/mobile/logout`
 - WebSocket: `/api/user/ws` (authenticated)
 - Health: `/api/health` (no auth)
 
@@ -102,8 +108,8 @@ make test-race     # Race detection
 ## Operational notes
 
 - **ffmpeg** is required at runtime (installed in Docker image) — used by the video module for on-the-fly transcoding.
-- WebSocket connections are managed by `internal/ws/manager.go` and started in a goroutine at `cmd/main.go:74`. Clients receive real-time progress for file operations.
-- File operations (copy/move/delete) are processed sequentially via a worker started at `cmd/main.go:77` to avoid filesystem lock contention.
+- WebSocket connections are managed by `backend/internal/ws/manager.go` and started in a goroutine at `backend/cmd/main.go:74`. Clients receive real-time progress for file operations.
+- File operations (copy/move/delete) are processed sequentially via a worker started at `backend/cmd/main.go:77` to avoid filesystem lock contention.
 - The backend creates a `.cloud_reserve` directory inside `WORK_DIR` for internal assets (logo, etc.) on startup.
 
 
@@ -113,29 +119,43 @@ make test-race     # Race detection
 
 ## Updating gonet-auth dependency
 
-gonet-auth is a private GitHub module (`github.com/leonkhoo123/gonet-auth`). To bump the version:
+gonet-auth is a private GitHub module. It ships as **two** modules that are both
+consumed here: the core (`github.com/leonkhoo123/gonet-auth`) and the Gin adapter
+(`github.com/leonkhoo123/gonet-auth/adapters/gin`). Both need a `require` and a
+local `replace`. To bump the version:
 
 ```bash
-# 1. Update the version in go.mod
-go mod edit -require github.com/leonkhoo123/gonet-auth@v0.2.0
+# 1. Update the versions in go.mod (both modules)
+go mod edit -require github.com/leonkhoo123/gonet-auth@v1.1.0
+go mod edit -require github.com/leonkhoo123/gonet-auth/adapters/gin@v1.1.0
 
-# 2. Drop the local replace so Go fetches from GitHub
+# 2. Drop the local replaces so Go fetches from GitHub
 go mod edit -dropreplace github.com/leonkhoo123/gonet-auth
+go mod edit -dropreplace github.com/leonkhoo123/gonet-auth/adapters/gin
 
 # 3. Fetch from GitHub and regenerate go.sum
 GOPRIVATE=github.com/leonkhoo123 go mod tidy
 
-# 4. Restore the local replace for dev
-go mod edit -replace github.com/leonkhoo123/gonet-auth=../gonet-auth
+# 4. Restore the local replaces for dev (NO go mod tidy after this!)
+go mod edit -replace github.com/leonkhoo123/gonet-auth=../../gonet-auth
+go mod edit -replace github.com/leonkhoo123/gonet-auth/adapters/gin=../../gonet-auth/adapters/gin
 
 # 5. Commit the updated go.mod + go.sum
-git add go.mod go.sum && git commit -m "bump gonet-auth to v0.2.0"
+git add backend/go.mod backend/go.sum && git commit -m "bump gonet-auth to v1.1.0"
 ```
 
-Never commit the repo without the `replace` directive — it must be present in every commit so local dev works. The Docker pipeline drops it at build time.
+**Important**: Do NOT run `go mod tidy` after step 4 — it removes the remote
+checksums from `go.sum` because the local replaces make them unnecessary.
+The checksums must stay in the committed `go.sum` so CI and other developers
+can fetch the remote modules.
+
+Never commit the repo without the `replace` directives — **both** must be present
+in every commit so local dev works. The Docker pipeline drops them at build time.
 
 ## Release pipeline
 
 Kaniko builds run via the `kaniko-build` Tekton pipeline in `infra-git`.
 The pipeline fetches a GitHub PAT from Vault and passes it as `--build-arg GITHUB_TOKEN`
 so Go can download private modules during `go mod download`.
+The pipeline drops **both** local `replace` directives (core + `adapters/gin`)
+at build time so the tagged GitHub versions are fetched instead.

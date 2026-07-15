@@ -32,10 +32,13 @@ ARG GITHUB_TOKEN
 RUN git config --global url."https://${GITHUB_TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
 
 # Copy go manifests first for layer caching
-COPY go.mod go.sum ./
+COPY backend/go.mod backend/go.sum ./
 
-# Remove local replace directive so Go fetches the private module from GitHub
-RUN go mod edit -dropreplace github.com/leonkhoo123/gonet-auth
+# Remove local replace directives so Go fetches the private modules from GitHub
+# (both the core module and the adapters/gin submodule).
+RUN go mod edit \
+    -dropreplace github.com/leonkhoo123/gonet-auth \
+    -dropreplace github.com/leonkhoo123/gonet-auth/adapters/gin
 
 # Cache Go modules
 RUN --mount=type=cache,target=/go/pkg/mod go mod download
@@ -44,7 +47,7 @@ RUN --mount=type=cache,target=/go/pkg/mod go mod download
 RUN git config --global --unset url."https://${GITHUB_TOKEN}:x-oauth-basic@github.com/".insteadOf
 
 # Copy source last
-COPY . .
+COPY backend/. .
 
 # Ensure embed directory exists before copying frontend dist
 RUN mkdir -p ui/dist
@@ -53,7 +56,9 @@ COPY --from=frontend-builder /app/dist ./ui/dist/
 # Build with BuildKit cache for Go build cache + modules, strip debug info
 RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg/mod \
-    go mod edit -dropreplace github.com/leonkhoo123/gonet-auth && \
+    go mod edit \
+      -dropreplace github.com/leonkhoo123/gonet-auth \
+      -dropreplace github.com/leonkhoo123/gonet-auth/adapters/gin && \
     CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
     go build -ldflags="-s -w" -trimpath -o server ./cmd/main.go
 

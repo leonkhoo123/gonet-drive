@@ -35,6 +35,7 @@ export default function ShareVerifyPage() {
   const [verifyingPin, setVerifyingPin] = useState(false);
   const [pin, setPin] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  const [shareNotFound, setShareNotFound] = useState(false);
   const [serverName, setServerName] = useState("Go File Server");
   const { setTheme } = useTheme();
 
@@ -69,6 +70,7 @@ export default function ShareVerifyPage() {
           error.response?.status === 404 ||
           error.response?.status === 410
         ) {
+          setShareNotFound(true);
           setErrorMsg(
             error.response.data?.error ??
               "Link has expired or does not exist."
@@ -101,7 +103,7 @@ export default function ShareVerifyPage() {
     }
   };
 
-  const isInvalidLink = !loading && errorMsg && !id;
+  const isInvalidLink = !loading && (shareNotFound || !id);
 
   const titleContent = loading
     ? { title: "Verifying Access", subtitle: "Checking share link permissions..." }
@@ -205,8 +207,8 @@ export default function ShareVerifyPage() {
               </div>
             ) : isInvalidLink ? (
               <div className="flex flex-col items-center gap-4 py-4">
-                <p className="text-sm text-muted-foreground text-center">
-                  This share link is no longer valid. Please request a new link.
+                <p className="text-sm text-destructive text-center font-medium">
+                  {errorMsg || "This share link is no longer valid. Please request a new link."}
                 </p>
               </div>
             ) : (

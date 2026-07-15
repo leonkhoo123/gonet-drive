@@ -86,7 +86,7 @@ func getOpName(opType string, sources []string, destDir string) string {
 	return fmt.Sprintf("%s %s and %d more items", actionDesc, firstFile, len(sources)-1)
 }
 
-func submitAsyncJob(opID, opType, opName string, tracker *util.ProgressTracker, includeSpeed bool, destDir string, requestID string, action func(tracker *util.ProgressTracker) error) {
+func submitAsyncJob(opID, opType, opName string, tracker *util.ProgressTracker, includeSpeed bool, destDir string, requestID string, username string, action func(tracker *util.ProgressTracker) error) {
 	var destDirPtr *string
 	if destDir != "" {
 		destDirPtr = &destDir
@@ -97,7 +97,7 @@ func submitAsyncJob(opID, opType, opName string, tracker *util.ProgressTracker, 
 		requestIDPtr = &requestID
 	}
 
-	ws.BroadcastAndCache(ws.OperationMessage{
+	ws.BroadcastAndCacheToUser(username, ws.OperationMessage{
 		OpId:      opID,
 		OpType:    opType,
 		OpName:    opName,
@@ -111,7 +111,7 @@ func submitAsyncJob(opID, opType, opName string, tracker *util.ProgressTracker, 
 	JobQueue <- func() {
 		jobLog := logger.L.With("request_id", requestID, "opId", opID)
 
-		ws.BroadcastAndCache(ws.OperationMessage{
+		ws.BroadcastAndCacheToUser(username, ws.OperationMessage{
 			OpId:      opID,
 			OpType:    opType,
 			OpName:    opName,
@@ -140,7 +140,7 @@ func submitAsyncJob(opID, opType, opName string, tracker *util.ProgressTracker, 
 
 			fileCountStr := fmt.Sprintf("%d/%d", pt.CopiedFiles, pt.TotalFiles)
 
-			ws.BroadcastAndCache(ws.OperationMessage{
+			ws.BroadcastAndCacheToUser(username, ws.OperationMessage{
 				OpId:         opID,
 				OpType:       opType,
 				OpName:       opName,
@@ -164,7 +164,7 @@ func submitAsyncJob(opID, opType, opName string, tracker *util.ProgressTracker, 
 				status = "aborted"
 			}
 
-			ws.BroadcastAndCache(ws.OperationMessage{
+			ws.BroadcastAndCacheToUser(username, ws.OperationMessage{
 				OpId:      opID,
 				OpType:    opType,
 				OpName:    opName,
@@ -175,7 +175,7 @@ func submitAsyncJob(opID, opType, opName string, tracker *util.ProgressTracker, 
 			})
 		} else {
 			jobLog.Debug("file operation completed", "opType", opType, "files", tracker.CopiedFiles, "bytes", tracker.CopiedBytes)
-			ws.BroadcastAndCache(ws.OperationMessage{
+			ws.BroadcastAndCacheToUser(username, ws.OperationMessage{
 				OpId:      opID,
 				OpType:    opType,
 				OpName:    opName,
@@ -187,30 +187,38 @@ func submitAsyncJob(opID, opType, opName string, tracker *util.ProgressTracker, 
 	}
 }
 
-func CancelOperation(req CancelReq) error {
+func CancelOperation(req CancelReq, username string) error {
 	logger.L.Debug("received cancel request", "opId", req.OpID)
 	// We assume sending to this endpoint means intent to cancel,
 	// but we respect the cancel flag if it's explicitly false.
 	if req.Cancel != nil && !*req.Cancel {
 		return nil
 	}
+
+	// Verify ownership: only the user who started the operation can cancel it
+	owner := state.GetOperationOwner(req.OpID)
+	if owner != "" && owner != username {
+		return fmt.Errorf("access denied: you did not initiate this operation")
+	}
+
 	util.SetCancelOperation(req.OpID)
 	return nil
 }
 
-func CopyFiles(req CopyReq, cfg *config.CloudConfig, requestID string) error {
+func CopyFiles(req CopyReq, cfg *config.CloudConfig, requestID string, username string) error {
 	logger.L.Debug("copy files requested", "opId", req.OpID, "sources", req.Sources, "destDir", req.DestDir)
 
 	opID := req.OpID
 	if opID == "" {
 		opID = util.GenerateOpID()
 	}
+	state.SetOperationOwner(opID, username)
 
 	opName := getOpName("copy", req.Sources, req.DestDir)
 
 	sendError := func(err error) error {
 		errMsg := err.Error()
-		ws.BroadcastAndCache(ws.OperationMessage{
+		ws.BroadcastAndCacheToUser(username, ws.OperationMessage{
 			OpId:     opID,
 			OpType:   "copy",
 			OpName:   opName,
@@ -242,7 +250,7 @@ func CopyFiles(req CopyReq, cfg *config.CloudConfig, requestID string) error {
 	tracker := util.NewProgressTracker()
 	state.SetProgress(opID, tracker)
 
-	submitAsyncJob(opID, "copy", opName, tracker, true, req.DestDir, requestID, func(t *util.ProgressTracker) error {
+	submitAsyncJob(opID, "copy", opName, tracker, true, req.DestDir, requestID, username, func(t *util.ProgressTracker) error {
 		var reservedSize int64
 		err := util.CopyFiles(t, safeSources, safeDestDir, opID, isSameDir, func(totalSize int64) error {
 			if config.AppCloudConfig != nil {
@@ -265,19 +273,20 @@ func CopyFiles(req CopyReq, cfg *config.CloudConfig, requestID string) error {
 	return nil
 }
 
-func MoveFiles(req MoveReq, cfg *config.CloudConfig, requestID string) error {
+func MoveFiles(req MoveReq, cfg *config.CloudConfig, requestID string, username string) error {
 	logger.L.Debug("move files requested", "opId", req.OpID, "sources", req.Sources, "destDir", req.DestDir)
 
 	opID := req.OpID
 	if opID == "" {
 		opID = util.GenerateOpID()
 	}
+	state.SetOperationOwner(opID, username)
 
 	opName := getOpName("move", req.Sources, req.DestDir)
 
 	sendError := func(err error) error {
 		errMsg := err.Error()
-		ws.BroadcastAndCache(ws.OperationMessage{
+		ws.BroadcastAndCacheToUser(username, ws.OperationMessage{
 			OpId:     opID,
 			OpType:   "move",
 			OpName:   opName,
@@ -307,26 +316,27 @@ func MoveFiles(req MoveReq, cfg *config.CloudConfig, requestID string) error {
 	tracker := util.NewProgressTracker()
 	state.SetProgress(opID, tracker)
 
-	submitAsyncJob(opID, "move", opName, tracker, false, req.DestDir, requestID, func(t *util.ProgressTracker) error {
+	submitAsyncJob(opID, "move", opName, tracker, false, req.DestDir, requestID, username, func(t *util.ProgressTracker) error {
 		return util.MoveFiles(t, safeSources, safeDestDir, opID)
 	})
 
 	return nil
 }
 
-func DeleteFiles(req DeleteReq, cfg *config.CloudConfig, requestID string) error {
+func DeleteFiles(req DeleteReq, cfg *config.CloudConfig, requestID string, username string) error {
 	logger.L.Debug("delete files requested", "opId", req.OpID, "sources", req.Sources)
 
 	opID := req.OpID
 	if opID == "" {
 		opID = util.GenerateOpID()
 	}
+	state.SetOperationOwner(opID, username)
 
 	opName := getOpName("delete", req.Sources, "")
 
 	sendError := func(err error) error {
 		errMsg := err.Error()
-		ws.BroadcastAndCache(ws.OperationMessage{
+		ws.BroadcastAndCacheToUser(username, ws.OperationMessage{
 			OpId:     opID,
 			OpType:   "delete",
 			OpName:   opName,
@@ -358,7 +368,7 @@ func DeleteFiles(req DeleteReq, cfg *config.CloudConfig, requestID string) error
 	tracker := util.NewProgressTracker()
 	state.SetProgress(opID, tracker)
 
-	submitAsyncJob(opID, "delete", opName, tracker, false, "", requestID, func(t *util.ProgressTracker) error {
+	submitAsyncJob(opID, "delete", opName, tracker, false, "", requestID, username, func(t *util.ProgressTracker) error {
 		recycleBinDir := filepath.Join(cfg.Server.FileRoot, ".cloud_delete")
 		if _, err := os.Stat(recycleBinDir); os.IsNotExist(err) {
 			os.MkdirAll(recycleBinDir, 0755)
@@ -369,19 +379,20 @@ func DeleteFiles(req DeleteReq, cfg *config.CloudConfig, requestID string) error
 	return nil
 }
 
-func DeletePermanentFiles(req DeleteReq, cfg *config.CloudConfig, requestID string) error {
+func DeletePermanentFiles(req DeleteReq, cfg *config.CloudConfig, requestID string, username string) error {
 	logger.L.Debug("permanent delete requested", "opId", req.OpID, "sources", req.Sources)
 
 	opID := req.OpID
 	if opID == "" {
 		opID = util.GenerateOpID()
 	}
+	state.SetOperationOwner(opID, username)
 
 	opName := getOpName("delete_permanent", req.Sources, "")
 
 	sendError := func(err error) error {
 		errMsg := err.Error()
-		ws.BroadcastAndCache(ws.OperationMessage{
+		ws.BroadcastAndCacheToUser(username, ws.OperationMessage{
 			OpId:     opID,
 			OpType:   "delete_permanent",
 			OpName:   opName,
@@ -413,7 +424,7 @@ func DeletePermanentFiles(req DeleteReq, cfg *config.CloudConfig, requestID stri
 	tracker := util.NewProgressTracker()
 	state.SetProgress(opID, tracker)
 
-	submitAsyncJob(opID, "delete_permanent", opName, tracker, false, "", requestID, func(t *util.ProgressTracker) error {
+	submitAsyncJob(opID, "delete_permanent", opName, tracker, false, "", requestID, username, func(t *util.ProgressTracker) error {
 		return util.DeleteFilesPermanent(t, validSources, opID, func(deletedSize int64) {
 			storage.SubtractUsage(deletedSize)
 		})

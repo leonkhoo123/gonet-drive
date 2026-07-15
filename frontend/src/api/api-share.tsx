@@ -1,4 +1,5 @@
 import axiosLayer from './axiosLayer';
+import { unwrap, type ApiEnvelope } from './envelope';
 
 // isNeverExpires checks if the expires_at string is the sentinel "never" value (year 9999).
 export const isNeverExpires = (expiresAt: string): boolean => {
@@ -31,27 +32,27 @@ export interface CreateShareResponse {
 }
 
 export const createShare = async (req: CreateShareRequest): Promise<CreateShareResponse> => {
-  const rs = await axiosLayer.post("/user/share/create", req, {
+  const rs = await axiosLayer.post<ApiEnvelope<CreateShareResponse>>("/user/share/create", req, {
     headers: { "Accept": "application/json", "Content-Type": "application/json" },
   });
-  return rs.data as CreateShareResponse;
+  return unwrap<CreateShareResponse>(rs);
 };
 
 export const checkSharePermission = async (id: string): Promise<VerifyShareResponse> => {
-  const rs = await axiosLayer.get(`/share/check-permission/${id}`, {
+  const rs = await axiosLayer.get<ApiEnvelope<VerifyShareResponse>>(`/share/check-permission/${id}`, {
     headers: { "Accept": "application/json" },
   });
-  return rs.data as VerifyShareResponse;
+  return unwrap<VerifyShareResponse>(rs);
 };
 
 export const verifySharePin = async (id: string, pin: string): Promise<VerifyShareResponse> => {
-  const rs = await axiosLayer.post("/share/verify", {
+  const rs = await axiosLayer.post<ApiEnvelope<VerifyShareResponse>>("/share/verify", {
     id,
     pin
   }, {
     headers: { "Accept": "application/json" },
   });
-  return rs.data as VerifyShareResponse;
+  return unwrap<VerifyShareResponse>(rs);
 };
 
 export interface ShareItem {
@@ -67,16 +68,16 @@ export interface ShareItem {
 }
 
 export const getShares = async (): Promise<ShareItem[]> => {
-  const rs = await axiosLayer.get<{ shares: ShareItem[] }>("/user/share/get-shares");
-  return rs.data.shares;
+  const rs = await axiosLayer.get<ApiEnvelope<{ shares: ShareItem[] }>>("/user/share/get-shares");
+  return unwrap<{ shares: ShareItem[] }>(rs).shares;
 };
 
 export const toggleShareBlock = async (id: string): Promise<unknown> => {
-  const rs = await axiosLayer.put(`/user/share/${id}/toggle-block`);
-  return rs.data as unknown;
+  const rs = await axiosLayer.put<ApiEnvelope<unknown>>(`/user/share/${id}/toggle-block`);
+  return unwrap<unknown>(rs);
 };
 
 export const deleteShare = async (id: string): Promise<unknown> => {
-  const rs = await axiosLayer.delete(`/user/share/${id}`);
-  return rs.data as unknown;
+  const rs = await axiosLayer.delete<ApiEnvelope<unknown>>(`/user/share/${id}`);
+  return unwrap<unknown>(rs);
 };

@@ -22,7 +22,7 @@ func SetShareJwt(c *gin.Context, cfg *config.CloudConfig, token string, maxAge i
 		Path:     "/",
 		Secure:   getSecureMode(cfg),
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteStrictMode,
 	}
 	http.SetCookie(c.Writer, cookie)
 }
@@ -35,7 +35,7 @@ func ClearShareJwt(c *gin.Context, cfg *config.CloudConfig, shareID string) {
 		Path:     "/",
 		Secure:   getSecureMode(cfg),
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteStrictMode,
 	}
 	http.SetCookie(c.Writer, cookie)
 }

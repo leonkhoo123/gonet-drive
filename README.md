@@ -95,13 +95,16 @@ docker run -d \
   -p 8080:8080 \
   -e APP_ENV="prod" \
   -e ALLOWED_ORIGINS="https://your-domain.com" \
-  -e APP_JWTSECRET="<your_jwt_secret_key>" \
-  -e ADMIN_USER="<admin_username>" \
-  -e ADMIN_PASS="<admin_secure_password>" \
+  -e TRUSTED_PROXY_CIDRS="10.0.0.0/8" \
   -v /path/to/your/folder-you-wanted-to-serve:/app/data \
   -v gonet_db:/app/db \
   gonet-drive
 ```
+
+> The first administrator is created at runtime through the setup flow
+> (`GET /api/setup/status` → `POST /api/setup/admin`) — there is no
+> `ADMIN_USER`/`ADMIN_PASS` env var. The JWT signing secret is generated and
+> rotated automatically by the auth library, so `APP_JWTSECRET` is no longer used.
 
 ## Environment Variables
 
@@ -110,27 +113,21 @@ The server can be configured using environment variables. You can set them direc
 - `WORK_DIR`: The root directory for the files to serve and manage. *(Default: `/app/data`)*
 - `DB_DIR`: The directory where the SQLite metadata database is stored. *(Default: `/app/db` in Docker, empty otherwise)*
 - `LISTEN_ADDR`: The host and port for the server to listen on. *(Default: `:8080`)*
-- `APP_JWTSECRET`: The secret key used to sign JWT auth tokens. **(Required)**
-- `APP_JWT`: Set to `OFF` to disable JWT authentication middleware (enabled by default).
-- `ADMIN_USER`: The username for the initial superadmin account. 
-- `ADMIN_PASS`: The password for the initial superadmin account.
+- `APP_JWT`: Set to `OFF` to disable JWT authentication middleware (enabled by default). Rejected in production; otherwise requires `ALLOW_UNSAFE_UNPROTECTED_MODE=true`.
 - `APP_ENV`: Application environment. Set to `prod` for maximum security in production. *(Default: `local`)*
-- `ALLOWED_ORIGINS`: Comma-separated list of allowed CORS origins. *(Default: `*`)*
+- `ALLOWED_ORIGINS`: Comma-separated list of allowed CORS origins. Wildcard `*` is rejected (unsafe with cookie auth). *(Default: `http://localhost:5173`)*
+- `TRUSTED_PROXY_CIDRS`: Comma-separated proxy CIDRs trusted for `X-Forwarded-For` (required in production for rate limiting).
+- `ALLOW_UNSAFE_UNPROTECTED_MODE`: Set to `true` (non-prod only) to permit `APP_JWT=OFF`.
 - `VIDEO_HOSTNAME`: Optional public URL override to serve video streams.
 - `DEFAULT_SERVICE_NAME`: The name of your cloud server displayed in the UI. *(Default: `My Cloud Server`)*
 - `DEFAULT_UPLOAD_CHUNK_SIZE`: Default chunk size for file uploads in MB. *(Default: `5`)*
 - `DEFAULT_STORAGE_LIMIT`: Default storage limit for new users in MB. *(Default: `20480`)*
 
-**Authentication & Cookie Settings (Advanced):**
-- `TOKEN_NAME`: Name for the authentication token. *(Default: `file_server_token`)*
-- `COOKIE_ACCESS_TOKEN`: Name of the access token cookie. *(Default: `access_token`)*
-- `COOKIE_REFRESH_TOKEN`: Name of the refresh token cookie. *(Default: `refresh_token`)*
-- `COOKIE_MFA_PENDING`: Name of the MFA pending cookie. *(Default: `mfa_pending`)*
-- `COOKIE_SHARE_JWT`: Name of the shared link JWT cookie. *(Default: `shareJwt`)*
-- `ACCESS_TOKEN_MAX_AGE`: Access token expiration duration. *(Default: `15m`)*
-- `REFRESH_TOKEN_MAX_AGE`: Refresh token expiration duration. *(Default: `168h`)*
-- `MFA_PENDING_MAX_AGE`: MFA pending status expiration duration. *(Default: `5m`)*
-- `SHARE_JWT_MAX_AGE`: Share link JWT expiration duration. *(Default: `168h`)*
+> **Auth is fully managed by the `gonet-auth` library.** The JWT signing secret
+> is auto-generated and rotated via the `SecretStore` (persisted in the
+> database), and the first admin is provisioned through the setup flow. The
+> retired `APP_JWTSECRET`, `ADMIN_USER`, `ADMIN_PASS`, `TOKEN_NAME`, `COOKIE_*`
+> and `*_MAX_AGE` variables no longer have any effect.
 
 ## Project Structure
 

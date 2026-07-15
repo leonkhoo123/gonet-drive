@@ -1,4 +1,5 @@
 import axiosInstance from "./axiosLayer";
+import { unwrap, type ApiEnvelope } from "./envelope";
 
 export interface AudioBookItem {
   name: string;
@@ -20,13 +21,13 @@ export interface AudioPath {
 }
 
 export const getAudioBooks = async (): Promise<AudioBookItem[]> => {
-  const response = await axiosInstance.get<AudioBookItem[]>("/user/audiobook/list");
-  return response.data;
+  const response = await axiosInstance.get<ApiEnvelope<{ audiobooks: AudioBookItem[] }>>("/user/audiobook/list");
+  return unwrap<{ audiobooks: AudioBookItem[] }>(response).audiobooks;
 };
 
 export const getAudioPaths = async (): Promise<AudioPath[]> => {
-  const response = await axiosInstance.get<AudioPath[]>("/user/audiobook/paths");
-  return response.data;
+  const response = await axiosInstance.get<ApiEnvelope<{ paths: AudioPath[] }>>("/user/audiobook/paths");
+  return unwrap<{ paths: AudioPath[] }>(response).paths;
 };
 
 export const addAudioPath = async (path: string, is_enabled = true): Promise<void> => {
@@ -46,8 +47,8 @@ export const reportAudioBookProgress = async (audiobook_name: string, progress_t
 };
 
 export const getAudioBookFileList = async (path = "/.audio_book"): Promise<{ path: string, items: AudioBookItem[] }> => {
-  const response = await axiosInstance.get<{ path: string, items: AudioBookItem[] }>("/user/audiobook/filelist", { params: { path } });
-  return response.data;
+  const response = await axiosInstance.get<ApiEnvelope<{ path: string, items: AudioBookItem[] }>>("/user/audiobook/filelist", { params: { path } });
+  return unwrap<{ path: string, items: AudioBookItem[] }>(response);
 };
 
 export const getAudioBookStreamUrl = (name: string): string => {

@@ -1,5 +1,6 @@
 import axiosLayer from "./axiosLayer";
 import fpPromise from '@fingerprintjs/fingerprintjs';
+import { unwrap, type ApiEnvelope } from "./envelope";
 
 // Initialize the agent at application startup.
 const getFingerprint = async (): Promise<string> => {
@@ -9,33 +10,32 @@ const getFingerprint = async (): Promise<string> => {
 };
 
 export interface LoginResponse {
-  message: string;
-  mfa_required?: boolean;
+  auth_status: "logged_in" | "mfa_required";
   mfa_setup_required?: boolean;
 }
 
 export const login = async (username: string, password: string): Promise<LoginResponse> => {
     const device_id = await getFingerprint();
-    const res = await axiosLayer.post<LoginResponse>(
+    const res = await axiosLayer.post<ApiEnvelope<LoginResponse>>(
       "/login",
       { username, password, device_id },
       { 
         headers: { "Content-Type": "application/json" },
       }
     );
-    return res.data;
+    return unwrap<LoginResponse>(res);
 };
 
 export const verifyMfa = async (code: string): Promise<LoginResponse> => {
     const device_id = await getFingerprint();
-    const res = await axiosLayer.post<LoginResponse>(
+    const res = await axiosLayer.post<ApiEnvelope<LoginResponse>>(
       "/mfa/verify",
       { code, device_id },
       { 
         headers: { "Content-Type": "application/json" },
       }
     );
-    return res.data;
+    return unwrap<LoginResponse>(res);
 };
 
 export interface MfaSetupResponse {
@@ -44,29 +44,45 @@ export interface MfaSetupResponse {
 }
 
 export const setupMfa = async (): Promise<MfaSetupResponse> => {
-    const res = await axiosLayer.get<MfaSetupResponse>("/user/mfa/setup");
-    return res.data;
+    const res = await axiosLayer.post<ApiEnvelope<MfaSetupResponse>>("/user/mfa/setup");
+    return unwrap<MfaSetupResponse>(res);
 };
 
-export const enableMfa = async (code: string): Promise<{ success: boolean; message: string }> => {
-    const res = await axiosLayer.post<{ success: boolean; message: string }>(
-      "/user/mfa/enable",
+export interface MfaEnableResponse {
+  recovery_codes: string[];
+}
+
+export const enableMfa = async (code: string): Promise<MfaEnableResponse> => {
+    const res = await axiosLayer.post<ApiEnvelope<MfaEnableResponse>>(
+      "/user/mfa/confirm",
       { code },
       { 
         headers: { "Content-Type": "application/json" },
       }
     );
-    return res.data;
+    return unwrap<MfaEnableResponse>(res);
 };
 
-export const getMe = async (): Promise<{ username: string; role: string; is_super_admin: boolean }> => {
-  const res = await axiosLayer.get<{ username: string; role: string; is_super_admin: boolean }>("/user/me");
-  return res.data;
+export const verifyMfaRecovery = async (code: string): Promise<LoginResponse> => {
+    const device_id = await getFingerprint();
+    const res = await axiosLayer.post<ApiEnvelope<LoginResponse>>(
+      "/mfa/recovery",
+      { recovery_code: code, device_id },
+      { 
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+    return unwrap<LoginResponse>(res);
 };
 
-export const checkAuthStatus = async (): Promise<{ status: string; message: string }> => {
-  const res = await axiosLayer.get<{ status: string; message: string }>("/user/status");
-  return res.data;
+export const getMe = async (): Promise<{ username: string; role: string }> => {
+  const res = await axiosLayer.get<ApiEnvelope<{ username: string; role: string }>>("/user/me");
+  return unwrap<{ username: string; role: string }>(res);
+};
+
+export const checkAuthStatus = async (): Promise<{ message: string }> => {
+  const res = await axiosLayer.get<ApiEnvelope<{ message: string }>>("/user/status");
+  return unwrap<{ message: string }>(res);
 };
 
 export const logout = async (): Promise<void> => {
@@ -85,13 +101,31 @@ export interface SessionInfo {
 }
 
 export const getSessions = async (): Promise<SessionInfo[]> => {
-  const res = await axiosLayer.get<SessionInfo[]>("/user/me/sessions");
-  return res.data;
+  const res = await axiosLayer.get<ApiEnvelope<{ sessions: SessionInfo[] }>>("/user/me/sessions");
+  return unwrap<{ sessions: SessionInfo[] }>(res).sessions;
 };
 
-export const revokeSession = async (family_id: string, password?: string): Promise<{ success: boolean }> => {
-  const res = await axiosLayer.delete<{ success: boolean }>(`/user/me/sessions/${family_id}`, {
-    data: { password }
+export const revokeSession = async (family_id: string, password?: string): Promise<void> => {
+  await axiosLayer.post<ApiEnvelope<never>>("/user/me/sessions/revoke", {
+    family_id,
+    password,
   });
-  return res.data;
+};
+
+export interface SetupStatusResponse {
+  setup_required: boolean;
+}
+
+export const getSetupStatus = async (): Promise<SetupStatusResponse> => {
+  const res = await axiosLayer.get<ApiEnvelope<SetupStatusResponse>>("/setup/status");
+  return unwrap<SetupStatusResponse>(res);
+};
+
+export const setupAdmin = async (username: string, password: string): Promise<{ message: string }> => {
+  const res = await axiosLayer.post<ApiEnvelope<{ message: string }>>(
+    "/setup/admin",
+    { username, password },
+    { headers: { "Content-Type": "application/json" } }
+  );
+  return unwrap<{ message: string }>(res);
 };

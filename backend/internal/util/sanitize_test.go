@@ -105,9 +105,9 @@ func TestSanitizeFilename_ReservedNames(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "reserved")
 
-	result, err := SanitizeFilename(".cloud_reserve")
-	assert.NoError(t, err)
-	assert.Equal(t, ".cloud_reserve", result)
+	_, err = SanitizeFilename(".cloud_reserve")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "reserved")
 }
 
 func TestSanitizeFilename_PathTraversal(t *testing.T) {

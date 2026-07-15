@@ -1,4 +1,5 @@
 import axiosLayer from './axiosLayer';
+import { unwrap, type ApiEnvelope } from './envelope';
 
 export interface PinnedFolder {
   id: number;
@@ -9,8 +10,8 @@ export interface PinnedFolder {
 }
 
 export const getPinnedFolders = async (): Promise<PinnedFolder[]> => {
-  const rs = await axiosLayer.get<{ pins: PinnedFolder[] }>('/user/pins');
-  return rs.data.pins;
+  const rs = await axiosLayer.get<ApiEnvelope<{ pins: PinnedFolder[] }>>('/user/pins');
+  return unwrap<{ pins: PinnedFolder[] }>(rs).pins;
 };
 
 export const addPinnedFolder = async (path: string): Promise<void> => {

@@ -13,6 +13,9 @@ frontend/dist
 # Binaries (large, not needed in build context)
 main
 server
+backend/main
+backend/server
 # Runtime data
 db/
+backend/db/
 

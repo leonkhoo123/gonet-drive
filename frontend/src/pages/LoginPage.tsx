@@ -6,14 +6,14 @@ import {
   Card,
   CardContent,
 } from '@/components/ui/card';
-import { login, verifyMfa, setupMfa, enableMfa, checkAuthStatus } from '@/api/api-auth';
+import { login, verifyMfa, verifyMfaRecovery, setupMfa, enableMfa, checkAuthStatus } from '@/api/api-auth';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import VersionTag from '@/components/custom/versionTag';
 import OtpInput from 'react-otp-input';
 import { QRCodeSVG } from 'qrcode.react';
 import axios from 'axios';
-import { Eye, EyeOff, ArrowRight, Shield, Fingerprint, User, Lock, Loader2, Sun, Moon } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, Shield, Fingerprint, User, Lock, Loader2, Sun, Moon, Copy, Check, KeyRound } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { useTheme } from '@/components/theme-provider';
 
@@ -33,6 +33,13 @@ const LoginPage: React.FC = () => {
   const [mfaCode, setMfaCode] = useState('');
   const [qrUrl, setQrUrl] = useState('');
   const [setupSecret, setSetupSecret] = useState('');
+  const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
+  const [recoveryCode, setRecoveryCode] = useState('');
+  const [useRecoveryCode, setUseRecoveryCode] = useState(false);
+  const [showRecoveryCodes, setShowRecoveryCodes] = useState(false);
+  const [secretCopied, setSecretCopied] = useState(false);
+  const [showSecret, setShowSecret] = useState(false);
+  const [recoveryCodesCopied, setRecoveryCodesCopied] = useState(false);
   const [serverName, setServerName] = useState('GoNet Drive');
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState<Step>('login');
@@ -77,19 +84,34 @@ const LoginPage: React.FC = () => {
 
   const resetToLogin = useCallback(() => {
     setMfaCode('');
+    setRecoveryCode('');
+    setUseRecoveryCode(false);
+    setShowRecoveryCodes(false);
+    setRecoveryCodes([]);
     transitionTo('login');
   }, [transitionTo]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('mfa_setup_required') === 'true') {
-      transitionTo('mfaSetup');
-      setMfaCode('');
-      setupMfa().then(setupRes => {
-        setQrUrl(setupRes.url);
-        setSetupSecret(setupRes.secret);
-      }).catch(() => {
-        toast.error("Failed to load MFA setup details");
+      checkAuthStatus().then(() => {
+        void navigate("/home", { replace: true });
+      }).catch((err: unknown) => {
+        const isMfaSetupPending = axios.isAxiosError(err)
+          && err.response?.status === 403
+          && (err.response.data as { error?: string } | undefined)?.error === 'mfa_setup_required';
+        if (!isMfaSetupPending) {
+          void navigate('/login', { replace: true });
+          return;
+        }
+        transitionTo('mfaSetup');
+        setMfaCode('');
+        setupMfa().then(setupRes => {
+          setQrUrl(setupRes.url);
+          setSetupSecret(setupRes.secret);
+        }).catch(() => {
+          toast.error("Failed to load MFA setup details");
+        });
       });
     } else {
       checkAuthStatus().then(() => {
@@ -105,7 +127,7 @@ const LoginPage: React.FC = () => {
     setIsLoading(true);
     try {
       const res = await login(username, password);
-      if (res.mfa_required) {
+      if (res.auth_status === "mfa_required") {
         setMfaCode('');
         transitionTo('mfa');
         toast.info("Enter your 2FA code to continue.");
@@ -155,9 +177,15 @@ const LoginPage: React.FC = () => {
     if (mfaCode.length !== 6) return;
     setIsLoading(true);
     try {
-      await enableMfa(mfaCode);
-      toast.success("MFA Setup Successful! Welcome");
-      void navigate("/home");
+      const result = await enableMfa(mfaCode);
+      if (result.recovery_codes.length > 0) {
+        setRecoveryCodes(result.recovery_codes);
+        setShowRecoveryCodes(true);
+        toast.success("MFA enabled! Save your recovery code below.");
+      } else {
+        toast.success("MFA Setup Successful! Welcome");
+        void navigate("/home");
+      }
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         toast.error((err.response?.data as { error?: string } | undefined)?.error ?? "Invalid MFA Code for setup");
@@ -169,10 +197,62 @@ const LoginPage: React.FC = () => {
     }
   };
 
+  const handleRecoverySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!recoveryCode.trim()) return;
+    setIsLoading(true);
+    try {
+      await verifyMfaRecovery(recoveryCode.trim());
+      toast.success("Recovery successful! Please set up MFA on your new device.");
+      transitionTo('mfaSetup');
+      setMfaCode('');
+      const setupRes = await setupMfa();
+      setQrUrl(setupRes.url);
+      setSetupSecret(setupRes.secret);
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        toast.error((err.response?.data as { error?: string } | undefined)?.error ?? "Invalid recovery code");
+      } else {
+        toast.error("Invalid recovery code");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRecoveryCodesDone = () => {
+    setShowRecoveryCodes(false);
+    setRecoveryCodes([]);
+    void navigate("/home");
+  };
+
   const handleUsernameKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && passwordRef.current) {
       e.preventDefault();
       passwordRef.current.focus();
+    }
+  };
+
+  const handleCopySecret = async () => {
+    try {
+      await navigator.clipboard.writeText(setupSecret);
+      setSecretCopied(true);
+      toast.success("Secret key copied");
+      setTimeout(() => { setSecretCopied(false); }, 2000);
+    } catch {
+      toast.error("Failed to copy");
+    }
+  };
+
+  const handleCopyRecoveryCodes = async () => {
+    const text = `Recovery Code — Keep this in a safe place.\nIt can be used once to recover your account if you lose access to your authenticator app.\n\n${recoveryCodes[0]}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setRecoveryCodesCopied(true);
+      toast.success("Recovery code copied");
+      setTimeout(() => { setRecoveryCodesCopied(false); }, 2000);
+    } catch {
+      toast.error("Failed to copy");
     }
   };
 
@@ -189,6 +269,16 @@ const LoginPage: React.FC = () => {
       title: 'Set Up Two-Factor Auth',
       subtitle: 'Scan the QR code with your authenticator app, then enter the code.',
     },
+  };
+
+  const getCurrentTitle = () => {
+    if (step === 'mfaSetup' && showRecoveryCodes) {
+      return { title: 'Recovery Code', subtitle: 'Save this code in a safe place. It can be used once to recover your account if you lose access to your authenticator app.' };
+    }
+    if (step === 'mfa' && useRecoveryCode) {
+      return { title: 'Account Recovery', subtitle: 'Enter your recovery code to regain access.' };
+    }
+    return stepTitles[step];
   };
 
   return (
@@ -285,14 +375,14 @@ const LoginPage: React.FC = () => {
             key={`title-${step}`}
             className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground animate-in fade-in slide-in-from-bottom-2 duration-200"
           >
-            {stepTitles[step].title}
+            {getCurrentTitle().title}
           </h2>
-          {stepTitles[step].subtitle && (
+          {getCurrentTitle().subtitle && (
             <p
               key={`sub-${step}`}
               className="text-base sm:text-sm text-muted-foreground animate-in fade-in slide-in-from-bottom-2 duration-200"
             >
-              {stepTitles[step].subtitle}
+              {getCurrentTitle().subtitle}
             </p>
           )}
         </div>
@@ -365,7 +455,7 @@ const LoginPage: React.FC = () => {
             )}
 
             {/* ---- MFA VERIFY FORM ---- */}
-            {step === 'mfa' && (
+            {step === 'mfa' && !useRecoveryCode && (
               <form ref={mfaFormRef} onSubmit={(e) => { void handleMfaSubmit(e); }} className="flex flex-col items-center">
 
                 <div className="flex justify-center w-full">
@@ -402,14 +492,63 @@ const LoginPage: React.FC = () => {
                     'Verify'
                   )}
                 </Button>
+                <button
+                  type="button"
+                  className="text-sm text-muted-foreground hover:text-foreground underline mt-4 transition-colors"
+                  onClick={() => { setUseRecoveryCode(true); setMfaCode(''); }}
+                >
+                  Use a recovery code instead
+                </button>
                 <Button type="button" variant="ghost" className="w-full rounded-xl mt-2" onClick={resetToLogin}>
                   Back
                 </Button>
               </form>
             )}
 
+            {/* ---- RECOVERY CODE LOGIN FORM ---- */}
+            {step === 'mfa' && useRecoveryCode && (
+              <form onSubmit={(e) => { void handleRecoverySubmit(e); }} className="flex flex-col items-center">
+                <div className="w-full space-y-2 mb-6">
+                  <Label htmlFor="recovery_code" className="text-sm font-medium">Recovery Code</Label>
+                  <Input
+                    id="recovery_code"
+                    type="text"
+                    placeholder="XXXX-XXXX-XXXX-XXXX-XXXX"
+                    value={recoveryCode}
+                    onChange={(e) => { setRecoveryCode(e.target.value); }}
+                    className="h-11 rounded-xl font-mono text-center text-lg tracking-widest"
+                    autoFocus
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full h-11 rounded-xl font-medium"
+                  disabled={!recoveryCode.trim() || isLoading}
+                >
+                  {isLoading ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Verifying...
+                    </span>
+                  ) : (
+                    'Recover Account'
+                  )}
+                </Button>
+                <button
+                  type="button"
+                  className="text-sm text-muted-foreground hover:text-foreground underline mt-4 transition-colors"
+                  onClick={() => { setUseRecoveryCode(false); setRecoveryCode(''); }}
+                >
+                  Back to authenticator code
+                </button>
+                <Button type="button" variant="ghost" className="w-full rounded-xl mt-2" onClick={resetToLogin}>
+                  Back to Login
+                </Button>
+              </form>
+            )}
+
             {/* ---- MFA SETUP FORM ---- */}
-            {step === 'mfaSetup' && (
+            {step === 'mfaSetup' && !showRecoveryCodes && (
               <form ref={mfaSetupFormRef} onSubmit={(e) => { void handleMfaSetupSubmit(e); }} className="flex flex-col items-center">
 
                 <div className="text-center text-base text-muted-foreground mb-4">
@@ -422,8 +561,44 @@ const LoginPage: React.FC = () => {
                   </div>
                 )}
 
-                <div className="text-center text-xs font-mono bg-muted p-2.5 rounded-xl w-full break-all mb-5">
-                  {setupSecret}
+                <div className="w-full mb-5">
+                  <button
+                    type="button"
+                    onClick={() => { setShowSecret(!showSecret); }}
+                    className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-muted/60 hover:bg-muted ring-1 ring-border/50 transition-all duration-150 group"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <KeyRound className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                      <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
+                        {showSecret ? 'Hide secret key' : 'Show secret key'}
+                      </span>
+                    </div>
+                    <Eye className={`w-4 h-4 text-muted-foreground transition-all duration-200 ${showSecret ? 'hidden' : 'block'}`} />
+                    <EyeOff className={`w-4 h-4 text-muted-foreground transition-all duration-200 ${showSecret ? 'block' : 'hidden'}`} />
+                  </button>
+                  {showSecret && (
+                    <div className="mt-2 px-3.5 py-3 rounded-xl bg-muted/40 ring-1 ring-border/50 animate-in fade-in slide-in-from-top-1 duration-150">
+                      <div className="flex items-center justify-between gap-2">
+                        <code className="text-xs font-mono text-foreground/80 break-all select-all leading-relaxed flex-1">{setupSecret}</code>
+                        <button
+                          type="button"
+                          onClick={() => { void handleCopySecret(); }}
+                          className="shrink-0 p-1.5 rounded-lg hover:bg-background text-muted-foreground hover:text-foreground transition-all duration-150"
+                          title="Copy to clipboard"
+                        >
+                          {secretCopied ? (
+                            <Check className="w-4 h-4 text-green-500" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground/70 mt-2 flex items-center gap-1.5">
+                        <Shield className="w-3 h-3 shrink-0" />
+                        Never share this key with anyone
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <p className="text-base text-muted-foreground mb-4">Enter the 6-digit code shown in your app:</p>
@@ -466,6 +641,45 @@ const LoginPage: React.FC = () => {
                   Back
                 </Button>
               </form>
+            )}
+
+            {/* ---- RECOVERY CODES DISPLAY ---- */}
+            {step === 'mfaSetup' && showRecoveryCodes && (
+              <div className="flex flex-col items-center">
+                <div className="w-full bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-3 mb-4 text-sm text-amber-800 dark:text-amber-200">
+                  Store this code securely. If you lose access to your authenticator app, you can use it once to recover your account.
+                </div>
+                <div className="w-full bg-muted font-mono text-sm py-3 px-4 rounded-xl text-center tracking-widest select-all cursor-pointer hover:bg-muted/80 transition-colors mb-4">
+                  {recoveryCodes[0]}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { void handleCopyRecoveryCodes(); }}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 mb-4 rounded-xl bg-muted/60 hover:bg-muted ring-1 ring-border/50 text-sm text-muted-foreground hover:text-foreground transition-all duration-150"
+                >
+                  {recoveryCodesCopied ? (
+                    <>
+                      <Check className="w-4 h-4 text-green-500" />
+                      <span>Copied to clipboard</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4" />
+                      <span>Copy recovery code</span>
+                    </>
+                  )}
+                </button>
+                <Button
+                  type="button"
+                  className="w-full h-11 rounded-xl font-medium"
+                  onClick={handleRecoveryCodesDone}
+                >
+                  I have saved my recovery code
+                </Button>
+                <Button type="button" variant="ghost" className="w-full rounded-xl mt-2" onClick={resetToLogin}>
+                  Back
+                </Button>
+              </div>
             )}
 
           </CardContent>

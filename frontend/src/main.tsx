@@ -6,7 +6,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { loadConfig } from './config.ts'
 
 console.log("Page with profile: ", import.meta.env.VITE_PROFILE)
-if (import.meta.env.VITE_PROFILE !== "prod") {
+if (!import.meta.env.PROD) {
   void import('eruda').then(({ default: eruda }) => { eruda.init(); });
 }
 

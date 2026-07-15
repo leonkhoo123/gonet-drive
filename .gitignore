@@ -4,6 +4,7 @@
 !.env.example
 .DS_Store
 *.sw?
+docs/security/*
 
 # Go
 # Binaries for programs and plugins
@@ -35,7 +36,7 @@ go.work.sum
 !/db/.gitkeep
 /temp_sample/*
 !/temp_sample/.gitkeep
-/ui/dist/
+/backend/ui/dist/
 
 # Logs
 logs/

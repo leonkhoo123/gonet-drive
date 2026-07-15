@@ -34,16 +34,12 @@ interface UserInfo {
   role: string;
   mfa_enabled: boolean;
   mfa_mandatory: boolean;
-  storage_quota: number;
-  failed_attempts: number;
   locked_until?: string;
-  is_super_admin: boolean;
 }
 
 const AdminPage = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'configs' | 'users'>('configs');
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [currentUsername, setCurrentUsername] = useState('');
   
   // Users state
@@ -69,7 +65,6 @@ const AdminPage = () => {
 
   useEffect(() => {
     getMe().then(res => {
-      setIsSuperAdmin(res.is_super_admin);
       setCurrentUsername(res.username);
     }).catch(console.error);
 
@@ -82,8 +77,8 @@ const AdminPage = () => {
 
   const fetchUsers = async () => {
     try {
-      const res = await axiosLayer.get<UserInfo[]>('/user/admin/users');
-      setUsers(res.data);
+      const res = await axiosLayer.get<{ status: string; data: { users: UserInfo[] } }>('/user/admin/users');
+      setUsers(res.data.data.users);
     } catch {
       toast.error('Failed to fetch users');
     }
@@ -97,8 +92,7 @@ const AdminPage = () => {
         username: newUsername,
         password: newPassword,
         role: newRole,
-        mfa_mandatory: newMfaMandatory,
-        storage_quota: 0
+        mfa_mandatory: newMfaMandatory
       });
       toast.success('User created successfully');
       setNewUsername('');
@@ -116,7 +110,7 @@ const AdminPage = () => {
 
   const handleRevoke = async (id: string) => {
     try {
-      await axiosLayer.post(`/user/admin/users/${id}/revoke`);
+      await axiosLayer.post(`/user/admin/users/${id}/revoke-all`);
       toast.success('Sessions revoked successfully');
     } catch {
       toast.error('Failed to revoke sessions');
@@ -524,23 +518,21 @@ const AdminPage = () => {
                     </select>
                   </div>
                   
-                  {isSuperAdmin && (
-                    <div className="space-y-3 flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm md:col-span-2 lg:col-span-2 bg-muted/20">
-                      <div className="space-y-0.5">
-                        <Label className="text-base font-medium">Require MFA</Label>
-                        <p className="text-xs text-muted-foreground">
-                          Force this user to setup Multi-Factor Authentication
-                        </p>
-                      </div>
-                      <Switch 
-                        checked={newMfaMandatory} 
-                        onCheckedChange={setNewMfaMandatory}
-                        className="data-[state=checked]:bg-primary"
-                      />
+                  <div className="space-y-3 flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm md:col-span-2 lg:col-span-2 bg-muted/20">
+                    <div className="space-y-0.5">
+                      <Label className="text-base font-medium">Require MFA</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Force this user to setup Multi-Factor Authentication
+                      </p>
                     </div>
-                  )}
+                    <Switch 
+                      checked={newMfaMandatory} 
+                      onCheckedChange={setNewMfaMandatory}
+                      className="data-[state=checked]:bg-primary"
+                    />
+                  </div>
                   
-                  <div className={`flex justify-end ${isSuperAdmin ? 'md:col-span-2 lg:col-span-1' : 'md:col-span-2 lg:col-span-3'}`}>
+                  <div className="flex justify-end md:col-span-2 lg:col-span-1">
                     <Button 
                       type="submit" 
                       className="w-full md:w-auto bg-primary hover:bg-primary/90 text-primary-foreground"
@@ -581,7 +573,6 @@ const AdminPage = () => {
                             <TableHead className="font-semibold">Username</TableHead>
                             <TableHead className="font-semibold">Role</TableHead>
                             <TableHead className="font-semibold">Security</TableHead>
-                            <TableHead className="font-semibold text-right">Quota</TableHead>
                             <TableHead className="font-semibold text-center">Status</TableHead>
                             <TableHead className="font-semibold text-right">Actions</TableHead>
                           </TableRow>
@@ -604,13 +595,11 @@ const AdminPage = () => {
                               </TableCell>
                               <TableCell>
                                 <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-                                  u.is_super_admin || u.role === 'superadmin' 
-                                    ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' 
-                                    : u.role === 'admin' 
-                                      ? 'bg-primary/10 text-primary'
-                                      : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                                  u.role === 'admin' 
+                                    ? 'bg-primary/10 text-primary'
+                                    : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
                                 }`}>
-                                  {u.is_super_admin ? 'Super Admin' : u.role.charAt(0).toUpperCase() + u.role.slice(1)}
+                                  {u.role.charAt(0).toUpperCase() + u.role.slice(1)}
                                 </span>
                               </TableCell>
                               <TableCell>
@@ -629,9 +618,6 @@ const AdminPage = () => {
                                     {u.mfa_mandatory ? 'Required' : 'Optional'}
                                   </div>
                                 </div>
-                              </TableCell>
-                              <TableCell className="text-right font-mono text-sm">
-                                {u.storage_quota.toLocaleString()}
                               </TableCell>
                               <TableCell className="text-center">
                                 {u.locked_until ? (
@@ -652,7 +638,7 @@ const AdminPage = () => {
                                     variant="outline" 
                                     size="sm" 
                                     onClick={() => { void handleRevoke(u.id); }}
-                                    disabled={u.username === currentUsername || u.is_super_admin || (u.role === 'admin' && !isSuperAdmin) || (u.role === 'superadmin' && !isSuperAdmin)}
+                                    disabled={u.username === currentUsername || u.role === 'admin'}
                                     className="h-8 text-xs px-2.5"
                                     title="Revoke all active sessions for this user"
                                   >
@@ -663,7 +649,7 @@ const AdminPage = () => {
                                     variant="destructive" 
                                     size="sm" 
                                     onClick={() => { void handleDelete(u.id); }}
-                                    disabled={u.username === currentUsername || u.is_super_admin || (u.role === 'admin' && !isSuperAdmin) || (u.role === 'superadmin' && !isSuperAdmin)}
+                                    disabled={u.username === currentUsername}
                                     className="h-8 text-xs px-2.5"
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
@@ -694,17 +680,15 @@ const AdminPage = () => {
                               </div>
                             </div>
                             <span className={`text-xs px-2.5 py-1 rounded-full font-medium shrink-0 ${
-                              u.is_super_admin || u.role === 'superadmin' 
-                                ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' 
-                                : u.role === 'admin' 
-                                  ? 'bg-primary/10 text-primary'
-                                  : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                              u.role === 'admin' 
+                                ? 'bg-primary/10 text-primary'
+                                : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
                             }`}>
-                              {u.is_super_admin ? 'Super Admin' : u.role.charAt(0).toUpperCase() + u.role.slice(1)}
+                              {u.role.charAt(0).toUpperCase() + u.role.slice(1)}
                             </span>
                           </div>
                           
-                          <div className="grid grid-cols-3 gap-1.5 text-sm">
+                          <div className="grid grid-cols-2 gap-1.5 text-sm">
                             <div>
                               <span className="text-xs text-muted-foreground block">MFA</span>
                               <div className="flex items-center gap-1 mt-0.5">
@@ -718,10 +702,6 @@ const AdminPage = () => {
                                 </span>
                               </div>
                               <span className="text-[10px] text-muted-foreground">{u.mfa_mandatory ? 'Required' : 'Optional'}</span>
-                            </div>
-                            <div>
-                              <span className="text-xs text-muted-foreground block">Quota</span>
-                              <span className="font-mono text-sm">{u.storage_quota.toLocaleString()}</span>
                             </div>
                             <div>
                               <span className="text-xs text-muted-foreground block">Status</span>
@@ -744,7 +724,7 @@ const AdminPage = () => {
                               variant="outline" 
                               size="sm" 
                               onClick={() => { void handleRevoke(u.id); }}
-                              disabled={u.username === currentUsername || u.is_super_admin || (u.role === 'admin' && !isSuperAdmin) || (u.role === 'superadmin' && !isSuperAdmin)}
+                              disabled={u.username === currentUsername || u.role === 'admin'}
                               className="h-8 text-xs px-2.5 flex-1"
                             >
                               <KeyRound className="h-3.5 w-3.5 mr-1" />
@@ -754,7 +734,7 @@ const AdminPage = () => {
                               variant="destructive" 
                               size="sm" 
                               onClick={() => { void handleDelete(u.id); }}
-                              disabled={u.username === currentUsername || u.is_super_admin || (u.role === 'admin' && !isSuperAdmin) || (u.role === 'superadmin' && !isSuperAdmin)}
+                              disabled={u.username === currentUsername}
                               className="h-8 text-xs px-2.5 flex-1"
                             >
                               <Trash2 className="h-3.5 w-3.5 mr-1" />

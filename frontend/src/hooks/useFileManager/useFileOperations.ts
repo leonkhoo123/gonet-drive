@@ -167,9 +167,11 @@ export function useFileOperations({
     try {
       setItemsToDelete(null); // close modal immediately
       setIsLoading(true);
-      const sources = Array.from(itemsToDelete).map(name =>
-        currentPath === "/" ? `/${name}` : `${currentPath}/${name}`
-      );
+      const sources = isSingleFile
+        ? ["/"]
+        : Array.from(itemsToDelete).map(name =>
+            currentPath === "/" ? `/${name}` : `${currentPath}/${name}`
+          );
       
       if (currentPath.startsWith("/.cloud_delete") || currentPath === "/.cloud_delete") {
         await deletePermanentFiles(sources);
@@ -210,7 +212,9 @@ export function useFileOperations({
       const oldName = itemToRename;
       setItemToRename(null);
       setIsLoading(true);
-      const source = currentPath === "/" ? `/${oldName}` : `${currentPath}/${oldName}`;
+      const source = isSingleFile
+        ? "/"
+        : currentPath === "/" ? `/${oldName}` : `${currentPath}/${oldName}`;
       await renameFile(source, newName);
       setSelectedItems(new Set());
       await handleRefresh();

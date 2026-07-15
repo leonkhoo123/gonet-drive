@@ -2,6 +2,7 @@ import axiosLayer from './axiosLayer';   // axios instance WITHOUT token
 import axios from 'axios';
 import { generateOpId } from "../utils/id";
 import { getConfig } from '../config';
+import { unwrap, type ApiEnvelope } from './envelope';
 
 export let isShareMode = false;
 export const setShareMode = (val: boolean) => { isShareMode = val; };
@@ -58,12 +59,12 @@ export const fetchDirList = async (path = "/", showHidden = false, sort?: string
   if (order) params.order = order;
 
   const endpoint = isShareMode ? "/share/file/list" : "/user/files/file-list";
-  const rs = await axiosLayer.get(endpoint, {
+  const rs = await axiosLayer.get<ApiEnvelope<ItemsResponse>>(endpoint, {
     params,
     headers: { "Accept": "application/json" },
   });
 
-  return rs.data as ItemsResponse;
+  return unwrap<ItemsResponse>(rs);
 };
 
 export const copyFiles = async (sources: string[], destDir: string, opId: string = generateOpId()): Promise<void> => {
@@ -149,13 +150,13 @@ export interface CheckDuplicatesResponse {
 
 export const checkDuplicates = async (sources: string[], destDir: string): Promise<CheckDuplicatesResponse> => {
   if (isShareMode) return { hasDuplicates: false, duplicates: [] };
-  const rs = await axiosLayer.post("/user/files/check-duplicates", {
+  const rs = await axiosLayer.post<ApiEnvelope<CheckDuplicatesResponse>>("/user/files/check-duplicates", {
     sources,
     destDir
   }, {
     headers: { "Accept": "application/json" },
   });
-  return rs.data as CheckDuplicatesResponse;
+  return unwrap<CheckDuplicatesResponse>(rs);
 };
 
 export interface UploadFileDetailReq {
@@ -166,13 +167,13 @@ export interface UploadFileDetailReq {
 
 export const checkUploadDuplicates = async (files: UploadFileDetailReq[], destDir: string): Promise<CheckDuplicatesResponse> => {
   if (isShareMode) return { hasDuplicates: false, duplicates: [] };
-  const rs = await axiosLayer.post("/user/files/check-upload-duplicates", {
+  const rs = await axiosLayer.post<ApiEnvelope<CheckDuplicatesResponse>>("/user/files/check-upload-duplicates", {
     files,
     destDir
   }, {
     headers: { "Accept": "application/json" },
   });
-  return rs.data as CheckDuplicatesResponse;
+  return unwrap<CheckDuplicatesResponse>(rs);
 };
 
 export interface PropertiesContains {
@@ -193,12 +194,12 @@ export interface PropertiesResponse {
 
 export const getFileProperties = async (sources: string[]): Promise<PropertiesResponse> => {
   const endpoint = isShareMode ? "/share/file/properties" : "/user/files/properties";
-  const rs = await axiosLayer.post(endpoint, {
+  const rs = await axiosLayer.post<ApiEnvelope<PropertiesResponse>>(endpoint, {
     sources
   }, {
     headers: { "Accept": "application/json" },
   });
-  return rs.data as PropertiesResponse;
+  return unwrap<PropertiesResponse>(rs);
 };
 
 export const cancelOperation = async (opId: string, cancel = true): Promise<void> => {
@@ -360,7 +361,7 @@ export const uploadFile = async (
       formData.append("chunk", chunkBlob, filename);
 
       const endpoint = isShareMode ? "/share/file/upload-chunk" : "/user/files/upload-chunk";
-      const rs = await axiosLayer.post(endpoint, formData, {
+      const rs = await axiosLayer.post<ApiEnvelope<unknown>>(endpoint, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -390,7 +391,7 @@ export const uploadFile = async (
       });
 
       loadedBytes += chunkBlob.size;
-      lastResponse = rs.data as unknown;
+      lastResponse = unwrap<unknown>(rs);
     }
   } catch (error: unknown) {
     if (axios.isCancel(error) || (error instanceof Error && error.message === "Upload cancelled")) {

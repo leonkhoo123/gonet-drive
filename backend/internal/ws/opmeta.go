@@ -27,3 +27,12 @@ func BroadcastAndCache(msg OperationMessage) {
 		SetOpMeta(msg.OpId, msg)
 	}
 }
+
+// BroadcastAndCacheToUser sends a message only to the specified user's WebSocket connections
+// and caches it for late-joining clients.
+func BroadcastAndCacheToUser(username string, msg OperationMessage) {
+	BroadcastToUser(username, msg)
+	if msg.OpId != "" {
+		SetOpMeta(msg.OpId, msg)
+	}
+}

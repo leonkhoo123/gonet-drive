@@ -1,4 +1,5 @@
 import axios from "@/api/axiosLayer";
+import { unwrap, type ApiEnvelope } from "@/api/envelope";
 
 export interface ConfigItem {
   id: number;
@@ -10,14 +11,14 @@ export interface ConfigItem {
 }
 
 export const getConfigs = async (): Promise<ConfigItem[]> => {
-  const response = await axios.get<ConfigItem[]>("/user/config");
-  return response.data;
+  const response = await axios.get<ApiEnvelope<{ configs: ConfigItem[] }>>("/user/config");
+  return unwrap<{ configs: ConfigItem[] }>(response).configs;
 };
 
 export const updateConfig = async (
   id: number,
   data: { config_value?: string | null; is_enabled?: boolean; is_deleted?: boolean }
-): Promise<ConfigItem> => {
-  const response = await axios.put<ConfigItem>(`/user/config/${String(id)}`, data);
-  return response.data;
+): Promise<void> => {
+  const response = await axios.put<ApiEnvelope<unknown>>(`/user/config/${String(id)}`, data);
+  unwrap<unknown>(response);
 };
