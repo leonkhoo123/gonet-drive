@@ -73,8 +73,8 @@ require (
 )
 
 require (
-	github.com/leonkhoo123/gonet-auth v1.0.2
-	github.com/leonkhoo123/gonet-auth/adapters/gin v1.0.2
+	github.com/leonkhoo123/gonet-auth v1.0.3
+	github.com/leonkhoo123/gonet-auth/adapters/gin v1.0.3
 )
 
 replace github.com/leonkhoo123/gonet-auth => ../../gonet-auth

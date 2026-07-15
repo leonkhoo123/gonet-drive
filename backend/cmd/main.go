@@ -140,7 +140,7 @@ func main() {
 	authCfg := gonetauth.NewDefaultConfig().
 		WithSecretStore(&config.SQLiteSecretStore{DB: config.DB}).
 		WithSecureMode(cfg.Auth.SecureMode).
-		WithMFA("GoNet Drive", 5, 15*time.Minute).
+		WithMFA(cfg.Defaults.ServiceName, 5, 15*time.Minute).
 		WithJWTOff(cfg.Auth.AppJwt == "OFF")
 	// Same-origin default is SameSiteStrict. If the frontend is served from a
 	// different origin in prod, add .WithSameSite(http.SameSiteNoneMode).
