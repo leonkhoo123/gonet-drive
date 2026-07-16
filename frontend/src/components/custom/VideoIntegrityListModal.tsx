@@ -75,12 +75,12 @@ export function VideoIntegrityListModal({ open, onOpenChange }: Props) {
   };
 
   const fileName = (entry: VideoIntegrityEntry) => {
-    const parts = entry.file_path.replace(/\\/g, "/").split("/");
-    return parts[parts.length - 1] || entry.file_path;
+    const parts = entry.relative_path.replace(/\\/g, "/").split("/");
+    return parts[parts.length - 1] || entry.relative_path;
   };
 
   const parentPath = (entry: VideoIntegrityEntry) => {
-    const parts = entry.file_path.replace(/\\/g, "/").split("/");
+    const parts = entry.relative_path.replace(/\\/g, "/").split("/");
     parts.pop();
     return parts.join("/") + "/";
   };

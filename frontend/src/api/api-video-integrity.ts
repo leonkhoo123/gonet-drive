@@ -3,7 +3,7 @@ import { unwrap, type ApiEnvelope } from './envelope';
 
 export interface VideoIntegrityEntry {
   hash: string;
-  file_path: string;
+  file_path?: string;
   relative_path: string;
   issue_type: string;
   mime_codec_string: string;
