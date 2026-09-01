@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	authgin "github.com/leonkhoo123/gonet-auth/adapters/gin"
 	"github.com/gorilla/websocket"
 )
 
@@ -111,6 +112,20 @@ func BroadcastToUser(username string, message interface{}) {
 	}
 }
 
+// resolveUsername determines the identity used for per-user broadcasts.
+// Authenticated user connections carry authgin.KeyUsername, while share
+// connections carry share_id (matching the "share:<id>" owner used by the
+// share file service). Falls back to the legacy "username" context key.
+func resolveUsername(c *gin.Context) string {
+	if username := c.GetString(authgin.KeyUsername); username != "" {
+		return username
+	}
+	if shareID := c.GetString("share_id"); shareID != "" {
+		return "share:" + shareID
+	}
+	return c.GetString("username")
+}
+
 // WsHandler handles the websocket handshake and manages real-time operation progress.
 // @Summary      WebSocket Connection
 // @Description  Establish a WebSocket connection for real-time file operation progress updates.
@@ -126,7 +141,7 @@ func WsHandler(c *gin.Context) {
 		return
 	}
 
-	username := c.GetString("username")
+	username := resolveUsername(c)
 
 	Manager.register <- &wsClient{conn: conn, username: username}
 
