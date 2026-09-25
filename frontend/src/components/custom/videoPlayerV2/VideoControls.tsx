@@ -15,7 +15,11 @@ import {
   RotateCw,
   ChevronLeft,
   Pencil,
+  ListVideo,
+  Shuffle,
+  CircleOff,
 } from "lucide-react";
+import type { AutoPlayMode } from "@/hooks/useVideoPlayerV2/useVideoAutoPlay";
 import type { VideoControlsProps } from "./types";
 
 /** Selectable playback speeds, ordered fast -> slow (left -> right). */
@@ -23,16 +27,29 @@ const SPEEDS = [2, 1.5, 1.25, 1, 0.75, 0.5, 0.25] as const;
 
 /** Shared look for the control column, derived from the speed panel. */
 const GLASS =
-  "border border-white/20 bg-black/60 backdrop-blur-sm text-white hover:bg-black/70";
+  "border border-white/20 bg-black/60 backdrop-blur-sm text-white hover:bg-black/70 hover:text-white dark:hover:bg-black/70";
 /** Same glass treatment, tinted for the rename action. */
 const GLASS_GREEN =
-  "border border-white/20 bg-green-600/50 backdrop-blur-sm text-white hover:bg-green-600/70";
+  "border border-white/20 bg-green-600/50 backdrop-blur-sm text-white hover:bg-green-600/70 hover:text-white dark:hover:bg-green-600/70";
 /** Same glass treatment, tinted for the disqualified action. */
 const GLASS_RED =
-  "border border-white/20 bg-red-600/50 backdrop-blur-sm text-white hover:bg-red-600/70";
+  "border border-white/20 bg-red-600/50 backdrop-blur-sm text-white hover:bg-red-600/70 hover:text-white dark:hover:bg-red-600/70";
 /** Same glass treatment, tinted for the rotate action. */
 const GLASS_YELLOW =
-  "border border-white/20 bg-yellow-500/50 backdrop-blur-sm text-white hover:bg-yellow-500/70";
+  "border border-white/20 bg-yellow-500/50 backdrop-blur-sm text-white hover:bg-yellow-500/70 hover:text-white dark:hover:bg-yellow-500/70";
+/** Same glass treatment, tinted for shuffle mode. */
+const GLASS_BLUE =
+  "border border-white/20 bg-blue-600/50 backdrop-blur-sm text-white hover:bg-blue-600/70 hover:text-white dark:hover:bg-blue-600/70";
+
+/** Per-mode look and copy for the cycling auto-play button. */
+const AUTO_PLAY_LOOK: Record<
+  AutoPlayMode,
+  { label: string; icon: typeof ListVideo; className: string }
+> = {
+  off: { label: "Off", icon: CircleOff, className: GLASS },
+  auto: { label: "Auto", icon: ListVideo, className: GLASS_GREEN },
+  shuffle: { label: "Shuffle", icon: Shuffle, className: GLASS_BLUE },
+};
 
 /** Which collapsible flyout is currently open. */
 type Panel = "actions" | "speed" | null;
@@ -43,6 +60,9 @@ export function VideoControls({
   isPlaying,
   playbackRate,
   hasEvents,
+  autoPlayMode,
+  hasNext,
+  shuffleRemaining,
   onPressStart,
   onPressEnd,
   onHoverStart,
@@ -51,6 +71,7 @@ export function VideoControls({
   onPrevEvent,
   onNextEvent,
   onTogglePlay,
+  onCycleAutoPlayMode,
   onChangeSpeed,
   onOpenRename,
   onToggleDisqualified,
@@ -111,6 +132,18 @@ export function VideoControls({
     onChangeSpeed(SPEEDS[values[0]]);
   };
 
+  const autoPlayLook = AUTO_PLAY_LOOK[autoPlayMode];
+  const autoPlayTitle =
+    autoPlayMode === "off"
+      ? "Auto-play next video: off"
+      : autoPlayMode === "auto"
+        ? hasNext
+          ? "Auto-play next video: on"
+          : "Auto-play: on (last video)"
+        : shuffleRemaining > 0
+          ? `Shuffle: ${String(shuffleRemaining)} left`
+          : "Shuffle: complete";
+
   return (
     <div
       className={`absolute right-0 top-0 bottom-12 flex flex-col p-1 lg:p-2 transition-opacity duration-300 ${
@@ -123,7 +156,21 @@ export function VideoControls({
       onTouchStart={onPressStart}
       onTouchEnd={onPressEnd}
     >
-      <div className="m-auto flex flex-col gap-1 lg:gap-2 h-full max-h-[100%] overflow-y-auto scrollbar-hide w-20 lg:w-24 py-2 justify-center">
+      {/* Auto-play / shuffle toggle pinned to the top of the column */}
+      <div className="flex shrink-0 justify-center">
+        <Button
+          variant="ghost"
+          onClick={onCycleAutoPlayMode}
+          aria-label={`Play mode: ${autoPlayLook.label}. Click to change.`}
+          title={autoPlayTitle}
+          className={`${autoPlayLook.className} w-20 lg:w-24 h-10 px-1 text-xs`}
+        >
+          <autoPlayLook.icon className="h-4 w-4 mr-1" />
+          {autoPlayLook.label}
+        </Button>
+      </div>
+
+      <div className="flex-1 min-h-0 flex flex-col gap-1 lg:gap-2 overflow-y-auto scrollbar-hide w-20 lg:w-24 py-2 justify-center">
         {/* previous detected event - only rendered when metadata exists */}
         {hasEvents && (
           <Button

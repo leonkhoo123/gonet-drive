@@ -49,6 +49,15 @@ export function useVideoRename(fileName: string) {
     setDisqualified(!disqualified);
   };
 
+  /** Clear every mark/dialog state — used when the player switches clips. */
+  const resetRename = useCallback(() => {
+    setNewname("");
+    setisNewname(false);
+    setDisqualified(false);
+    setShowRenameModal(false);
+    setTempName("");
+  }, []);
+
   return {
     newName,
     isNewName,
@@ -61,5 +70,6 @@ export function useVideoRename(fileName: string) {
     handleRenameCancel,
     openRenameModal,
     handleDisqualified,
+    resetRename,
   };
 }

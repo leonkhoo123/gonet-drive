@@ -1,5 +1,6 @@
 import type { RefObject, TouchEvent } from "react";
 import type { FileInterface } from "@/api/api-file";
+import type { AutoPlayMode } from "@/hooks/useVideoPlayerV2/useVideoAutoPlay";
 import type { EventSpan } from "@/utils/videoPlayerV2Events";
 
 export interface VideoPlayerModalProps {
@@ -12,6 +13,10 @@ export interface VideoPlayerModalProps {
     newName: string,
     rotation: number
   ) => void;
+  /** Video files of the current folder, in list order (for auto-play). */
+  videoFiles?: FileInterface[];
+  /** Swap the open clip without closing the player (auto-play). */
+  onSelectVideo?: (file: FileInterface) => void;
 }
 
 export interface VideoSurfaceProps {
@@ -58,6 +63,9 @@ export interface VideoControlsProps {
   isPlaying: boolean;
   playbackRate: number;
   hasEvents: boolean;
+  autoPlayMode: AutoPlayMode;
+  hasNext: boolean;
+  shuffleRemaining: number;
   onPressStart: () => void;
   onPressEnd: () => void;
   onHoverStart: () => void;
@@ -66,6 +74,7 @@ export interface VideoControlsProps {
   onPrevEvent: () => void;
   onNextEvent: () => void;
   onTogglePlay: () => void;
+  onCycleAutoPlayMode: () => void;
   onChangeSpeed: (rate: number) => void;
   onOpenRename: () => void;
   onToggleDisqualified: () => void;

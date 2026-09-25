@@ -7,6 +7,8 @@ import { useVideoSwipeSeek } from "@/hooks/useVideoPlayerV2/useVideoSwipeSeek";
 import { useVideoControlsVisibility } from "@/hooks/useVideoPlayerV2/useVideoControlsVisibility";
 import { useVideoRename } from "@/hooks/useVideoPlayerV2/useVideoRename";
 import { useVideoKeyboard } from "@/hooks/useVideoPlayerV2/useVideoKeyboard";
+import { useVideoAutoPlay } from "@/hooks/useVideoPlayerV2/useVideoAutoPlay";
+import type { FileInterface } from "@/api/api-file";
 import type { VideoPlayerModalProps } from "./videoPlayerV2/types";
 import { VideoSurface } from "./videoPlayerV2/VideoSurface";
 import { VideoDragDelta } from "./videoPlayerV2/VideoDragDelta";
@@ -19,6 +21,8 @@ const VideoPlayerModalV2 = ({
   file,
   isOpen,
   onClose,
+  videoFiles = [],
+  onSelectVideo,
 }: VideoPlayerModalProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -69,11 +73,44 @@ const VideoPlayerModalV2 = ({
     handleRenameCancel,
     openRenameModal,
     handleDisqualified,
+    resetRename,
   } = useVideoRename(file.name);
 
   /* -------------------- rotation -------------------- */
   const [rotation, setRotation] = useState(0);
   const [isRotation, setisRotation] = useState(false);
+
+  /* -------------------- auto-play -------------------- */
+  const handleSelectVideo = useCallback(
+    (next: FileInterface) => {
+      onSelectVideo?.(next);
+    },
+    [onSelectVideo]
+  );
+
+  const hasUnsavedMarks =
+    disqualified || isNewName || rotation !== 0 || showRenameModal;
+
+  const {
+    mode: autoPlayMode,
+    cycleMode: cycleAutoPlayMode,
+    hasNext,
+    shuffleRemaining,
+  } = useVideoAutoPlay({
+    isOpen,
+    videoRef,
+    filePath: file.path,
+    videoFiles,
+    onSelectVideo: handleSelectVideo,
+    holdAdvance: hasUnsavedMarks,
+  });
+
+  // Switching clips (auto-play) must start the next one from a clean slate.
+  useEffect(() => {
+    setRotation(0);
+    setisRotation(false);
+    resetRename();
+  }, [file.path, resetRename]);
 
   useForceDarkStatusBar(isOpen);
 
@@ -261,6 +298,9 @@ const VideoPlayerModalV2 = ({
         isPlaying={isPlaying}
         playbackRate={playbackRate}
         hasEvents={events.length > 0}
+        autoPlayMode={autoPlayMode}
+        hasNext={hasNext}
+        shuffleRemaining={shuffleRemaining}
         onPressStart={handlePressStart}
         onPressEnd={handlePressEnd}
         onHoverStart={handleHoverStart}
@@ -269,6 +309,7 @@ const VideoPlayerModalV2 = ({
         onPrevEvent={prevEvent}
         onNextEvent={nextEvent}
         onTogglePlay={togglePlay}
+        onCycleAutoPlayMode={cycleAutoPlayMode}
         onChangeSpeed={changeSpeed}
         onOpenRename={openRenameModal}
         onToggleDisqualified={handleDisqualified}

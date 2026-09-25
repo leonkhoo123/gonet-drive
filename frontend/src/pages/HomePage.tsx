@@ -40,6 +40,7 @@ export default function HomePage() {
     isLoading,
     error,
     selectedVideo,
+    setSelectedVideo,
     selectedPhoto,
     setSelectedPhoto,
     selectedMusic,
@@ -127,6 +128,12 @@ export default function HomePage() {
     ? (currentPath === '/' ? `/${selectedFolderItem.name}` : `${currentPath}/${selectedFolderItem.name}`)
     : null;
   const isPinned = selectedFolderPath ? pinnedPaths.has(selectedFolderPath) : false;
+
+  // Video files of the current folder, in the list's current sort order, used
+  // by the player's auto-play to advance to the next clip.
+  const videoFiles = (items?.items ?? []).filter(
+    (item) => item.media_type === "video"
+  );
 
   useEffect(() => {
     const handleResize = () => {
@@ -324,6 +331,8 @@ export default function HomePage() {
             <VideoPlayerModalV2
               file={selectedVideo}
               isOpen={!!selectedVideo}
+              videoFiles={videoFiles}
+              onSelectVideo={setSelectedVideo}
               onClose={(...args: [boolean, string, boolean, string, number]) => { void handlePlayerClose(...args); }}
             />
           ) : (

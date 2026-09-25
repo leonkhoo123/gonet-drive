@@ -44,12 +44,18 @@ export function useVideoPlayback(
       const end = video.buffered.end(video.buffered.length - 1);
       setBufferedProgress((end / video.duration) * 100);
     };
+    // Reaching the end pauses the element, but `pause` is not guaranteed to
+    // fire, so mirror the playing state here explicitly.
+    const onEnded = () => {
+      setIsPlaying(false);
+    };
 
     video.addEventListener("play", onPlay);
     video.addEventListener("pause", onPause);
     video.addEventListener("loadedmetadata", onLoaded);
     video.addEventListener("timeupdate", onTime);
     video.addEventListener("progress", onProgress);
+    video.addEventListener("ended", onEnded);
 
     return () => {
       video.removeEventListener("play", onPlay);
@@ -57,6 +63,7 @@ export function useVideoPlayback(
       video.removeEventListener("loadedmetadata", onLoaded);
       video.removeEventListener("timeupdate", onTime);
       video.removeEventListener("progress", onProgress);
+      video.removeEventListener("ended", onEnded);
     };
   }, [videoRef]);
 
