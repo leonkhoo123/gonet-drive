@@ -6,12 +6,15 @@ import {
   Zap,
   SkipBack,
   SkipForward,
+  ChevronsLeft,
+  ChevronsRight,
   LogOut,
   TextCursorInput,
   ListX,
   RotateCw,
 } from "lucide-react";
 import type { FileInterface } from "@/api/api-file";
+import axiosLayer from "@/api/axiosLayer";
 
 import { useDialogHistory } from "@/hooks/useDialogHistory";
 import { useForceDarkStatusBar } from "@/hooks/useForceDarkStatusBar";
@@ -30,6 +33,53 @@ interface VideoPlayerModalProps {
 
 const CONTROL_TIMEOUT = 2500;
 
+/** A detected event as an absolute [start, end] pair in seconds. */
+type EventSpan = [number, number];
+
+const METADATA_DIRNAME = "vid_metadata";
+
+/**
+ * Read the event array out of a timestamps JSON payload.
+ * Mirrors the tolerant parsing of the Python player: accepts
+ * `{"events": [...]}`, the compact `{"e": [...]}`, or a bare array.
+ */
+const extractEventArray = (data: unknown): unknown[] => {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === "object") {
+    const obj = data as Record<string, unknown>;
+    if (Array.isArray(obj.events)) return obj.events;
+    if (Array.isArray(obj.e)) return obj.e;
+  }
+  return [];
+};
+
+/** Normalise raw JSON entries into sorted, clamped [start, end] spans. */
+const parseEventSpans = (data: unknown): EventSpan[] => {
+  const spans: EventSpan[] = [];
+
+  for (const item of extractEventArray(data)) {
+    let start: number;
+    let end: number;
+
+    if (Array.isArray(item) && item.length >= 2) {
+      start = Number(item[0]);
+      end = Number(item[1]);
+    } else if (item && typeof item === "object") {
+      const obj = item as Record<string, unknown>;
+      start = Number(obj.start);
+      end = Number(obj.end);
+    } else {
+      continue;
+    }
+
+    if (!Number.isFinite(start) || !Number.isFinite(end)) continue;
+    spans.push([Math.min(start, end), Math.max(start, end)]);
+  }
+
+  spans.sort((a, b) => a[0] - b[0]);
+  return spans;
+};
+
 const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
   file,
   isOpen,
@@ -44,6 +94,9 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
   const [bufferedProgress, setBufferedProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
+
+  /* -------------------- event metadata -------------------- */
+  const [events, setEvents] = useState<EventSpan[]>([]);
 
   /* -------------------- ui states -------------------- */
   const [showControls, setShowControls] = useState(true);
@@ -234,6 +287,39 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
     return () => { clearTimeout(timer); };
   }, [isOpen, file.url]);
 
+  /* Load the sibling metadata JSON written by the AI pipeline:
+     <video folder>/vid_metadata/<video stem>_timestamps.json
+     A missing or malformed file is non-fatal - the player just shows no markers. */
+  useEffect(() => {
+    if (!isOpen || !file.path) {
+      setEvents([]);
+      return;
+    }
+
+    const slash = file.path.lastIndexOf("/");
+    const dir = slash >= 0 ? file.path.slice(0, slash) : "";
+    const dot = file.name.lastIndexOf(".");
+    const stem = dot > 0 ? file.name.slice(0, dot) : file.name;
+    const metaPath = `${dir}/${METADATA_DIRNAME}/${stem}_timestamps.json`;
+
+    let cancelled = false;
+    setEvents([]);
+
+    axiosLayer
+      .get<unknown>(`/user/document/read/file${encodeURI(metaPath)}`)
+      .then((res) => {
+        if (cancelled) return;
+        const payload: unknown =
+          typeof res.data === "string" ? (JSON.parse(res.data) as unknown) : res.data;
+        setEvents(parseEventSpans(payload));
+      })
+      .catch(() => {
+        if (!cancelled) setEvents([]);
+      });
+
+    return () => { cancelled = true; };
+  }, [isOpen, file.path, file.name]);
+
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -284,6 +370,26 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
     const v = videoRef.current;
     if (v) v.currentTime += sec;
   },[]);
+
+  /** Jump to the next detected event start after the playhead. */
+  const nextEvent = useCallback(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const next = events.find(([start]) => start > v.currentTime + 0.05);
+    if (next) v.currentTime = next[0];
+  }, [events]);
+
+  /** Jump to the previous detected event start before the playhead. */
+  const prevEvent = useCallback(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    let candidate: number | null = null;
+    for (const [start] of events) {
+      if (start < v.currentTime - 0.05) candidate = start;
+      else break;
+    }
+    if (candidate !== null) v.currentTime = candidate;
+  }, [events]);
 
   const changeSpeed = (rate: number) => {
     const v = videoRef.current;
@@ -404,6 +510,42 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
         togglePlay()
         break;
 
+      case '<':
+      case ',': // Shift+comma / comma → previous event start
+        if (showRenameModal) {
+          return;
+        }
+        actionDescription = 'prevEvent';
+        prevEvent();
+        break;
+
+      case '>':
+      case '.': // Shift+period / period → next event start
+        if (showRenameModal) {
+          return;
+        }
+        actionDescription = 'nextEvent';
+        nextEvent();
+        break;
+
+      case 'n':
+      case 'N':
+        if (showRenameModal) {
+          return;
+        }
+        actionDescription = 'nextEvent';
+        nextEvent();
+        break;
+
+      case 'p':
+      case 'P':
+        if (showRenameModal) {
+          return;
+        }
+        actionDescription = 'prevEvent';
+        prevEvent();
+        break;
+
       case 'Enter':
         if (showRenameModal) {
           actionDescription = 'handleRenameSave';
@@ -427,7 +569,7 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
     }
     console.log(`Key Pressed: ${actionDescription}`);
 
-  }, [showRenameModal, togglePlay, skip, handleRenameSave]);
+  }, [showRenameModal, togglePlay, skip, nextEvent, prevEvent, handleRenameSave]);
 
   useEffect(() => {
     // Add the keydown listener to the document
@@ -523,6 +665,31 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
           className="absolute h-full bg-white/70 pointer-events-none"
           style={{ width: `${String(progress)}%` }}
         />
+
+        {/* Detected-event markers loaded from vid_metadata/<video>_timestamps.json.
+            A faint emerald tint with a crisp accent line; brighter and glowing
+            while the playhead sits inside an event. */}
+        {duration > 0 && events.length > 0 && (
+          <div className="absolute inset-0 pointer-events-none">
+            {events.map(([start, end]) => {
+              const left = Math.min(100, Math.max(0, (start / duration) * 100));
+              const right = Math.min(100, Math.max(left, (end / duration) * 100));
+              const width = Math.max(right - left, 0.4);
+              const isInside = currentTime >= start && currentTime <= end;
+              return (
+                <div
+                  key={`${String(start)}-${String(end)}`}
+                  className={`absolute top-0 bottom-0 rounded-[1px] border-b-2 transition-all duration-200 ${
+                    isInside
+                      ? "bg-emerald-300/35 border-emerald-200 shadow-[0_0_8px_rgba(52,211,153,0.85)]"
+                      : "bg-emerald-400/15 border-emerald-400/70"
+                  }`}
+                  style={{ left: `${String(left)}%`, width: `${String(width)}%` }}
+                />
+              );
+            })}
+          </div>
+        )}
         
         {/* Invisible range input for native dragging/scrubbing */}
         <input
@@ -604,6 +771,28 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
           className="hover:bg-white/80 w-full bg-white/30 flex-1 min-h-[32px] max-h-12 px-1"
         >
           1s <SkipForward className="h-4 w-4 ml-1" />
+        </Button>
+
+        {/* previous detected event */}
+        <Button
+          variant="ghost"
+          onClick={prevEvent}
+          disabled={events.length === 0}
+          title="Previous event (P or Shift+,)"
+          className="hover:bg-emerald-300/60 w-full bg-emerald-400/20 disabled:opacity-40 flex-1 min-h-[32px] max-h-12 px-1"
+        >
+          <ChevronsLeft className="h-4 w-4 mr-1" /> Evt
+        </Button>
+
+        {/* next detected event */}
+        <Button
+          variant="ghost"
+          onClick={nextEvent}
+          disabled={events.length === 0}
+          title="Next event (N or Shift+.)"
+          className="hover:bg-emerald-300/60 w-full bg-emerald-400/20 disabled:opacity-40 flex-1 min-h-[32px] max-h-12 px-1"
+        >
+          Evt <ChevronsRight className="h-4 w-4 ml-1" />
         </Button>
 
         {/* speed x2  */}
