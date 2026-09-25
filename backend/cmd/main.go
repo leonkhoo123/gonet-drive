@@ -142,6 +142,8 @@ func main() {
 		WithSecureMode(cfg.Auth.SecureMode).
 		WithMFA(cfg.Defaults.ServiceName, 5, 15*time.Minute).
 		WithJWTOff(cfg.Auth.AppJwt == "OFF")
+	// Override the library's 7-day default refresh-token lifetime (REFRESH_TOKEN_TTL).
+	authCfg.Tokens.RefreshToken = cfg.Auth.RefreshTokenTTL
 	// Same-origin default is SameSiteStrict. If the frontend is served from a
 	// different origin in prod, add .WithSameSite(http.SameSiteNoneMode).
 

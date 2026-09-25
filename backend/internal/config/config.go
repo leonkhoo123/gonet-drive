@@ -31,6 +31,8 @@ type AuthConfig struct {
 	CookieShareJwt string        // per-share cookie name prefix (fixed default)
 	ShareJwtMaxAge time.Duration // share link lifetime (fixed default)
 
+	RefreshTokenTTL time.Duration // refresh token / session lifetime (default: 90 days)
+
 	SecureMode                 bool
 	AllowUnsafeUnprotectedMode bool
 	TrustedProxyCIDRs          string
@@ -88,6 +90,7 @@ func Load() *CloudConfig {
 			AppJwt:                     getEnv("APP_JWT", ""),
 			CookieShareJwt:             "shareJwt",
 			ShareJwtMaxAge:             7 * 24 * time.Hour,
+			RefreshTokenTTL:            getRefreshTokenTTL(),
 			SecureMode:                 getSecureMode(getEnv("APP_ENV", "local")),
 			AllowUnsafeUnprotectedMode: getEnv("ALLOW_UNSAFE_UNPROTECTED_MODE", "") == "true",
 			TrustedProxyCIDRs:          getEnv("TRUSTED_PROXY_CIDRS", ""),
@@ -160,6 +163,18 @@ func getEnv(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+// defaultRefreshTokenTTL is the fallback refresh-token (session) lifetime when
+// REFRESH_TOKEN_TTL is not set. The gonet-auth library default is 7 days, which
+// is intentionally overridden here to 90 days.
+const defaultRefreshTokenTTL = 90 * 24 * time.Hour
+
+// getRefreshTokenTTL returns the refresh token lifetime from REFRESH_TOKEN_TTL
+// (Go duration string, e.g. "2160h"), falling back to defaultRefreshTokenTTL
+// when unset or invalid.
+func getRefreshTokenTTL() time.Duration {
+	return getEnvDuration("REFRESH_TOKEN_TTL", defaultRefreshTokenTTL)
 }
 
 // getEnvDuration returns the parsed duration from env or fallback if not found or invalid
