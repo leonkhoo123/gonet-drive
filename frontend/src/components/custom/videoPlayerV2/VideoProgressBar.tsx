@@ -15,12 +15,16 @@ export function VideoProgressBar({
   onScrubStart,
   onScrubEnd,
   onScrub,
+  onHoverStart,
+  onHoverEnd,
 }: VideoProgressBarProps) {
   return (
     <div
       className={`absolute w-full transition-all duration-300 bg-gray-700/50 z-30 ${
         showControls ? "bottom-12 h-3" : "bottom-0 h-2"
       }`}
+      onMouseEnter={onHoverStart}
+      onMouseLeave={onHoverEnd}
     >
       <div
         className="absolute h-full bg-gray-500 pointer-events-none"

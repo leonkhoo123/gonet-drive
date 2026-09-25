@@ -49,6 +49,8 @@ export interface VideoProgressBarProps {
   onScrubStart: () => void;
   onScrubEnd: () => void;
   onScrub: (progressPercent: number) => void;
+  onHoverStart: () => void;
+  onHoverEnd: () => void;
 }
 
 export interface VideoControlsProps {
@@ -58,6 +60,8 @@ export interface VideoControlsProps {
   hasEvents: boolean;
   onPressStart: () => void;
   onPressEnd: () => void;
+  onHoverStart: () => void;
+  onHoverEnd: () => void;
   onSkip: (seconds: number) => void;
   onPrevEvent: () => void;
   onNextEvent: () => void;

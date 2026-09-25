@@ -50,8 +50,10 @@ const VideoPlayerModalV2 = ({
     setShowControls,
     clearHideTimer,
     startHideTimer,
-    handleControlPressStart,
-    handleControlPressEnd,
+    handlePressStart,
+    handlePressEnd,
+    handleHoverStart,
+    handleHoverEnd,
   } = useVideoControlsVisibility(isOpen, isPlaying);
 
   /* -------------------- rename / flags -------------------- */
@@ -249,6 +251,8 @@ const VideoPlayerModalV2 = ({
         onScrubStart={scrubStart}
         onScrubEnd={scrubEnd}
         onScrub={scrubTo}
+        onHoverStart={handleHoverStart}
+        onHoverEnd={handleHoverEnd}
       />
 
       {/* CONTROLS */}
@@ -257,8 +261,10 @@ const VideoPlayerModalV2 = ({
         isPlaying={isPlaying}
         playbackRate={playbackRate}
         hasEvents={events.length > 0}
-        onPressStart={handleControlPressStart}
-        onPressEnd={handleControlPressEnd}
+        onPressStart={handlePressStart}
+        onPressEnd={handlePressEnd}
+        onHoverStart={handleHoverStart}
+        onHoverEnd={handleHoverEnd}
         onSkip={skip}
         onPrevEvent={prevEvent}
         onNextEvent={nextEvent}

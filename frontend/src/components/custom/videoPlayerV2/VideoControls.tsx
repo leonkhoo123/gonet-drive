@@ -45,6 +45,8 @@ export function VideoControls({
   hasEvents,
   onPressStart,
   onPressEnd,
+  onHoverStart,
+  onHoverEnd,
   onSkip,
   onPrevEvent,
   onNextEvent,
@@ -116,6 +118,8 @@ export function VideoControls({
       }`}
       onMouseDown={onPressStart}
       onMouseUp={onPressEnd}
+      onMouseEnter={onHoverStart}
+      onMouseLeave={onHoverEnd}
       onTouchStart={onPressStart}
       onTouchEnd={onPressEnd}
     >
