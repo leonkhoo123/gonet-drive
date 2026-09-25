@@ -30,6 +30,9 @@ const GLASS_GREEN =
 /** Same glass treatment, tinted for the disqualified action. */
 const GLASS_RED =
   "border border-white/20 bg-red-600/50 backdrop-blur-sm text-white hover:bg-red-600/70";
+/** Same glass treatment, tinted for the rotate action. */
+const GLASS_YELLOW =
+  "border border-white/20 bg-yellow-500/50 backdrop-blur-sm text-white hover:bg-yellow-500/70";
 
 /** Which collapsible flyout is currently open. */
 type Panel = "actions" | "speed" | null;
@@ -174,9 +177,6 @@ export function VideoControls({
         )}
 
         {/* play/pause */}
-        <div className="text-sm text-white text-center flex items-center justify-center min-h-[20px] shrink-0">
-          {playbackRate}x
-        </div>
         <Button
           variant="ghost"
           size="icon"
@@ -298,19 +298,6 @@ export function VideoControls({
             : "opacity-0 translate-x-3 pointer-events-none"
         }`}
       >
-        {/* --- Rename Button --- */}
-        <Button
-          variant="ghost"
-          onClick={() => {
-            runAction(onOpenRename);
-          }}
-          title="Rename"
-          aria-label="Rename"
-          className={`${GLASS_GREEN} h-12 w-14 p-0`}
-        >
-          <TextCursorInput className="size-5" />
-        </Button>
-
         {/* --- disqualified Button --- */}
         <Button
           variant="ghost"
@@ -332,9 +319,22 @@ export function VideoControls({
           }}
           title="Rotate"
           aria-label="Rotate"
-          className={`${GLASS} h-12 w-14 p-0`}
+          className={`${GLASS_YELLOW} h-12 w-14 p-0`}
         >
           <RotateCw className="size-5" />
+        </Button>
+
+        {/* --- Rename Button --- */}
+        <Button
+          variant="ghost"
+          onClick={() => {
+            runAction(onOpenRename);
+          }}
+          title="Rename"
+          aria-label="Rename"
+          className={`${GLASS_GREEN} h-12 w-14 p-0`}
+        >
+          <TextCursorInput className="size-5" />
         </Button>
       </div>
     </div>
