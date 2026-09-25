@@ -1,6 +1,6 @@
 module go-file-server
 
-go 1.25.10
+go 1.26.6
 
 require (
 	github.com/gin-contrib/cors v1.7.7
@@ -18,8 +18,8 @@ require (
 	github.com/swaggo/gin-swagger v1.6.1
 	github.com/swaggo/swag v1.16.6
 	github.com/tcolgate/mp3 v0.0.0-20170426193717-e79c5a46d300
-	golang.org/x/crypto v0.53.0
-	golang.org/x/sync v0.21.0
+	golang.org/x/crypto v0.57.0
+	golang.org/x/sync v0.23.0
 	golang.org/x/time v0.15.0
 )
 
@@ -63,18 +63,18 @@ require (
 	go.mongodb.org/mongo-driver/v2 v2.6.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/arch v0.27.0 // indirect
-	golang.org/x/mod v0.36.0 // indirect
-	golang.org/x/net v0.55.0 // indirect
-	golang.org/x/sys v0.46.0 // indirect
-	golang.org/x/text v0.38.0 // indirect
-	golang.org/x/tools v0.45.0 // indirect
+	golang.org/x/mod v0.41.0 // indirect
+	golang.org/x/net v0.59.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
+	golang.org/x/tools v0.49.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 require (
-	github.com/leonkhoo123/gonet-auth v1.0.3
-	github.com/leonkhoo123/gonet-auth/adapters/gin v1.0.3
+	github.com/leonkhoo123/gonet-auth v1.0.4
+	github.com/leonkhoo123/gonet-auth/adapters/gin v1.0.4
 )
 
 replace github.com/leonkhoo123/gonet-auth => ../../gonet-auth

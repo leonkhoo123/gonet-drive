@@ -18,7 +18,7 @@ ENV VITE_PROFILE=prod
 RUN npm run build
 
 # ====== 2. Backend Build Stage ======
-FROM golang:1.25.10-alpine AS backend-builder
+FROM golang:1.26.6-alpine AS backend-builder
 
 RUN apk add --no-cache git gcc musl-dev vips-dev
 
@@ -63,9 +63,14 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     go build -ldflags="-s -w" -trimpath -o server ./cmd/main.go
 
 # ====== 3. Runtime stage ======
-FROM alpine:latest
+# Pin to the Alpine 3.24 branch so the image always picks up patched OpenSSL
+# packages (libcrypto3/libssl3) instead of a stale floating "latest" digest.
+FROM alpine:3.24
 
-RUN apk add --no-cache ffmpeg vips util-linux ca-certificates
+# Upgrade the base packages as well, so a cached/stale Alpine layer cannot keep
+# an older libcrypto3/libssl3 than the one currently patched in the 3.24 repo.
+RUN apk upgrade --no-cache && \
+    apk add --no-cache ffmpeg vips util-linux ca-certificates
 
 WORKDIR /root/
 
