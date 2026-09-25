@@ -282,6 +282,55 @@ export interface UploadProgressEvent {
 export const uploadControllers = new Map<string, AbortController>();
 export const cancelledUploads = new Set<string>();
 
+// Chunk upload retry policy. Auth failures get their own (smaller) budget so a
+// genuinely broken session fails fast instead of hammering /refresh.
+const CHUNK_MAX_RETRIES = 5;
+const CHUNK_MAX_AUTH_RETRIES = 2;
+const CHUNK_RETRY_BASE_DELAY_MS = 1000;
+const CHUNK_RETRY_MAX_DELAY_MS = 8000;
+
+// Sleep that stays responsive to upload cancellation.
+const retryDelay = async (ms: number, signal: AbortSignal): Promise<void> => {
+  const deadline = Date.now() + ms;
+  while (Date.now() < deadline) {
+    if (signal.aborted) {
+      throw new Error("Upload cancelled");
+    }
+    await new Promise((resolve) => setTimeout(resolve, Math.min(200, deadline - Date.now())));
+  }
+  if (signal.aborted) {
+    throw new Error("Upload cancelled");
+  }
+};
+
+const isRetryableChunkError = (error: unknown): boolean => {
+  if (axios.isCancel(error)) return false;
+  if (error instanceof Error && error.message === "Upload cancelled") return false;
+  if (!axios.isAxiosError(error)) return false;
+
+  const status = error.response?.status;
+  if (status === undefined) {
+    // No response: network hiccup, timeout or connection reset — safe to retry.
+    return true;
+  }
+  if (status === 401) {
+    // The axios layer refreshes the access token and replays the request once.
+    // Seeing another 401 here means the refresh was triggered by (or raced
+    // with) a different in-flight request, so a fresh attempt will pick up the
+    // new token. Share links carry a separate, non-refreshable JWT.
+    return !isShareMode;
+  }
+  return (
+    status === 408 ||
+    status === 425 ||
+    status === 429 ||
+    (status >= 500 && status <= 599)
+  );
+};
+
+const isAuthRetryableChunkError = (error: unknown): boolean =>
+  axios.isAxiosError(error) && error.response?.status === 401;
+
 export const uploadFile = async (
   path: string,
   file: File,
@@ -326,7 +375,7 @@ export const uploadFile = async (
   const controller = new AbortController();
   uploadControllers.set(identifier, controller);
 
-  let lastResponse = null;
+  let lastResponse: unknown = null;
   const startTime = Date.now();
 
   try {
@@ -361,37 +410,67 @@ export const uploadFile = async (
       formData.append("chunk", chunkBlob, filename);
 
       const endpoint = isShareMode ? "/share/file/upload-chunk" : "/user/files/upload-chunk";
-      const rs = await axiosLayer.post<ApiEnvelope<unknown>>(endpoint, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-        signal: controller.signal,
-        onUploadProgress: (progressEvent) => {
-          if (onProgress && progressEvent.loaded) {
-            // Calculate overall progress across chunks
-            const overallLoaded = loadedBytes + progressEvent.loaded;
-            
-            const elapsedSeconds = Math.max((Date.now() - startTime) / 1000, 0.1);
-            const calculatedRate = overallLoaded / elapsedSeconds;
-            const calculatedEstimated = file.size > overallLoaded 
-              ? (file.size - overallLoaded) / calculatedRate 
-              : 0;
+      let retryCount = 0;
+      let authRetryCount = 0;
 
-            onProgress({
-              loaded: overallLoaded,
-              total: file.size,
-              progress: file.size > 0 ? overallLoaded / file.size : 1,
-              bytes: progressEvent.bytes,
-              rate: calculatedRate,
-              estimated: calculatedEstimated,
-              upload: true
-            });
+      for (;;) {
+        try {
+          const rs = await axiosLayer.post<ApiEnvelope<unknown>>(endpoint, formData, {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+            signal: controller.signal,
+            onUploadProgress: (progressEvent) => {
+              if (onProgress && progressEvent.loaded) {
+                // Calculate overall progress across chunks
+                const overallLoaded = loadedBytes + progressEvent.loaded;
+                
+                const elapsedSeconds = Math.max((Date.now() - startTime) / 1000, 0.1);
+                const calculatedRate = overallLoaded / elapsedSeconds;
+                const calculatedEstimated = file.size > overallLoaded 
+                  ? (file.size - overallLoaded) / calculatedRate 
+                  : 0;
+
+                onProgress({
+                  loaded: overallLoaded,
+                  total: file.size,
+                  progress: file.size > 0 ? overallLoaded / file.size : 1,
+                  bytes: progressEvent.bytes,
+                  rate: calculatedRate,
+                  estimated: calculatedEstimated,
+                  upload: true
+                });
+              }
+            },
+          });
+
+          loadedBytes += chunkBlob.size;
+          lastResponse = unwrap<unknown>(rs);
+          break;
+        } catch (error: unknown) {
+          if (!isRetryableChunkError(error)) {
+            throw error;
           }
-        },
-      });
 
-      loadedBytes += chunkBlob.size;
-      lastResponse = unwrap<unknown>(rs);
+          if (isAuthRetryableChunkError(error)) {
+            if (authRetryCount >= CHUNK_MAX_AUTH_RETRIES) {
+              throw error;
+            }
+            authRetryCount += 1;
+          } else {
+            if (retryCount >= CHUNK_MAX_RETRIES) {
+              throw error;
+            }
+            retryCount += 1;
+          }
+
+          const delay = Math.min(
+            CHUNK_RETRY_BASE_DELAY_MS * 2 ** (retryCount + authRetryCount - 1),
+            CHUNK_RETRY_MAX_DELAY_MS
+          );
+          await retryDelay(delay, controller.signal);
+        }
+      }
     }
   } catch (error: unknown) {
     if (axios.isCancel(error) || (error instanceof Error && error.message === "Upload cancelled")) {

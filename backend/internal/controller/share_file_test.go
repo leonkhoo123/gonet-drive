@@ -373,3 +373,34 @@ func TestShareFileDelete_Authored(t *testing.T) {
 		return os.IsNotExist(err)
 	}, 5*time.Second, 50*time.Millisecond)
 }
+
+// ---------------------------------------------------------------------------
+// Share File Upload — Idempotent Replay
+// ---------------------------------------------------------------------------
+
+// TestShareFileUpload_FinalChunkReplayIsIdempotent covers a lost response after
+// the merge: replaying the final chunk must return the same path, not a
+// "Missing chunk" error or a duplicate file.
+func TestShareFileUpload_FinalChunkReplayIsIdempotent(t *testing.T) {
+	fix := setupShareFileRouter(t, "modify")
+
+	// An empty destination resolves to the share root (shared_subdir).
+	first := makeShareFileMultipartReq(t, fix, http.MethodPost, "/api/share/file/upload-chunk", "", []byte("share payload"))
+	require.Equal(t, http.StatusOK, first.Code)
+	firstResp := testutil.DecodeData(t, first)
+	assert.Equal(t, "done", firstResp["status"])
+
+	second := makeShareFileMultipartReq(t, fix, http.MethodPost, "/api/share/file/upload-chunk", "", []byte("share payload"))
+	require.Equal(t, http.StatusOK, second.Code)
+	secondResp := testutil.DecodeData(t, second)
+	assert.Equal(t, "done", secondResp["status"])
+	assert.Equal(t, firstResp["path"], secondResp["path"])
+
+	matches, err := filepath.Glob(filepath.Join(fix.WorkDir, "shared_subdir", "testfile*.txt"))
+	require.NoError(t, err)
+	assert.Len(t, matches, 1, "replay must not create a duplicate file")
+
+	content, err := os.ReadFile(filepath.Join(fix.WorkDir, "shared_subdir", "testfile.txt"))
+	require.NoError(t, err)
+	assert.Equal(t, "share payload", string(content))
+}

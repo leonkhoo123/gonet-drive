@@ -23,18 +23,19 @@ instance.interceptors.request.use((config) => {
   return config;
 });
 
-let isRefreshing = false;
-let failedQueue: { resolve: (value?: unknown) => void, reject: (reason?: unknown) => void }[] = [];
+// Single-flight refresh: concurrent 401s share one /refresh request instead of
+// each spinning up its own (which would rotate the refresh token twice and trip
+// the backend's reuse detection, revoking every session).
+let refreshPromise: Promise<void> | null = null;
 
-const processQueue = (error: unknown, token: string | null = null) => {
-  failedQueue.forEach(prom => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
-  });
-  failedQueue = [];
+const refreshAccessToken = (): Promise<void> => {
+  refreshPromise ??= instance
+    .post('/refresh', null, { withCredentials: true })
+    .then(() => undefined)
+    .finally(() => {
+      refreshPromise = null;
+    });
+  return refreshPromise;
 };
 
 interface CustomAxiosRequestConfig extends AxiosRequestConfig {
@@ -57,37 +58,35 @@ instance.interceptors.response.use(
       }
     }
 
-    // If 401 and we haven't retried yet, and it's not the refresh endpoint itself
-    if (error.response?.status === 401 && originalRequest && !originalRequest._retry && originalRequest.url && !originalRequest.url.includes('/refresh') && !originalRequest.url.includes('/login') && !originalRequest.url.includes('/mfa/verify') && !originalRequest.url.includes('/user/mfa/enable') && !originalRequest.url.includes('/logout')) {
+    const isAuthEndpoint = Boolean(
+      originalRequest?.url &&
+      (originalRequest.url.includes('/refresh') ||
+        originalRequest.url.includes('/login') ||
+        originalRequest.url.includes('/mfa/verify') ||
+        originalRequest.url.includes('/user/mfa/enable') ||
+        originalRequest.url.includes('/logout'))
+    );
+
+    // If 401 and we haven't retried yet, and it's not an auth endpoint itself
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !isAuthEndpoint) {
       if (window.location.pathname.startsWith('/share')) {
         window.dispatchEvent(new Event('share:unauthorized'));
         return Promise.reject(error);
       }
 
-      if (isRefreshing) {
-        return new Promise(function(resolve, reject) {
-          failedQueue.push({ resolve, reject });
-        }).then(() => {
-          return instance(originalRequest);
-        }).catch((err: unknown) => {
-          return Promise.reject(err instanceof Error ? err : new Error(String(err)));
-        });
-      }
-
+      // Mark before awaiting so a concurrent 401 for this same request cannot
+      // kick off a second refresh/retry cycle.
       originalRequest._retry = true;
-      isRefreshing = true;
 
       try {
-        await instance.post('/refresh', null, { withCredentials: true });
-        processQueue(null);
-        return await instance(originalRequest);
-      } catch (err: unknown) {
-        processQueue(err, null);
+        await refreshAccessToken();
+      } catch (refreshError: unknown) {
         window.dispatchEvent(new Event('auth:unauthorized'));
-        return await Promise.reject(err instanceof Error ? err : new Error(String(err)));
-      } finally {
-        isRefreshing = false;
+        return await Promise.reject(refreshError instanceof Error ? refreshError : new Error(String(refreshError)));
       }
+
+      // Token refreshed — replay the original request exactly once.
+      return await instance(originalRequest);
     }
 
     return Promise.reject(error);

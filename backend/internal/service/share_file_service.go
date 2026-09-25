@@ -754,12 +754,15 @@ func ShareUploadChunk(c *gin.Context, cfg *config.CloudConfig) {
 		return
 	}
 
-	tempDir := filepath.Join(cfg.Server.FileRoot, ".cloud_reserve", "upload_temp", identifier)
+	tempDir := uploadTempDir(cfg.Server.FileRoot, identifier)
+
+	// Serialize requests for this identifier so a retried chunk cannot race a
+	// merge in progress and the completion check stays atomic.
+	unlock := lockUpload(identifier)
+	defer unlock()
 
 	if status == "cancel" {
-		size := storage.GetPathSize(tempDir)
-		_ = os.RemoveAll(tempDir)
-		storage.SubtractUsage(size)
+		clearUploadTemp(tempDir)
 		httpx.OK(c, http.StatusOK, gin.H{"message": "Upload cancelled", "status": "cancelled"})
 		return
 	}
@@ -789,6 +792,21 @@ func ShareUploadChunk(c *gin.Context, cfg *config.CloudConfig) {
 	totalChunks, err := strconv.Atoi(totalChunksStr)
 	if err != nil {
 		httpx.Err(c, http.StatusBadRequest, "Invalid totalChunks")
+		return
+	}
+
+	// A fresh upload starts from a clean slate, dropping any completion marker
+	// left by a previous upload that reused this identifier. Any other request
+	// for an already-completed identifier is a replay (the merge succeeded but
+	// the response was lost) and is answered as a no-op success.
+	if status == "start" && chunkNumber == 1 {
+		clearUploadTemp(tempDir)
+	} else if completion, done := completedUpload(cfg.Server.FileRoot, identifier); done {
+		httpx.OK(c, http.StatusOK, gin.H{
+			"message": "Upload complete",
+			"status":  "done",
+			"path":    completion.VirtualPath,
+		})
 		return
 	}
 
@@ -835,12 +853,6 @@ func ShareUploadChunk(c *gin.Context, cfg *config.CloudConfig) {
 		return
 	}
 	defer file.Close()
-
-	if status == "start" && chunkNumber == 1 {
-		size := storage.GetPathSize(tempDir)
-		_ = os.RemoveAll(tempDir)
-		storage.SubtractUsage(size)
-	}
 
 	if err := os.MkdirAll(tempDir, 0755); err != nil {
 		httpx.Err(c, http.StatusInternalServerError, "Failed to create temp directory")
@@ -932,14 +944,30 @@ func ShareUploadChunk(c *gin.Context, cfg *config.CloudConfig) {
 
 		storage.AddUsage(finalSize)
 
-		tempSize := storage.GetPathSize(tempDir)
-		_ = os.RemoveAll(tempDir)
-		storage.SubtractUsage(tempSize)
+		// Record completion before dropping the chunk data so a retry whose
+		// response was lost can be replayed as a success.
+		virtualPath := filepath.ToSlash(filepath.Clean(filepath.Join(destination, filepath.Base(finalDest))))
+		chunkBytes := storage.GetPathSize(tempDir)
+		if err := writeUploadCompletion(tempDir, uploadCompletion{
+			VirtualPath:  virtualPath,
+			PhysicalPath: finalDest,
+			Size:         finalSize,
+			CompletedAt:  time.Now(),
+		}); err != nil {
+			logger.L.Warn("failed to write upload completion marker", "identifier", identifier, "err", err)
+		}
+
+		// Drop the chunk data but keep the (tiny) marker for idempotent
+		// replays; the stale-upload sweep reaps it later.
+		for i := 1; i <= totalChunks; i++ {
+			_ = os.Remove(filepath.Join(tempDir, fmt.Sprintf("chunk_%d", i)))
+		}
+		storage.SubtractUsage(chunkBytes)
 
 		httpx.OK(c, http.StatusOK, gin.H{
 			"message": "Upload complete",
 			"status":  "done",
-			"path":    filepath.ToSlash(filepath.Clean(destination + "/" + cleanFilename)),
+			"path":    virtualPath,
 		})
 		return
 	}

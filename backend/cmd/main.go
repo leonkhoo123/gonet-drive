@@ -217,6 +217,9 @@ func main() {
 	// Start daily thumbnail maintenance scheduler (runs at 4:30 AM)
 	schedule.StartThumbnailMaintenanceScheduler(cfg.Server.FileRoot, thumbnailRepo)
 
+	// Reap stale upload temp directories (abandoned uploads, completion markers)
+	schedule.StartUploadTempCleanup(cfg.Server.FileRoot)
+
 	// Configure trusted proxy CIDRs for rate limiters (Finding 6.2)
 	var trustedProxyCIDRs []string
 	if cfg.Auth.TrustedProxyCIDRs != "" {
