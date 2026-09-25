@@ -778,7 +778,7 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
           onClick={prevEvent}
           disabled={events.length === 0}
           title="Previous event (P or Shift+,)"
-          className="hover:bg-emerald-300/60 w-full bg-emerald-400/20 disabled:opacity-40 flex-1 min-h-[32px] max-h-12 px-1"
+          className="hover:bg-white/80 w-full bg-white/30 disabled:opacity-40 flex-1 min-h-[32px] max-h-12 px-1"
         >
           <ChevronsLeft className="h-4 w-4 mr-1" /> Evt
         </Button>
@@ -789,19 +789,9 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
           onClick={nextEvent}
           disabled={events.length === 0}
           title="Next event (N or Shift+.)"
-          className="hover:bg-emerald-300/60 w-full bg-emerald-400/20 disabled:opacity-40 flex-1 min-h-[32px] max-h-12 px-1"
+          className="hover:bg-white/80 w-full bg-white/30 disabled:opacity-40 flex-1 min-h-[32px] max-h-12 px-1"
         >
           Evt <ChevronsRight className="h-4 w-4 ml-1" />
-        </Button>
-
-        {/* speed x2  */}
-        <Button
-          variant="ghost"
-          onClick={() => { changeSpeed(playbackRate !== 1.0 ? 1.0 : 2.0); }}
-          className="hover:bg-white/80 w-full bg-white/30 flex-1 min-h-[32px] max-h-12 px-1"
-        >
-          <Zap className="h-4 w-4 mr-1" />
-          {playbackRate !== 1.0 ? "x1" : "x2"}
         </Button>
 
         {/* slow mo x0.25 */}
