@@ -288,7 +288,8 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
   }, [isOpen, file.url]);
 
   /* Load the sibling metadata JSON written by the AI pipeline:
-     <video folder>/vid_metadata/<video stem>_timestamps.json
+     <video folder>/vid_metadata/<video filename>_timestamps.json
+     (e.g. clip.mp4_timestamps.json - the extension is kept in the name).
      A missing or malformed file is non-fatal - the player just shows no markers. */
   useEffect(() => {
     if (!isOpen || !file.path) {
@@ -298,9 +299,7 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
 
     const slash = file.path.lastIndexOf("/");
     const dir = slash >= 0 ? file.path.slice(0, slash) : "";
-    const dot = file.name.lastIndexOf(".");
-    const stem = dot > 0 ? file.name.slice(0, dot) : file.name;
-    const metaPath = `${dir}/${METADATA_DIRNAME}/${stem}_timestamps.json`;
+    const metaPath = `${dir}/${METADATA_DIRNAME}/${file.name}_timestamps.json`;
 
     let cancelled = false;
     setEvents([]);
