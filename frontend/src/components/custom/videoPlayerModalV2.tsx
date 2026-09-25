@@ -194,7 +194,13 @@ const VideoPlayerModalV2 = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black z-[100] select-none">
+    <div
+      className="fixed inset-0 bg-black z-[100] select-none [-webkit-touch-callout:none]"
+      onContextMenu={(e) => {
+        // Disable the native menu for desktop right-click and mobile long press.
+        e.preventDefault();
+      }}
+    >
       {/* VIDEO AREA */}
       <VideoSurface
         videoRef={videoRef}

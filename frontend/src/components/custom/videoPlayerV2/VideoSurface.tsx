@@ -14,7 +14,7 @@ export function VideoSurface({
 }: VideoSurfaceProps) {
   return (
     <div
-      className="flex items-center justify-center h-full touch-none"
+      className="flex items-center justify-center h-full touch-none select-none [-webkit-touch-callout:none] [-webkit-tap-highlight-color:transparent]"
       onClick={onTap}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
