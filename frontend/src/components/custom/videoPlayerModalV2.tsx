@@ -651,8 +651,11 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
       </div>
 
       {/* PROGRESS */}
+      {/* z-30 keeps the seek bar above the time display (z-10) and the
+          controls column, so the full width — including the far left and
+          the area under the buttons — stays clickable for scrubbing. */}
       <div
-        className={`absolute w-full transition-all duration-300 bg-gray-700/50 ${
+        className={`absolute w-full transition-all duration-300 bg-gray-700/50 z-30 ${
           showControls ? "bottom-12 h-3" : "bottom-0 h-2"
         }`}
       >
@@ -729,7 +732,7 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
             setCurrentTime(newTime);
           }}
           className={`absolute left-0 w-full opacity-0 cursor-pointer m-0 ${
-            showControls ? "h-[60px] top-1/2 -translate-y-1/2" : "inset-0 h-full"
+            showControls ? "top-0 h-[60px]" : "inset-0 h-full"
           }`}
         />
       </div>
@@ -864,7 +867,7 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
 
       {/* RENAME MODAL */}
       {showRenameModal && (
-        <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+        <div className="absolute inset-0 z-40 bg-black/70 flex items-center justify-center">
           <div className="bg-white/70 rounded-md p-4 w-full max-w-5xl shadow-lg text-black mx-2">
             <h3 className="font-semibold mb-2">Rename File</h3>
             <input
