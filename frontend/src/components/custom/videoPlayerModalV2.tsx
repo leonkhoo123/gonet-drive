@@ -36,7 +36,7 @@ const CONTROL_TIMEOUT = 2500;
 /** A detected event as an absolute [start, end] pair in seconds. */
 type EventSpan = [number, number];
 
-const METADATA_DIRNAME = "vid_metadata";
+const METADATA_DIRNAME = ".vid_metadata";
 
 /**
  * Read the event array out of a timestamps JSON payload.
@@ -288,7 +288,7 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
   }, [isOpen, file.url]);
 
   /* Load the sibling metadata JSON written by the AI pipeline:
-     <video folder>/vid_metadata/<video filename>_timestamps.json
+     <video folder>/.vid_metadata/<video filename>_timestamps.json
      (e.g. clip.mp4_timestamps.json - the extension is kept in the name).
      A missing or malformed file is non-fatal - the player just shows no markers. */
   useEffect(() => {
@@ -665,7 +665,7 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
           style={{ width: `${String(progress)}%` }}
         />
 
-        {/* Detected-event markers loaded from vid_metadata/<video>_timestamps.json.
+        {/* Detected-event markers loaded from .vid_metadata/<video>_timestamps.json.
             A faint emerald tint with a crisp accent line; brighter and glowing
             while the playhead sits inside an event. */}
         {duration > 0 && events.length > 0 && (
