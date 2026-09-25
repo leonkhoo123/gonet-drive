@@ -772,27 +772,28 @@ const VideoPlayerModalV2: React.FC<VideoPlayerModalProps> = ({
           1s <SkipForward className="h-4 w-4 ml-1" />
         </Button>
 
-        {/* previous detected event */}
-        <Button
-          variant="ghost"
-          onClick={prevEvent}
-          disabled={events.length === 0}
-          title="Previous event (P or Shift+,)"
-          className="hover:bg-white/80 w-full bg-white/30 disabled:opacity-40 flex-1 min-h-[32px] max-h-12 px-1"
-        >
-          <ChevronsLeft className="h-4 w-4 mr-1" /> Evt
-        </Button>
+        {/* previous/next detected event - only rendered when metadata exists */}
+        {events.length > 0 && (
+          <>
+            <Button
+              variant="ghost"
+              onClick={prevEvent}
+              title="Previous event (P or Shift+,)"
+              className="hover:bg-white/80 w-full bg-white/30 flex-1 min-h-[32px] max-h-12 px-1"
+            >
+              <ChevronsLeft className="h-4 w-4 mr-1" /> Evt
+            </Button>
 
-        {/* next detected event */}
-        <Button
-          variant="ghost"
-          onClick={nextEvent}
-          disabled={events.length === 0}
-          title="Next event (N or Shift+.)"
-          className="hover:bg-white/80 w-full bg-white/30 disabled:opacity-40 flex-1 min-h-[32px] max-h-12 px-1"
-        >
-          Evt <ChevronsRight className="h-4 w-4 ml-1" />
-        </Button>
+            <Button
+              variant="ghost"
+              onClick={nextEvent}
+              title="Next event (N or Shift+.)"
+              className="hover:bg-white/80 w-full bg-white/30 flex-1 min-h-[32px] max-h-12 px-1"
+            >
+              Evt <ChevronsRight className="h-4 w-4 ml-1" />
+            </Button>
+          </>
+        )}
 
         {/* slow mo x0.25 */}
         <Button
