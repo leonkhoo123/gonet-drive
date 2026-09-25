@@ -126,6 +126,13 @@ func initCloudReserve(workDir string) {
 		}
 	}
 
+	// The recycle bin lives inside the reserve directory. Clients still address
+	// it as "/.cloud_delete" (see util.RecycleBinVirtualPath).
+	recycleBinDir := filepath.Join(cloudReserveDir, ".cloud_delete")
+	if err := os.MkdirAll(recycleBinDir, 0755); err != nil {
+		logger.L.Fatal("failed to create recycle bin", "path", recycleBinDir, "err", err)
+	}
+
 	initLogo(cloudReserveDir)
 }
 

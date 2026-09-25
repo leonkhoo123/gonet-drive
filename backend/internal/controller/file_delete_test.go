@@ -33,8 +33,55 @@ func TestDeleteSoft_Success(t *testing.T) {
 	_, err := os.Stat(filepath.Join(cfg.Server.FileRoot, "todel.txt"))
 	assert.True(t, os.IsNotExist(err), "file should be gone from original location")
 
-	_, err = os.Stat(filepath.Join(cfg.Server.FileRoot, ".cloud_delete", "todel.txt"))
-	assert.NoError(t, err, "file should be in .cloud_delete")
+	_, err = os.Stat(filepath.Join(cfg.Server.FileRoot, ".cloud_reserve", ".cloud_delete", "todel.txt"))
+	assert.NoError(t, err, "file should be in .cloud_reserve/.cloud_delete")
+}
+
+func TestRecycleBin_VirtualPathMapping(t *testing.T) {
+	router, cfg, db := setupFileRouter(t)
+	testutil.CreateTestUser(t, db, "fileuser", "pass123", "user")
+	accessCookie := testutil.LoginAndGetCookie(t, router, "fileuser", "pass123")
+
+	writeTestFile(t, cfg.Server.FileRoot, "recycleme.txt", "recycle content")
+
+	// Soft delete moves the file into the physical reserve-nested recycle bin.
+	rec := testutil.MakeAuthRequestJSON(t, router, http.MethodPost,
+		"/api/user/files/delete",
+		map[string]interface{}{
+			"sources": []string{"/recycleme.txt"},
+		},
+		accessCookie)
+	require.Equal(t, http.StatusOK, rec.Code)
+	waitForJobQueue(t)
+
+	// The recycle bin is still addressed through the virtual "/.cloud_delete" path.
+	rec = testutil.MakeAuthRequest(t, router, http.MethodGet,
+		"/api/user/files/file-list?path=/.cloud_delete", nil, accessCookie)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var envelope map[string]interface{}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &envelope))
+	resp := envelope["data"].(map[string]interface{})
+	assert.Equal(t, "/.cloud_delete", resp["path"])
+
+	items := resp["items"].([]interface{})
+	require.Len(t, items, 1)
+	item := items[0].(map[string]interface{})
+	assert.Equal(t, "recycleme.txt", item["name"])
+	assert.Equal(t, "/.cloud_delete/recycleme.txt", item["path"])
+
+	// Permanent delete from the recycle bin uses the virtual path too.
+	rec = testutil.MakeAuthRequestJSON(t, router, http.MethodPost,
+		"/api/user/files/delete-permanent",
+		map[string]interface{}{
+			"sources": []string{"/.cloud_delete/recycleme.txt"},
+		},
+		accessCookie)
+	require.Equal(t, http.StatusOK, rec.Code)
+	waitForJobQueue(t)
+
+	_, err := os.Stat(filepath.Join(cfg.Server.FileRoot, ".cloud_reserve", ".cloud_delete", "recycleme.txt"))
+	assert.True(t, os.IsNotExist(err), "file should be permanently removed from the recycle bin")
 }
 
 func TestDeleteSoft_ProtectedDir(t *testing.T) {

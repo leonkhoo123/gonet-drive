@@ -47,11 +47,13 @@ func FileList(c *gin.Context, cfg *config.CloudConfig) {
 	} else {
 		cleanPath = "/" + filepath.ToSlash(cleanPath)
 	}
+	// Expose the on-disk ".cloud_reserve/.cloud_delete" as "/.cloud_delete".
+	cleanPath = util.ToVirtualPath(cleanPath)
 
 	displayPath := cleanPath
 
 	// Auto-create .cloud_delete directory if requested and it doesn't exist
-	if cleanPath == "/.cloud_delete" {
+	if cleanPath == util.RecycleBinVirtualPath {
 		if _, err := os.Stat(fullPath); os.IsNotExist(err) {
 			os.MkdirAll(fullPath, 0755)
 		}

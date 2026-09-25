@@ -369,7 +369,7 @@ func DeleteFiles(req DeleteReq, cfg *config.CloudConfig, requestID string, usern
 	state.SetProgress(opID, tracker)
 
 	submitAsyncJob(opID, "delete", opName, tracker, false, "", requestID, username, func(t *util.ProgressTracker) error {
-		recycleBinDir := filepath.Join(cfg.Server.FileRoot, ".cloud_delete")
+		recycleBinDir := util.RecycleBinPath(cfg.Server.FileRoot)
 		if _, err := os.Stat(recycleBinDir); os.IsNotExist(err) {
 			os.MkdirAll(recycleBinDir, 0755)
 		}

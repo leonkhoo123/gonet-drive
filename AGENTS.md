@@ -129,7 +129,7 @@ make test-race     # Race detection
 - **ffmpeg** is required at runtime (installed in Docker image) — used by the video module for on-the-fly transcoding.
 - WebSocket connections are managed by `backend/internal/ws/manager.go` and started in a goroutine at `backend/cmd/main.go:74`. Clients receive real-time progress for file operations.
 - File operations (copy/move/delete) are processed sequentially via a worker started at `backend/cmd/main.go:77` to avoid filesystem lock contention.
-- The backend creates a `.cloud_reserve` directory inside `WORK_DIR` for internal assets (logo, etc.) on startup.
+- The backend creates a `.cloud_reserve` directory inside `WORK_DIR` for internal assets (logo, etc.) on startup. The recycle bin is stored at `.cloud_reserve/.cloud_delete` but is still exposed to the API/UI as the virtual path `/.cloud_delete` (see `util.ToPhysicalPath`/`util.ToVirtualPath`).
 
 
 ## Temporary directory

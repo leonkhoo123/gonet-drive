@@ -77,6 +77,111 @@ func TestSanitizeRepoPaths_EmptySlice(t *testing.T) {
 	assert.Empty(t, results)
 }
 
+func TestToPhysicalPath_RecycleBin(t *testing.T) {
+	assert.Equal(t, "/.cloud_reserve/.cloud_delete", ToPhysicalPath("/.cloud_delete"))
+	assert.Equal(t, "/.cloud_reserve/.cloud_delete/a/b.txt", ToPhysicalPath("/.cloud_delete/a/b.txt"))
+	// Unrelated paths are untouched.
+	assert.Equal(t, "/photos/a.jpg", ToPhysicalPath("/photos/a.jpg"))
+	assert.Equal(t, "/.cloud_reserve/logo.png", ToPhysicalPath("/.cloud_reserve/logo.png"))
+}
+
+func TestToVirtualPath_RecycleBin(t *testing.T) {
+	assert.Equal(t, "/.cloud_delete", ToVirtualPath("/.cloud_reserve/.cloud_delete"))
+	assert.Equal(t, "/.cloud_delete/a/b.txt", ToVirtualPath("/.cloud_reserve/.cloud_delete/a/b.txt"))
+	// Unrelated paths are untouched.
+	assert.Equal(t, "/photos/a.jpg", ToVirtualPath("/photos/a.jpg"))
+	assert.Equal(t, "/.cloud_reserve", ToVirtualPath("/.cloud_reserve"))
+}
+
+func TestRecycleBinPath(t *testing.T) {
+	root := t.TempDir()
+	assert.Equal(t, filepath.Join(root, ".cloud_reserve", ".cloud_delete"), RecycleBinPath(root))
+}
+
+func TestSanitizeRepoPath_RecycleBinMapping(t *testing.T) {
+	root := t.TempDir()
+
+	result, err := SanitizeRepoPath(root, "/.cloud_delete")
+	assert.NoError(t, err)
+	assert.Equal(t, RecycleBinPath(root), result)
+
+	result, err = SanitizeRepoPath(root, "/.cloud_delete/deleted.txt")
+	assert.NoError(t, err)
+	assert.Equal(t, filepath.Join(RecycleBinPath(root), "deleted.txt"), result)
+}
+
+func TestSanitizeRepoPaths_RecycleBinMapping(t *testing.T) {
+	root := t.TempDir()
+
+	results, err := SanitizeRepoPaths(root, []string{"/a.txt", "/.cloud_delete/b.txt"})
+	assert.NoError(t, err)
+	assert.Equal(t, []string{
+		filepath.Join(root, "a.txt"),
+		filepath.Join(RecycleBinPath(root), "b.txt"),
+	}, results)
+}
+
+func TestSanitizeRepoPath_RecycleBinTraversal(t *testing.T) {
+	root := t.TempDir()
+
+	payloads := []string{
+		"/.cloud_delete/../../etc/passwd",
+		"/.cloud_delete/../.cloud_reserve/config.db",
+		"/.cloud_delete/sub/../../outside.txt",
+	}
+	for _, p := range payloads {
+		_, err := SanitizeRepoPath(root, p)
+		assert.Error(t, err, "path %q must be rejected", p)
+		assert.Contains(t, err.Error(), "..")
+	}
+}
+
+func TestSanitizeRepoPaths_RecycleBinTraversal(t *testing.T) {
+	root := t.TempDir()
+
+	_, err := SanitizeRepoPaths(root, []string{"/.cloud_delete/../../etc/passwd"})
+	assert.Error(t, err)
+}
+
+func TestSanitizeRepoPath_ReserveBlocked(t *testing.T) {
+	root := t.TempDir()
+
+	payloads := []string{
+		"/.cloud_reserve",
+		"/.cloud_reserve/logo.png",
+		"/.cloud_reserve/config/db",
+		"/.cloud_reserve/.thumbnails/x.webp",
+		"/.cloud_reserve/.cloud_delete/leaked.txt",
+		"sub/.cloud_reserve/file",
+	}
+	for _, p := range payloads {
+		_, err := SanitizeRepoPath(root, p)
+		assert.Error(t, err, "path %q must be rejected", p)
+		assert.Contains(t, err.Error(), "forbidden")
+	}
+}
+
+func TestSanitizeRepoPaths_ReserveBlocked(t *testing.T) {
+	root := t.TempDir()
+
+	_, err := SanitizeRepoPaths(root, []string{"/a.txt", "/.cloud_reserve/logo.png"})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "forbidden")
+}
+
+func TestSanitizeRepoPath_ReserveSubstringAllowed(t *testing.T) {
+	root := t.TempDir()
+
+	// A name that merely contains the reserved string is not a path component.
+	result, err := SanitizeRepoPath(root, "/notes.cloud_reserve.txt")
+	assert.NoError(t, err)
+	assert.Equal(t, filepath.Join(root, "notes.cloud_reserve.txt"), result)
+
+	result, err = SanitizeRepoPath(root, "/.cloud_deleteish/file.txt")
+	assert.NoError(t, err)
+	assert.Equal(t, filepath.Join(root, ".cloud_deleteish", "file.txt"), result)
+}
+
 func TestSanitizeFilename_Valid(t *testing.T) {
 	result, err := SanitizeFilename("myfile.txt")
 	assert.NoError(t, err)

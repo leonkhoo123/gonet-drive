@@ -224,6 +224,49 @@ func TestPathTraversal_FileList(t *testing.T) {
 	}
 }
 
+// TestPathTraversal_RecycleBinAndReserve verifies that the recycle bin's new
+// on-disk location under .cloud_reserve cannot be used to escape the root or to
+// reach the internal reserve namespace directly.
+func TestPathTraversal_RecycleBinAndReserve(t *testing.T) {
+	router, _ := setupSecurityRouter(t)
+	db := config.DB
+	testutil.CreateTestUser(t, db, "reservetravuser", "pass123", "user")
+	accessCookie := testutil.LoginAndGetCookie(t, router, "reservetravuser", "pass123")
+
+	// Direct access to the internal reserve namespace is forbidden.
+	reservePayloads := []string{
+		"/.cloud_reserve",
+		"/.cloud_reserve/logo.png",
+		"/.cloud_reserve/.cloud_delete",
+		"/.cloud_reserve/.cloud_delete/secret.txt",
+	}
+	for _, payload := range reservePayloads {
+		rec := testutil.MakeAuthRequest(t, router, http.MethodGet,
+			"/api/user/files/file-list?path="+payload, nil, accessCookie)
+		assert.Equal(t, http.StatusForbidden, rec.Code,
+			"reserve path %q must be forbidden", payload)
+	}
+
+	// Traversal attempts through the virtual recycle bin path are rejected.
+	traversalPayloads := []string{
+		"/.cloud_delete/../../etc/passwd",
+		"/.cloud_delete/../.cloud_reserve/logo.png",
+		"/.cloud_delete/%2e%2e/%2e%2e/etc/passwd",
+	}
+	for _, payload := range traversalPayloads {
+		rec := testutil.MakeAuthRequest(t, router, http.MethodGet,
+			"/api/user/files/file-list?path="+payload, nil, accessCookie)
+		assert.NotEqual(t, http.StatusOK, rec.Code,
+			"traversal via recycle bin %q must not return 200", payload)
+	}
+
+	// The virtual recycle bin path itself remains usable.
+	rec := testutil.MakeAuthRequest(t, router, http.MethodGet,
+		"/api/user/files/file-list?path=/.cloud_delete", nil, accessCookie)
+	assert.Equal(t, http.StatusOK, rec.Code,
+		"virtual recycle bin path /.cloud_delete must remain accessible")
+}
+
 func TestPathTraversal_CopySources(t *testing.T) {
 	router, _ := setupSecurityRouter(t)
 	db := config.DB
@@ -383,7 +426,7 @@ func TestTokenInCookieNotAccessibleToJS(t *testing.T) {
 		assert.True(t, c.HttpOnly,
 			"cookie %q must be HttpOnly to prevent JavaScript access", c.Name)
 		assert.Equal(t, "/", c.Path,
-			"cookie %q should have Path=/" , c.Name)
+			"cookie %q should have Path=/", c.Name)
 	}
 
 	assert.True(t, cookieNames["access_token"], "access_token cookie should be set")
