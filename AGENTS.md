@@ -15,17 +15,36 @@
 # 1) Build frontend
 cd frontend && npm run build
 
-# 2) Copy dist to the embed directory
-cp -r frontend/dist backend/ui/dist
+# 2) Copy dist contents into the embed directory (no nesting)
+cp -r frontend/dist/. backend/ui/dist/
 
 # 3) Build Go binary (CGO required for SQLite)
 cd backend && CGO_ENABLED=1 go build -o ../server ./cmd/main.go
 ```
 
-- The `backend/ui/dist/` directory is gitignored. It must exist before `go build` (even empty), because of `//go:embed all:dist`. If missing, create it: `mkdir -p backend/ui/dist`.
+- The `backend/ui/dist/` directory is gitignored and must contain at least one file before `go build`/`go run`, because `//go:embed all:dist` (`backend/ui/embed.go:5`) is resolved at compile time. A **missing or empty** directory fails: `pattern all:dist: no matching files found` / `cannot embed directory dist: contains no embeddable files`. It is a **CI/Docker artifact** for the embedded production UI. Populate it with the copy above for a real embedded build, or with any placeholder file when you only need the backend to compile (see local dev below).
 - Docker build handles this sequence automatically (multi-stage Dockerfile).
 
 ### Dev — backend only (use Vite for frontend)
+
+> **Prerequisite — `backend/ui/dist` must be non-empty.** `//go:embed all:dist`
+> (`backend/ui/embed.go:5`) is resolved at compile time, so a fresh clone fails
+> with `pattern all:dist: no matching files found` / `cannot embed directory
+> dist: contains no embeddable files`. That directory is a gitignored
+> **CI/Docker artifact** holding the embedded production UI — local dev never
+> serves it (Vite does), so any placeholder file is enough to compile:
+>
+> ```bash
+> mkdir -p backend/ui/dist && touch backend/ui/dist/.gitkeep
+> ```
+>
+> To compile with the real embedded UI instead, run the full build steps above.
+>
+> **Native dependencies (Linux):** the backend links CGO libraries — SQLite
+> (`mattn/go-sqlite3`) and libvips (`h2non/bimg`, see
+> `internal/service/thumbnail_generation.go`) — and needs `ffmpeg` at runtime.
+> e.g. Fedora `sudo dnf install -y vips-devel ffmpeg`; Debian/Ubuntu
+> `sudo apt install -y libvips-dev ffmpeg`.
 
 ```bash
 # Backend (from repo root, reads .env)

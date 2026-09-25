@@ -106,6 +106,50 @@ docker run -d \
 > `ADMIN_USER`/`ADMIN_PASS` env var. The JWT signing secret is generated and
 > rotated automatically by the auth library, so `APP_JWTSECRET` is no longer used.
 
+### Local Development (from source)
+
+For day-to-day development, run the frontend on Vite and the backend with
+`go run`. The production UI is embedded only for release/CI builds.
+
+```bash
+# Backend (reads .env; WORK_DIR must exist on disk)
+cd backend && go run ./cmd/main.go
+
+# Frontend hot-reload — separate terminal; Vite proxies /api to http://localhost:3333
+cd frontend && npm run dev
+```
+
+> **`backend/ui/dist` must be non-empty to compile.** The Go binary embeds it at
+> compile time (`//go:embed all:dist` in `backend/ui/embed.go`), and the directory
+> is gitignored. If it is missing or empty, `go run` fails with
+> `pattern all:dist: no matching files found`. It is a CI/Docker artifact holding
+> the embedded UI and is **not used** in local dev (Vite serves the app), so any
+> placeholder file is enough:
+>
+> ```bash
+> mkdir -p backend/ui/dist && touch backend/ui/dist/.gitkeep
+> ```
+
+To produce the embedded UI locally (what CI/Docker do automatically):
+
+```bash
+# 1) Build the frontend
+cd frontend && npm run build
+
+# 2) Copy the build contents into the embed directory (no nesting)
+cd .. && cp -r frontend/dist/. backend/ui/dist/
+
+# 3) Build the Go binary (CGO required for SQLite)
+cd backend && CGO_ENABLED=1 go build -o ../server ./cmd/main.go
+```
+
+Native prerequisites: a C toolchain with CGO, SQLite dev headers, **libvips**
+(`vips-devel` on Fedora, `libvips-dev` on Debian/Ubuntu) for image thumbnails,
+and `ffmpeg` at runtime.
+
+> Note: `npm run build` writes to `frontend/dist` and does **not** populate
+> `backend/ui/dist`; step 2 is required (CI/Docker do this for you).
+
 ## Environment Variables
 
 The server can be configured using environment variables. You can set them directly in your environment or use a `.env` file in the directory where the binary is executed.
