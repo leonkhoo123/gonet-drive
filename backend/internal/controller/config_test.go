@@ -42,7 +42,7 @@ func setupConfigRouter(t *testing.T) (*gin.Engine, *config.CloudConfig, *service
 
 	// Auth routes (includes ConfigRoutes, admin, etc.)
 	controller.SetupPublicAuthRoutes(router, cfg, authInstance, authCfg)
-	controller.SetupAuthenticatedRoutes(router, cfg, authInstance, authCfg, userService, nil, nil, configRepo, nil)
+	controller.SetupAuthenticatedRoutes(router, cfg, authInstance, authCfg, userService, nil, nil, configRepo, nil, nil)
 
 	return router, cfg, userService, authInstance, configRepo, db
 }

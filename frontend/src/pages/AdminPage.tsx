@@ -9,6 +9,8 @@ import { toast } from 'sonner';
 import axiosLayer from '@/api/axiosLayer';
 import { getConfigs, updateConfig } from "@/api/api-config";
 import { getMe } from "@/api/api-auth";
+import { getAuditLogs } from "@/api/api-audit";
+import type { AuditLogEntry } from "@/api/api-audit";
 import { getConfig } from '@/config';
 import { Logo } from '@/components/Logo';
 import type { ConfigItem } from "@/api/api-config";
@@ -24,7 +26,11 @@ import {
   UserPlus,
   Trash2,
   KeyRound,
-  Database
+  Database,
+  ScrollText,
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -37,9 +43,64 @@ interface UserInfo {
   locked_until?: string;
 }
 
+const AUDIT_EVENT_OPTIONS: { value: string; label: string }[] = [
+  { value: '', label: 'All Events' },
+  { value: 'login_success', label: 'Login Success' },
+  { value: 'login_failure', label: 'Login Failure' },
+  { value: 'account_locked', label: 'Account Locked' },
+  { value: 'mfa_setup_initiated', label: 'MFA Setup Initiated' },
+  { value: 'mfa_enabled', label: 'MFA Enabled' },
+  { value: 'mfa_verify_success', label: 'MFA Verify Success' },
+  { value: 'mfa_verify_failure', label: 'MFA Verify Failure' },
+  { value: 'mfa_lockout_triggered', label: 'MFA Lockout Triggered' },
+  { value: 'mfa_recovery_success', label: 'MFA Recovery Success' },
+  { value: 'mfa_recovery_failure', label: 'MFA Recovery Failure' },
+  { value: 'token_compromise', label: 'Token Compromise' },
+  { value: 'session_revoked', label: 'Session Revoked' },
+  { value: 'all_sessions_revoked', label: 'All Sessions Revoked' },
+  { value: 'logout', label: 'Logout' },
+  { value: 'jwt_off_active', label: 'JWT-Off Active' },
+  { value: 'admin_provisioned', label: 'Admin Provisioned' },
+  { value: 'user_created', label: 'User Created' },
+  { value: 'user_deleted', label: 'User Deleted' },
+];
+
+const AUDIT_DANGER_EVENTS = new Set(['account_locked', 'mfa_lockout_triggered', 'token_compromise']);
+const AUDIT_WARNING_EVENTS = new Set(['login_failure', 'mfa_verify_failure', 'mfa_recovery_failure']);
+const AUDIT_SUCCESS_EVENTS = new Set([
+  'login_success',
+  'mfa_enabled',
+  'mfa_verify_success',
+  'mfa_recovery_success',
+  'admin_provisioned',
+  'user_created',
+]);
+
+const auditEventLabel = (type: string): string =>
+  AUDIT_EVENT_OPTIONS.find((o) => o.value === type)?.label ?? type;
+
+const auditEventBadgeClass = (type: string): string => {
+  if (AUDIT_DANGER_EVENTS.has(type)) {
+    return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+  }
+  if (AUDIT_WARNING_EVENTS.has(type)) {
+    return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
+  }
+  if (AUDIT_SUCCESS_EVENTS.has(type)) {
+    return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+  }
+  return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
+};
+
+const formatAuditTime = (value: string): string => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString();
+};
+
 const AdminPage = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'configs' | 'users'>('configs');
+  const [activeTab, setActiveTab] = useState<'configs' | 'users' | 'audit'>('configs');
   const [currentUsername, setCurrentUsername] = useState('');
   
   // Users state
@@ -63,17 +124,54 @@ const AdminPage = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Audit logs state
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
+  const [auditTotal, setAuditTotal] = useState(0);
+  const [auditPage, setAuditPage] = useState(1);
+  const [auditPageSize] = useState(50);
+  const [auditEventType, setAuditEventType] = useState('');
+  const [auditUsername, setAuditUsername] = useState('');
+  const [auditUsernameInput, setAuditUsernameInput] = useState('');
+  const [loadingAudit, setLoadingAudit] = useState(false);
+  const [auditRefreshKey, setAuditRefreshKey] = useState(0);
+
   useEffect(() => {
     getMe().then(res => {
       setCurrentUsername(res.username);
     }).catch(console.error);
+  }, []);
 
+  useEffect(() => {
     if (activeTab === 'users') {
       void fetchUsers();
-    } else {
-      void fetchConfigs();
+      return;
     }
-  }, [activeTab]);
+    if (activeTab === 'audit') {
+      let cancelled = false;
+      setLoadingAudit(true);
+      getAuditLogs({
+        page: auditPage,
+        page_size: auditPageSize,
+        event_type: auditEventType || undefined,
+        username: auditUsername || undefined,
+      })
+        .then((data) => {
+          if (cancelled) return;
+          setAuditLogs(data.logs);
+          setAuditTotal(data.total);
+        })
+        .catch(() => {
+          if (!cancelled) toast.error('Failed to fetch audit logs');
+        })
+        .finally(() => {
+          if (!cancelled) setLoadingAudit(false);
+        });
+      return () => {
+        cancelled = true;
+      };
+    }
+    void fetchConfigs();
+  }, [activeTab, auditPage, auditPageSize, auditEventType, auditUsername, auditRefreshKey]);
 
   const fetchUsers = async () => {
     try {
@@ -258,6 +356,17 @@ const AdminPage = () => {
           >
             <Users className="h-4 w-4" />
             Users
+          </button>
+          <button
+            className={`px-4 py-3 font-medium text-sm transition-colors border-b-2 flex items-center gap-2 ${
+              activeTab === 'audit'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+            onClick={() => { setActiveTab('audit'); }}
+          >
+            <ScrollText className="h-4 w-4" />
+            Auth Logs
           </button>
         </div>
 
@@ -743,6 +852,176 @@ const AdminPage = () => {
                           </div>
                         </div>
                       ))}
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {activeTab === 'audit' && (
+          <div className="space-y-4">
+            <Card className="border-border shadow-sm py-3 md:py-6 gap-3 md:gap-6">
+              <CardHeader className="bg-muted/30 pb-3 px-4 md:px-6">
+                <CardTitle className="flex items-center gap-2">
+                  <ScrollText className="h-5 w-5 text-primary" />
+                  Auth Logs
+                </CardTitle>
+                <CardDescription className="hidden sm:block">
+                  Security events captured by the authentication service: logins, logouts, MFA, session and account changes.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0 md:pt-6 px-4 md:px-6 space-y-4">
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <select
+                    className="flex h-10 w-full sm:w-60 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={auditEventType}
+                    onChange={(e) => {
+                      setAuditEventType(e.target.value);
+                      setAuditPage(1);
+                    }}
+                  >
+                    {AUDIT_EVENT_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                  <form
+                    className="flex flex-1 gap-2"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      setAuditPage(1);
+                      setAuditUsername(auditUsernameInput.trim());
+                    }}
+                  >
+                    <Input
+                      value={auditUsernameInput}
+                      onChange={(e) => { setAuditUsernameInput(e.target.value); }}
+                      placeholder="Filter by username"
+                      className="flex-1 focus-visible:ring-ring"
+                    />
+                    <Button type="submit" variant="outline">Search</Button>
+                    {auditUsername && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => {
+                          setAuditUsernameInput('');
+                          setAuditUsername('');
+                          setAuditPage(1);
+                        }}
+                      >
+                        Clear
+                      </Button>
+                    )}
+                  </form>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => { setAuditRefreshKey((k) => k + 1); }}
+                    disabled={loadingAudit}
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${loadingAudit ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </Button>
+                </div>
+
+                {loadingAudit && auditLogs.length === 0 ? (
+                  <div className="flex items-center justify-center p-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : auditLogs.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground rounded-md border">
+                    <ScrollText className="h-8 w-8 mx-auto mb-3 opacity-20" />
+                    No audit events found
+                  </div>
+                ) : (
+                  <>
+                    <div className="hidden md:block rounded-md border overflow-x-auto">
+                      <Table>
+                        <TableHeader className="bg-muted/50">
+                          <TableRow>
+                            <TableHead className="font-semibold">Time</TableHead>
+                            <TableHead className="font-semibold">Event</TableHead>
+                            <TableHead className="font-semibold">User</TableHead>
+                            <TableHead className="font-semibold">IP Address</TableHead>
+                            <TableHead className="font-semibold">Device</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {auditLogs.map((log) => (
+                            <TableRow key={log.id} className="hover:bg-muted/30 transition-colors">
+                              <TableCell className="py-3 text-xs text-muted-foreground whitespace-nowrap">
+                                {formatAuditTime(log.timestamp)}
+                              </TableCell>
+                              <TableCell className="py-3">
+                                <span className={`text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap ${auditEventBadgeClass(log.event_type)}`}>
+                                  {auditEventLabel(log.event_type)}
+                                </span>
+                              </TableCell>
+                              <TableCell className="py-3 font-medium">{log.username || '—'}</TableCell>
+                              <TableCell className="py-3 font-mono text-xs">{log.ip_address || '—'}</TableCell>
+                              <TableCell className="py-3 text-xs text-muted-foreground max-w-[280px] truncate" title={log.device_info}>
+                                {log.device_info || '—'}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    <div className="md:hidden space-y-2">
+                      {auditLogs.map((log) => (
+                        <div key={log.id} className="rounded-md border p-3 space-y-2 bg-card">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${auditEventBadgeClass(log.event_type)}`}>
+                              {auditEventLabel(log.event_type)}
+                            </span>
+                            <span className="text-[11px] text-muted-foreground shrink-0">{formatAuditTime(log.timestamp)}</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-1.5 text-sm">
+                            <div>
+                              <span className="text-xs text-muted-foreground block">User</span>
+                              <span className="truncate block">{log.username || '—'}</span>
+                            </div>
+                            <div>
+                              <span className="text-xs text-muted-foreground block">IP</span>
+                              <span className="font-mono text-xs truncate block">{log.ip_address || '—'}</span>
+                            </div>
+                          </div>
+                          {log.device_info && (
+                            <div className="text-[11px] text-muted-foreground break-words border-t border-border pt-1.5">
+                              {log.device_info}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2">
+                      <span className="text-sm text-muted-foreground">
+                        Page {auditPage} of {Math.max(1, Math.ceil(auditTotal / auditPageSize))} · {auditTotal} event{auditTotal === 1 ? '' : 's'}
+                      </span>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => { setAuditPage((p) => Math.max(1, p - 1)); }}
+                          disabled={auditPage <= 1 || loadingAudit}
+                        >
+                          <ChevronLeft className="h-4 w-4 mr-1" />
+                          Prev
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => { setAuditPage((p) => p + 1); }}
+                          disabled={auditPage >= Math.ceil(auditTotal / auditPageSize) || loadingAudit}
+                        >
+                          Next
+                          <ChevronRight className="h-4 w-4 ml-1" />
+                        </Button>
+                      </div>
                     </div>
                   </>
                 )}

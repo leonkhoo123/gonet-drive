@@ -333,7 +333,7 @@ func SetupShareFileRoutes(router *gin.Engine, shareRepo repository.SharingReposi
 var mfaBypassPaths = []string{"/api/user/me", "/api/user/mfa/setup", "/api/user/mfa/confirm", "/api/logout"}
 
 // SetupAuthenticatedRoutes wires all /api/user/** routes with JWTAuthMiddleware.
-func SetupAuthenticatedRoutes(router *gin.Engine, cfg *config.CloudConfig, authInstance *auth.Auth, authCfg *gonetauth.AuthConfig, userService *service.UserService, sharingService *service.SharingService, audiobookService *service.AudiobookService, configRepo repository.CloudConfigRepository, pinnedFolderService *service.PinnedFolderService) {
+func SetupAuthenticatedRoutes(router *gin.Engine, cfg *config.CloudConfig, authInstance *auth.Auth, authCfg *gonetauth.AuthConfig, userService *service.UserService, sharingService *service.SharingService, audiobookService *service.AudiobookService, configRepo repository.CloudConfigRepository, pinnedFolderService *service.PinnedFolderService, auditLogRepo repository.AuditLogRepository) {
 	h := authgin.NewHandlers(authInstance, authCfg)
 
 	authRouter := router.Group("/api/user")
@@ -370,6 +370,7 @@ func SetupAuthenticatedRoutes(router *gin.Engine, cfg *config.CloudConfig, authI
 			ConfigRoutes(adminRouter, configRepo)
 
 			RegisterVideoIntegrityAdminRoutes(adminRouter, cfg)
+			RegisterAuditLogAdminRoutes(adminRouter, auditLogRepo)
 		}
 	}
 }

@@ -128,6 +128,8 @@ func main() {
 	pinnedFolderRepo := repository.NewSQLitePinnedFolderRepo(config.DB)
 	pinnedFolderService := service.NewPinnedFolderService(pinnedFolderRepo)
 
+	auditLogRepo := repository.NewSQLiteAuditLogRepo(config.DB)
+
 	// Start WebSocket manager
 	go ws.Manager.Start()
 
@@ -242,7 +244,7 @@ func main() {
 	controller.SetupShareFileRoutes(router, shareRepo, authInstance)
 
 	// Authenticated routes
-	controller.SetupAuthenticatedRoutes(router, cfg, authInstance, authCfg, userService, sharingService, audiobookService, configRepo, pinnedFolderService)
+	controller.SetupAuthenticatedRoutes(router, cfg, authInstance, authCfg, userService, sharingService, audiobookService, configRepo, pinnedFolderService, auditLogRepo)
 
 	distFS, err := fs.Sub(ui.ReactFiles, "dist")
 	if err != nil {

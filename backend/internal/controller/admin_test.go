@@ -29,7 +29,7 @@ func setupAdminRouter(t *testing.T) (*gin.Engine, *config.CloudConfig, *auth.Aut
 
 	router := gin.New()
 	controller.SetupPublicAuthRoutes(router, cfg, authInstance, authCfg)
-	controller.SetupAuthenticatedRoutes(router, cfg, authInstance, authCfg, userService, nil, nil, nil, nil)
+	controller.SetupAuthenticatedRoutes(router, cfg, authInstance, authCfg, userService, nil, nil, nil, nil, nil)
 
 	return router, cfg, authInstance, db
 }

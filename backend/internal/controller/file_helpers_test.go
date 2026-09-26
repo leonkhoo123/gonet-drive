@@ -32,7 +32,7 @@ func setupFileRouter(t *testing.T) (*gin.Engine, *config.CloudConfig, *sql.DB) {
 
 	router := gin.New()
 	controller.SetupPublicAuthRoutes(router, cfg, authInstance, authCfg)
-	controller.SetupAuthenticatedRoutes(router, cfg, authInstance, authCfg, userService, nil, nil, nil, nil)
+	controller.SetupAuthenticatedRoutes(router, cfg, authInstance, authCfg, userService, nil, nil, nil, nil, nil)
 
 	return router, cfg, db
 }
