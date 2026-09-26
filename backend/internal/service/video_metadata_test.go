@@ -177,7 +177,7 @@ func TestProcessVideoRenameDone_EmbedFailureLeavesInTmp(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "broken.mp4")
 	// An invalid container forces the remux to fail: the original must stay in
-	// done/tmp for recovery, with its sidecar brought alongside it.
+	// .cloud_reserve/temp for recovery, with its sidecar brought alongside it.
 	require.NoError(t, os.WriteFile(src, []byte("not a video"), 0644))
 
 	metaDir := filepath.Join(dir, util.MetadataDirName)
@@ -192,11 +192,11 @@ func TestProcessVideoRenameDone_EmbedFailureLeavesInTmp(t *testing.T) {
 	require.Error(t, err)
 
 	// The original stays put; nothing lands in done/.
-	require.FileExists(t, procPath, "failed file must remain in done/tmp")
+	require.FileExists(t, procPath, "failed file must remain in .cloud_reserve/temp")
 	assert.NoFileExists(t, filepath.Join(dir, "done", "renamed.mp4"))
 
 	// Its sidecar is relocated next to it, keyed to the staged file name.
-	relocated := filepath.Join(doneDir, VideoProcessingDirName, util.MetadataDirName, "broken.mp4_timestamps.json")
+	relocated := filepath.Join(filepath.Dir(procPath), util.MetadataDirName, "broken.mp4_timestamps.json")
 	require.FileExists(t, relocated)
 	assert.NoFileExists(t, sidecar)
 	assert.Equal(t, "broken.mp4", readSidecarVideoField(t, relocated))
@@ -232,13 +232,13 @@ func TestProcessVideoRenameDone_NonMP4RelocatesSidecar(t *testing.T) {
 }
 
 // stageVideo mirrors StartVideoRenameDone's first step: atomically move the
-// source video into done/tmp and return the staging path, done dir and the
-// sidecar path keyed to the original location.
+// source video into .cloud_reserve/temp and return the staging path, done dir
+// and the sidecar path keyed to the original location.
 func stageVideo(t *testing.T, dir, name string) (procPath, doneDir, sidecarPath string) {
 	t.Helper()
 	src := filepath.Join(dir, name)
 	doneDir = filepath.Join(dir, "done")
-	procDir := filepath.Join(doneDir, VideoProcessingDirName)
+	procDir := filepath.Join(dir, util.CloudReserveDirName, VideoProcessingDirName)
 	require.NoError(t, os.MkdirAll(procDir, 0777))
 	procPath = filepath.Join(procDir, name)
 	require.NoError(t, os.Rename(src, procPath))

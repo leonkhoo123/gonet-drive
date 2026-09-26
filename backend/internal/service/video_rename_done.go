@@ -34,17 +34,20 @@ type VideoRenameDoneReq struct {
 // VideoDoneOpType identifies the async "rename to done + embed metadata" job.
 const VideoDoneOpType = "video-done"
 
-// VideoProcessingDirName is the staging folder inside `done/` that the source
-// video is atomically moved into before processing. On failure the original is
-// left here for recovery.
-const VideoProcessingDirName = "tmp"
+// VideoProcessingDirName is the staging folder inside the hidden
+// `.cloud_reserve` directory that the source video is atomically moved into
+// before processing. Keeping it out of the browse tree means the staging area
+// never shows up under `done/` and never has to be deleted — deleting it would
+// race with other in-flight rename-done jobs sharing the folder. On failure the
+// original is left here for recovery.
+const VideoProcessingDirName = "temp"
 
 // VideoRenameDone moves a video into a staging folder and queues an async job
 // that rotates/embeds metadata into it before it lands in the `done` folder.
 // This mirrors copy/move: it returns immediately with an operation id and
 // streams progress over the WebSocket.
 // @Summary      Rename Video (Done)
-// @Description  Move a video into done/tmp, then rotate + embed metadata into the done folder asynchronously.
+// @Description  Stage a video in .cloud_reserve/temp, then rotate + embed metadata into the done folder asynchronously.
 // @Tags         Media
 // @Accept       json
 // @Produce      json
@@ -79,8 +82,8 @@ func VideoRenameDone(c *gin.Context, cfg *config.CloudConfig) {
 }
 
 // StartVideoRenameDone validates the request, atomically moves the video out of
-// its browse folder into done/tmp, and enqueues the async processing job.
-// It returns the operation id the client can use to track progress.
+// its browse folder into .cloud_reserve/temp, and enqueues the async processing
+// job. It returns the operation id the client can use to track progress.
 func StartVideoRenameDone(req VideoRenameDoneReq, cfg *config.CloudConfig, requestID, username string) (string, error) {
 	srcPath, err := util.SanitizeRepoPath(cfg.Server.FileRoot, req.Path)
 	if err != nil {
@@ -94,7 +97,10 @@ func StartVideoRenameDone(req VideoRenameDoneReq, cfg *config.CloudConfig, reque
 
 	parentDir := filepath.Dir(srcPath)
 	doneDir := filepath.Join(parentDir, "done")
-	procDir := filepath.Join(doneDir, VideoProcessingDirName)
+	// Stage the file in the hidden reserve directory rather than in done/tmp:
+	// the staging area stays out of the browse tree, never needs deleting, and
+	// cannot be disturbed by other concurrent rename-done jobs.
+	procDir := filepath.Join(cfg.Server.FileRoot, util.CloudReserveDirName, VideoProcessingDirName)
 	if err := os.MkdirAll(procDir, 0777); err != nil {
 		return "", fmt.Errorf("failed to create processing folder: %w", err)
 	}
@@ -106,7 +112,8 @@ func StartVideoRenameDone(req VideoRenameDoneReq, cfg *config.CloudConfig, reque
 
 	// Move the source out of the browse folder FIRST (atomic rename, same
 	// filesystem) so it disappears immediately and cannot be reopened while the
-	// potentially slow remux runs. On failure it stays in done/tmp for recovery.
+	// potentially slow remux runs. On failure it stays in .cloud_reserve/temp
+	// for recovery.
 	if err := os.Rename(srcPath, procPath); err != nil {
 		return "", fmt.Errorf("failed to move file to processing folder: %w", err)
 	}
@@ -143,8 +150,9 @@ func StartVideoRenameDone(req VideoRenameDoneReq, cfg *config.CloudConfig, reque
 }
 
 // processVideoRenameDone performs the actual work on the file-operation worker.
-// The source already lives in done/tmp/<name>; the annotated result is written
-// to done/<newName>. On failure the original is left in done/tmp.
+// The source already lives in .cloud_reserve/temp/<name>; the annotated result is
+// written to done/<newName>. On failure the original is left in
+// .cloud_reserve/temp.
 func processVideoRenameDone(procPath, doneDir, sidecarPath, newName string, rotateAngle int, tracker *util.ProgressTracker) error {
 	procInfo, err := os.Stat(procPath)
 	if err != nil {
@@ -152,6 +160,12 @@ func processVideoRenameDone(procPath, doneDir, sidecarPath, newName string, rota
 	}
 	if procInfo.IsDir() {
 		return fmt.Errorf("processing path is not a file")
+	}
+
+	// The staging folder no longer lives under done/, so make sure the
+	// destination folder exists before we move/remux into it.
+	if err := os.MkdirAll(doneDir, 0777); err != nil {
+		return fmt.Errorf("failed to create done folder: %w", err)
 	}
 
 	destPath, err := util.ResolveDuplicatePath(doneDir, newName)
@@ -167,8 +181,8 @@ func processVideoRenameDone(procPath, doneDir, sidecarPath, newName string, rota
 	tracker.TotalBytes = procInfo.Size()
 	tracker.TotalFiles = 1
 
-	// A genuine processing failure leaves the original in done/tmp and keeps the
-	// sidecar next to it so the pair can be recovered together.
+	// A genuine processing failure leaves the original in .cloud_reserve/temp and
+	// keeps the sidecar next to it so the pair can be recovered together.
 	failProcessing := func(processingErr error) error {
 		if sidecarExists {
 			if relocateErr := util.RelocateSidecar(sidecarPath, procPath); relocateErr != nil {

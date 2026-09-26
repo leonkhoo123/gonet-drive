@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
 import {
   Play,
   Pause,
@@ -21,25 +20,18 @@ import {
 } from "lucide-react";
 import type { AutoPlayMode } from "@/hooks/useVideoPlayerV2/useVideoAutoPlay";
 import type { VideoControlsProps } from "./types";
+import {
+  GLASS,
+  GLASS_ACTIVE,
+  GLASS_BLUE,
+  GLASS_GREEN,
+  GLASS_PANEL,
+  GLASS_RED,
+  GLASS_YELLOW,
+} from "./glassStyles";
 
 /** Selectable playback speeds, ordered fast -> slow (left -> right). */
 const SPEEDS = [2, 1.5, 1.25, 1, 0.75, 0.5, 0.25] as const;
-
-/** Shared look for the control column, derived from the speed panel. */
-const GLASS =
-  "border border-white/20 bg-black/60 backdrop-blur-sm text-white hover:bg-black/70 hover:text-white dark:hover:bg-black/70";
-/** Same glass treatment, tinted for the rename action. */
-const GLASS_GREEN =
-  "border border-white/20 bg-green-600/50 backdrop-blur-sm text-white hover:bg-green-600/70 hover:text-white dark:hover:bg-green-600/70";
-/** Same glass treatment, tinted for the disqualified action. */
-const GLASS_RED =
-  "border border-white/20 bg-red-600/50 backdrop-blur-sm text-white hover:bg-red-600/70 hover:text-white dark:hover:bg-red-600/70";
-/** Same glass treatment, tinted for the rotate action. */
-const GLASS_YELLOW =
-  "border border-white/20 bg-yellow-500/50 backdrop-blur-sm text-white hover:bg-yellow-500/70 hover:text-white dark:hover:bg-yellow-500/70";
-/** Same glass treatment, tinted for shuffle mode. */
-const GLASS_BLUE =
-  "border border-white/20 bg-blue-600/50 backdrop-blur-sm text-white hover:bg-blue-600/70 hover:text-white dark:hover:bg-blue-600/70";
 
 /** Per-mode look and copy for the cycling auto-play button. */
 const AUTO_PLAY_LOOK: Record<
@@ -118,18 +110,6 @@ export function VideoControls({
   const runAction = (action: () => void) => {
     action();
     setOpenPanel(null);
-  };
-
-  const speedIndex = SPEEDS.reduce(
-    (best, speed, index) =>
-      Math.abs(speed - playbackRate) < Math.abs(SPEEDS[best] - playbackRate)
-        ? index
-        : best,
-    0
-  );
-
-  const handleSpeedChange = (values: number[]) => {
-    onChangeSpeed(SPEEDS[values[0]]);
   };
 
   const autoPlayLook = AUTO_PLAY_LOOK[autoPlayMode];
@@ -255,7 +235,7 @@ export function VideoControls({
         >
           {/* Chevron pinned left; rotates when the speed slider is open */}
           <ChevronLeft
-            className={`absolute left-2 h-4 w-4 sm:h-5 sm:w-5 text-gray-500 transition-transform duration-300 ${
+            className={`absolute left-2 h-4 w-4 sm:h-5 sm:w-5 text-black/50 transition-transform duration-300 ${
               openPanel === "speed" ? "rotate-180" : ""
             }`}
           />
@@ -278,7 +258,7 @@ export function VideoControls({
         >
           {/* Chevron pinned to the left; rotates between < and > when toggled */}
           <ChevronLeft
-            className={`absolute left-2 h-4 w-4 sm:h-5 sm:w-5 text-gray-500 transition-transform duration-300 ${
+            className={`absolute left-2 h-4 w-4 sm:h-5 sm:w-5 text-black/50 transition-transform duration-300 ${
               openPanel === "actions" ? "rotate-180" : ""
             }`}
           />
@@ -306,36 +286,34 @@ export function VideoControls({
             : "opacity-0 translate-x-3 pointer-events-none"
         }`}
       >
-        <div className="flex w-[calc(100vw-7rem)] max-w-sm flex-col gap-2 rounded-md border border-white/20 bg-black/60 px-3 py-2 text-white shadow-lg backdrop-blur-sm">
+        <div className={`flex w-[calc(100vw-7rem)] max-w-sm flex-col gap-2 rounded-md px-3 py-2 ${GLASS_PANEL}`}>
           <div className="flex items-center justify-between text-xs">
             <span className="opacity-80">Speed</span>
             <span className="font-semibold tabular-nums">{playbackRate}x</span>
           </div>
-          <Slider
-            min={0}
-            max={SPEEDS.length - 1}
-            step={1}
-            value={[speedIndex]}
-            onValueChange={handleSpeedChange}
-            aria-label="Playback speed"
-            className="[&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-track]]:bg-white/25 [&_[data-slot=slider-range]]:bg-white/90 [&_[data-slot=slider-thumb]]:size-5 [&_[data-slot=slider-thumb]]:border-white [&_[data-slot=slider-thumb]]:bg-white [&_[data-slot=slider-thumb]]:shadow-md"
-          />
-          <div className="relative h-3 text-[10px] tabular-nums text-white/70">
-            {SPEEDS.map((speed, index) => (
-              // Radix insets the 20px thumb by 10px on each side, so its
-              // center travels from +10px to (100% - 10px). Match that here.
-              <span
-                key={speed}
-                className="absolute top-0 -translate-x-1/2"
-                style={{
-                  left: `calc(10px + (100% - 20px) * ${String(
-                    index / (SPEEDS.length - 1)
-                  )})`,
-                }}
-              >
-                {speed}
-              </span>
-            ))}
+          {/* One button per speed step — easier to hit than the slider on touch. */}
+          <div className="grid grid-cols-4 gap-1 sm:grid-cols-7">
+            {SPEEDS.map((speed) => {
+              const isActive = speed === playbackRate;
+              return (
+                <Button
+                  key={speed}
+                  variant="ghost"
+                  onClick={() => {
+                    runAction(() => {
+                      onChangeSpeed(speed);
+                    });
+                  }}
+                  aria-pressed={isActive}
+                  aria-label={`Set playback speed to ${String(speed)}x`}
+                  className={`h-9 px-0 text-xs tabular-nums ${
+                    isActive ? GLASS_ACTIVE : GLASS
+                  }`}
+                >
+                  {speed}x
+                </Button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -366,7 +344,8 @@ export function VideoControls({
         <Button
           variant="ghost"
           onClick={() => {
-            runAction(onRotate);
+            // Rotation is repeatable: keep the flyout open so it can be tapped again.
+            onRotate();
           }}
           title="Rotate"
           aria-label="Rotate"
