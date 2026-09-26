@@ -21,14 +21,14 @@ import {
 import type { AutoPlayMode } from "@/hooks/useVideoPlayerV2/useVideoAutoPlay";
 import type { VideoControlsProps } from "./types";
 import {
-  GLASS,
-  GLASS_ACTIVE,
-  GLASS_BLUE,
-  GLASS_GREEN,
-  GLASS_PANEL,
-  GLASS_RED,
-  GLASS_YELLOW,
-} from "./glassStyles";
+  CONTROL,
+  CONTROL_ACTIVE,
+  CONTROL_BLUE,
+  CONTROL_GREEN,
+  CONTROL_RED,
+  CONTROL_YELLOW,
+  PANEL,
+} from "./controlStyles";
 
 /** Selectable playback speeds, ordered fast -> slow (left -> right). */
 const SPEEDS = [2, 1.5, 1.25, 1, 0.75, 0.5, 0.25] as const;
@@ -38,9 +38,9 @@ const AUTO_PLAY_LOOK: Record<
   AutoPlayMode,
   { label: string; icon: typeof ListVideo; className: string }
 > = {
-  off: { label: "Off", icon: CircleOff, className: GLASS },
-  auto: { label: "Auto", icon: ListVideo, className: GLASS_GREEN },
-  shuffle: { label: "Shuffle", icon: Shuffle, className: GLASS_BLUE },
+  off: { label: "Off", icon: CircleOff, className: CONTROL },
+  auto: { label: "Auto", icon: ListVideo, className: CONTROL_GREEN },
+  shuffle: { label: "Shuffle", icon: Shuffle, className: CONTROL_BLUE },
 };
 
 /** Which collapsible flyout is currently open. */
@@ -157,7 +157,7 @@ export function VideoControls({
             variant="ghost"
             onClick={onPrevEvent}
             title="Previous event (P or Shift+,)"
-            className={`${GLASS} w-full flex-1 min-h-[32px] max-h-12 px-1`}
+            className={`${CONTROL} w-full flex-1 min-h-[32px] max-h-12 px-1`}
           >
             Evt <ChevronFirst className="h-4 w-4 ml-1" />
           </Button>
@@ -168,7 +168,7 @@ export function VideoControls({
           onClick={() => {
             onSkip(-1);
           }}
-          className={`${GLASS} w-full flex-1 min-h-[32px] max-h-12 px-1`}
+          className={`${CONTROL} w-full flex-1 min-h-[32px] max-h-12 px-1`}
         >
           <SkipBack className="h-4 w-4 mr-1" /> 1s
         </Button>
@@ -179,7 +179,7 @@ export function VideoControls({
           onClick={() => {
             onSkip(3);
           }}
-          className={`${GLASS} w-full flex-1 min-h-[32px] max-h-12 px-1`}
+          className={`${CONTROL} w-full flex-1 min-h-[32px] max-h-12 px-1`}
         >
           3s <SkipForward className="h-4 w-4 ml-1" />
         </Button>
@@ -190,7 +190,7 @@ export function VideoControls({
           onClick={() => {
             onSkip(1);
           }}
-          className={`${GLASS} w-full flex-1 min-h-[32px] max-h-12 px-1`}
+          className={`${CONTROL} w-full flex-1 min-h-[32px] max-h-12 px-1`}
         >
           1s <SkipForward className="h-4 w-4 ml-1" />
         </Button>
@@ -201,7 +201,7 @@ export function VideoControls({
             variant="ghost"
             onClick={onNextEvent}
             title="Next event (N or Shift+.)"
-            className={`${GLASS} w-full flex-1 min-h-[32px] max-h-12 px-1`}
+            className={`${CONTROL} w-full flex-1 min-h-[32px] max-h-12 px-1`}
           >
             Evt <ChevronLast className="h-4 w-4 ml-1" />
           </Button>
@@ -212,7 +212,7 @@ export function VideoControls({
           variant="ghost"
           size="icon"
           onClick={onTogglePlay}
-          className={`${GLASS} w-full flex-[2] min-h-[40px] max-h-24`}
+          className={`${CONTROL} w-full flex-[2] min-h-[40px] max-h-24`}
         >
           {isPlaying ? (
             <Pause className="h-6 w-6" />
@@ -231,11 +231,11 @@ export function VideoControls({
           aria-expanded={openPanel === "speed"}
           aria-label="Playback speed"
           title="Playback speed"
-          className={`${GLASS} relative w-full flex-1 min-h-[32px] max-h-12 px-1`}
+          className={`${CONTROL} relative w-full flex-1 min-h-[32px] max-h-12 px-1`}
         >
           {/* Chevron pinned left; rotates when the speed slider is open */}
           <ChevronLeft
-            className={`absolute left-2 h-4 w-4 sm:h-5 sm:w-5 text-black/50 transition-transform duration-300 ${
+            className={`absolute left-2 h-4 w-4 sm:h-5 sm:w-5 text-gray-500 transition-transform duration-300 ${
               openPanel === "speed" ? "rotate-180" : ""
             }`}
           />
@@ -254,11 +254,11 @@ export function VideoControls({
           aria-expanded={openPanel === "actions"}
           aria-label={openPanel === "actions" ? "Hide actions" : "Show actions"}
           title={openPanel === "actions" ? "Hide actions" : "Show actions"}
-          className={`${GLASS} relative w-full flex-1 min-h-[32px] max-h-12`}
+          className={`${CONTROL} relative w-full flex-1 min-h-[32px] max-h-12`}
         >
           {/* Chevron pinned to the left; rotates between < and > when toggled */}
           <ChevronLeft
-            className={`absolute left-2 h-4 w-4 sm:h-5 sm:w-5 text-black/50 transition-transform duration-300 ${
+            className={`absolute left-2 h-4 w-4 sm:h-5 sm:w-5 text-gray-500 transition-transform duration-300 ${
               openPanel === "actions" ? "rotate-180" : ""
             }`}
           />
@@ -271,7 +271,7 @@ export function VideoControls({
           variant="ghost"
           size="icon"
           onClick={onClose}
-          className={`${GLASS} w-full flex-1 min-h-[32px] max-h-12`}
+          className={`${CONTROL} w-full flex-1 min-h-[32px] max-h-12`}
         >
           <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
         </Button>
@@ -286,7 +286,7 @@ export function VideoControls({
             : "opacity-0 translate-x-3 pointer-events-none"
         }`}
       >
-        <div className={`flex w-[calc(100vw-7rem)] max-w-sm flex-col gap-2 rounded-md px-3 py-2 ${GLASS_PANEL}`}>
+        <div className={`flex w-[calc(100vw-7rem)] max-w-sm flex-col gap-2 rounded-md px-3 py-2 ${PANEL}`}>
           <div className="flex items-center justify-between text-xs">
             <span className="opacity-80">Speed</span>
             <span className="font-semibold tabular-nums">{playbackRate}x</span>
@@ -307,7 +307,7 @@ export function VideoControls({
                   aria-pressed={isActive}
                   aria-label={`Set playback speed to ${String(speed)}x`}
                   className={`h-9 px-0 text-xs tabular-nums ${
-                    isActive ? GLASS_ACTIVE : GLASS
+                    isActive ? CONTROL_ACTIVE : CONTROL
                   }`}
                 >
                   {speed}x
@@ -335,7 +335,7 @@ export function VideoControls({
           }}
           title="Disqualify"
           aria-label="Disqualify"
-          className={`${GLASS_RED} h-12 w-14 p-0`}
+          className={`${CONTROL_RED} h-12 w-14 p-0`}
         >
           <ListX className="size-5" />
         </Button>
@@ -349,7 +349,7 @@ export function VideoControls({
           }}
           title="Rotate"
           aria-label="Rotate"
-          className={`${GLASS_YELLOW} h-12 w-14 p-0`}
+          className={`${CONTROL_YELLOW} h-12 w-14 p-0`}
         >
           <RotateCw className="size-5" />
         </Button>
@@ -362,7 +362,7 @@ export function VideoControls({
           }}
           title="Rename"
           aria-label="Rename"
-          className={`${GLASS_GREEN} h-12 w-14 p-0`}
+          className={`${CONTROL_GREEN} h-12 w-14 p-0`}
         >
           <TextCursorInput className="size-5" />
         </Button>

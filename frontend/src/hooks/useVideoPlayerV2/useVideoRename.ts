@@ -1,17 +1,6 @@
 import { useCallback, useState } from "react";
 
 /**
- * iOS leaves a frosted status-bar ("liquid glass") overlay stuck across the
- * whole installed PWA if a focused text input is removed from the DOM without
- * first being blurred. Always blur before closing the rename dialog so the
- * virtual keyboard is dismissed cleanly.
- */
-function blurActiveElement() {
-  const active = document.activeElement;
-  if (active instanceof HTMLElement) active.blur();
-}
-
-/**
  * Rename / disqualify / rotation-agnostic flag state for the video player.
  * Keeps the edited name, the rename dialog and the "disqualified" toggle in
  * one place and returns the handlers the controls and keyboard need.
@@ -24,7 +13,6 @@ export function useVideoRename(fileName: string) {
   const [tempName, setTempName] = useState("");
 
   const handleRenameSave = useCallback(() => {
-    blurActiveElement();
     let finalName = tempName.trim();
     const ext = fileName.includes(".")
       ? fileName.substring(fileName.lastIndexOf("."))
@@ -41,14 +29,12 @@ export function useVideoRename(fileName: string) {
   }, [tempName, fileName]);
 
   const handleRenameDefault = () => {
-    blurActiveElement();
     setNewname("");
     setisNewname(false);
     setShowRenameModal(false);
   };
 
   const handleRenameCancel = useCallback(() => {
-    blurActiveElement();
     setShowRenameModal(false);
   }, []);
 
@@ -65,7 +51,6 @@ export function useVideoRename(fileName: string) {
 
   /** Clear every mark/dialog state — used when the player switches clips. */
   const resetRename = useCallback(() => {
-    blurActiveElement();
     setNewname("");
     setisNewname(false);
     setDisqualified(false);
