@@ -447,6 +447,8 @@ export default function HomePage() {
             file={selectedDocument}
             isOpen={!!selectedDocument}
             onClose={() => { setSelectedDocument(null); }}
+            editable
+            onSaved={() => { void handleRefresh(); }}
           />
         </Suspense>
       )}

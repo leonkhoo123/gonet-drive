@@ -3,6 +3,8 @@ package service
 import (
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"go-file-server/internal/config"
 	"go-file-server/internal/util"
@@ -24,28 +26,36 @@ import (
 // @Router       /api/user/document/read/file/{filepath} [get]
 func ServeDocument(c *gin.Context, cfg *config.CloudConfig) {
 	relPath := c.Param("filepath")
-	fullPath, err := util.SanitizeRepoPath(cfg.Server.FileRoot, relPath)
+
+	// Resolve symlinks and confirm the real target is still inside the repo
+	// root, so a symlink inside WORK_DIR cannot expose files outside it.
+	fullPath, err := util.SanitizeRepoPathResolved(cfg.Server.FileRoot, relPath)
 	if err != nil {
+		if os.IsNotExist(err) {
+			c.AbortWithStatus(http.StatusNotFound)
+			return
+		}
 		c.AbortWithStatus(http.StatusForbidden)
 		return
 	}
 
-	file, err := os.Open(fullPath)
-	if err != nil {
-		c.AbortWithStatus(http.StatusNotFound)
-		return
-	}
-	defer file.Close()
-
-	stat, err := file.Stat()
-	if err != nil || stat.IsDir() {
+	info, err := os.Stat(fullPath)
+	if err != nil || info.IsDir() {
 		c.AbortWithStatus(http.StatusNotFound)
 		return
 	}
 
-	// Read content and serve as text
-	// Let gin handle Content-Type sensing or we could force text/plain
-	// if we wanted to prevent browser rendering for HTML.
-	// For API usage, the frontend will just fetch it, so c.File is fine.
+	// Never let the browser sniff and execute user-controlled content. Text and
+	// markup (including .html/.xml/.js) are served as inert text/plain so they
+	// cannot run scripts in the application origin. PDFs keep their real type;
+	// the frontend parses those client-side.
+	contentType := "text/plain; charset=utf-8"
+	if strings.EqualFold(filepath.Ext(fullPath), ".pdf") {
+		contentType = "application/pdf"
+	}
+	c.Header("Content-Type", contentType)
+	c.Header("Content-Disposition", "inline")
+	c.Header("X-Content-Type-Options", "nosniff")
+
 	c.File(fullPath)
 }

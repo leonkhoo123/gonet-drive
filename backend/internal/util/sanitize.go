@@ -1,6 +1,7 @@
 package util
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -19,6 +20,17 @@ const (
 	// RecycleBinVirtualPath is the client-facing path of the recycle bin.
 	RecycleBinVirtualPath = "/" + CloudDeleteDirName
 )
+
+// ErrPathOutsideRoot is returned when a path resolves, after following
+// symbolic links, to a location outside the repository root.
+var ErrPathOutsideRoot = errors.New("path resolves outside the allowed directory")
+
+// containsNullByte reports whether s contains a NUL byte. NUL bytes are never
+// valid in filesystem paths and can be used to smuggle a path past naive
+// string checks, so they are rejected outright.
+func containsNullByte(s string) bool {
+	return strings.IndexByte(s, 0) >= 0
+}
 
 // RecycleBinPath returns the absolute on-disk path of the recycle bin directory
 // for the given repository root. Physically it lives inside the cloud reserve
@@ -88,6 +100,9 @@ func SanitizeRepoPaths(repoRoot string, paths []string) ([]string, error) {
 	}
 
 	for _, p := range paths {
+		if containsNullByte(p) {
+			return nil, fmt.Errorf("path contains a null byte")
+		}
 		if strings.Contains(p, "..") {
 			return nil, fmt.Errorf("path contains '..', which is not allowed: %s", p)
 		}
@@ -125,6 +140,9 @@ func SanitizeRepoPaths(repoRoot string, paths []string) ([]string, error) {
 //   - The sanitized, absolute path.
 //   - An error if the path is invalid or falls outside the repository root.
 func SanitizeRepoPath(repoRoot string, path string) (string, error) {
+	if containsNullByte(path) {
+		return "", fmt.Errorf("path contains a null byte")
+	}
 	if strings.Contains(path, "..") {
 		return "", fmt.Errorf("path contains '..', which is not allowed: %s", path)
 	}
@@ -148,6 +166,58 @@ func SanitizeRepoPath(repoRoot string, path string) (string, error) {
 	}
 
 	return absPath, nil
+}
+
+// SanitizeRepoPathResolved is like SanitizeRepoPath but additionally resolves
+// symbolic links and verifies that the *real* target still lives inside the
+// repository root. The purely lexical SanitizeRepoPath cannot detect a symlink
+// placed inside the root that points at, say, /etc or the internal
+// .cloud_reserve namespace, so callers that read or write file contents should
+// use this variant.
+//
+// The path must exist; a non-existent target returns an error wrapping
+// os.ErrNotExist so callers can map it to a 404 response.
+func SanitizeRepoPathResolved(repoRoot string, path string) (string, error) {
+	absPath, err := SanitizeRepoPath(repoRoot, path)
+	if err != nil {
+		return "", err
+	}
+
+	absRepoRoot, err := filepath.Abs(repoRoot)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve absolute path for repo root: %w", err)
+	}
+
+	realRoot, err := filepath.EvalSymlinks(absRepoRoot)
+	if err != nil {
+		return "", err
+	}
+	realTarget, err := filepath.EvalSymlinks(absPath)
+	if err != nil {
+		return "", err
+	}
+
+	rel, err := filepath.Rel(realRoot, realTarget)
+	if err != nil || rel == ".." || filepath.IsAbs(rel) ||
+		strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("%w: %s", ErrPathOutsideRoot, path)
+	}
+
+	// A symlink must not be able to reach the internal reserve namespace, except
+	// through the intended recycle-bin alias (".cloud_reserve/.cloud_delete").
+	if containsCloudReserveComponent("/"+filepath.ToSlash(rel)) && !isRecycleBinRel(rel) {
+		return "", fmt.Errorf("%w: %s", ErrPathOutsideRoot, path)
+	}
+
+	return realTarget, nil
+}
+
+// isRecycleBinRel reports whether rel (relative to the repo root) is the
+// on-disk location of the recycle bin or something inside it.
+func isRecycleBinRel(rel string) bool {
+	rel = filepath.ToSlash(rel)
+	prefix := CloudReserveDirName + "/" + CloudDeleteDirName
+	return rel == prefix || strings.HasPrefix(rel, prefix+"/")
 }
 
 // SanitizeFilename ensures that the provided string is a safe filename.

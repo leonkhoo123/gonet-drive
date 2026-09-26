@@ -30,6 +30,13 @@ export interface FileInterface {
   integrity_status?: string;
 }
 
+/**
+ * Maximum size (in bytes) a text file may be to be opened in the built-in
+ * viewer/editor. This gates *entering* edit mode only: once editing, a file may
+ * grow past this limit on save (with a warning).
+ */
+export const MAX_TEXT_EDIT_SIZE = 2 * 1024 * 1024;
+
 
 export interface HealthResponse {
   service_name?: string;
@@ -129,6 +136,43 @@ export const createFolder = async (path: string, folderName: string, opId: strin
   }, {
     headers: { "Accept": "application/json" },
   });
+};
+
+export interface SaveTextResponse {
+  size: number;
+  modified: string;
+}
+
+export interface SaveTextOptions {
+  /** Allow saving an empty string (removes all file content). */
+  allowEmpty?: boolean;
+  /** Size of the file when it was loaded, for conflict detection. */
+  baseSize?: number;
+  /** Modified time of the file when it was loaded, for conflict detection. */
+  baseModified?: string;
+}
+
+/**
+ * Overwrite a text file's content. Personal files only.
+ *
+ * The backend refuses to save an empty string unless `allowEmpty` is true, and
+ * returns HTTP 409 when the file changed on disk since it was loaded.
+ */
+export const saveTextFile = async (
+  path: string,
+  content: string,
+  options: SaveTextOptions = {},
+): Promise<SaveTextResponse> => {
+  const rs = await axiosLayer.post<ApiEnvelope<SaveTextResponse>>("/user/files/save-text", {
+    path,
+    content,
+    allowEmpty: options.allowEmpty ?? false,
+    baseSize: options.baseSize ?? 0,
+    baseModified: options.baseModified ?? "",
+  }, {
+    headers: { "Accept": "application/json" },
+  });
+  return unwrap<SaveTextResponse>(rs);
 };
 
 export interface FileDetail {

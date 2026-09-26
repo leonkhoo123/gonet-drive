@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"net/http"
 
 	"go-file-server/internal/config"
@@ -44,6 +45,7 @@ func FilesRoutes(router *gin.RouterGroup, cfg *config.CloudConfig) {
 	api.POST("/upload-chunk", func(c *gin.Context) {
 		service.UploadChunk(c, cfg)
 	})
+	api.POST("/save-text", saveTextHandler(cfg))
 
 	api.Static("/static", "./static")
 }
@@ -309,6 +311,79 @@ func filePropertiesHandler(cfg *config.CloudConfig) gin.HandlerFunc {
 			httpx.Err(c, http.StatusInternalServerError, "failed to get file properties")
 			return
 		}
+		httpx.OK(c, http.StatusOK, res)
+	}
+}
+
+// saveTextHandler godoc
+// @Summary      Save Text File
+// @Description  Overwrite an existing text file with new content. Writes atomically and rejects stale baselines.
+// @Tags         Files
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Security     CookieAuth
+// @Param        body  body      service.SaveTextReq  true  "Save request"
+// @Success      200   {object}  service.SaveTextResp
+// @Failure      400   {object}  map[string]interface{}
+// @Failure      403   {object}  map[string]interface{}
+// @Failure      404   {object}  map[string]interface{}
+// @Failure      409   {object}  map[string]interface{}
+// @Failure      413   {object}  map[string]interface{}
+// @Router       /api/user/files/save-text [post]
+func saveTextHandler(cfg *config.CloudConfig) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Bound the request body to the hard ceiling plus a little JSON overhead.
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, service.MaxTextSaveBytes+(1<<20))
+
+		var req service.SaveTextReq
+		if err := c.ShouldBindJSON(&req); err != nil {
+			var maxBytesErr *http.MaxBytesError
+			if errors.As(err, &maxBytesErr) {
+				httpx.Err(c, http.StatusRequestEntityTooLarge, "content is too large")
+				return
+			}
+			httpx.Err(c, http.StatusBadRequest, "invalid request body")
+			return
+		}
+
+		res, err := service.SaveTextDocument(req, cfg)
+		if err != nil {
+			switch {
+			case errors.Is(err, service.ErrSavePathRequired),
+				errors.Is(err, service.ErrSaveContentMissing),
+				errors.Is(err, service.ErrSaveNotRegular),
+				errors.Is(err, service.ErrSaveNotText):
+				httpx.Err(c, http.StatusBadRequest, err.Error())
+			case errors.Is(err, service.ErrSaveForbidden):
+				httpx.Err(c, http.StatusForbidden, "path is not allowed")
+			case errors.Is(err, service.ErrSaveNotFound):
+				httpx.Err(c, http.StatusNotFound, "file not found")
+			case errors.Is(err, service.ErrSaveEmpty):
+				httpx.Err(c, http.StatusBadRequest, "refusing to save empty content")
+			case errors.Is(err, service.ErrSaveTooLarge):
+				httpx.Err(c, http.StatusRequestEntityTooLarge, "content is too large")
+			case errors.Is(err, service.ErrSaveConflict):
+				var conflict *service.SaveConflictError
+				if errors.As(err, &conflict) {
+					c.JSON(http.StatusConflict, gin.H{
+						"status": "error",
+						"error":  "file changed on disk since it was opened",
+						"data": gin.H{
+							"size":     conflict.Size,
+							"modified": conflict.Modified,
+						},
+					})
+				} else {
+					httpx.Err(c, http.StatusConflict, "file changed on disk since it was opened")
+				}
+			default:
+				logger.L.Error("save text failed", "err", err, "path", req.Path)
+				httpx.Err(c, http.StatusInternalServerError, "failed to save file")
+			}
+			return
+		}
+
 		httpx.OK(c, http.StatusOK, res)
 	}
 }

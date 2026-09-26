@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSanitizeRepoPath_Valid(t *testing.T) {
@@ -263,4 +264,81 @@ func TestTruncateString_Long(t *testing.T) {
 func TestTruncateString_Tiny(t *testing.T) {
 	result := TruncateString("hello world", 2)
 	assert.Equal(t, "he", result)
+}
+
+func TestSanitizeRepoPath_NullByteRejected(t *testing.T) {
+	root := t.TempDir()
+
+	_, err := SanitizeRepoPath(root, "evil\x00.txt")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "null byte")
+
+	_, err = SanitizeRepoPaths(root, []string{"a.txt", "evil\x00.txt"})
+	assert.Error(t, err)
+
+	_, err = SanitizeRepoPathResolved(root, "evil\x00.txt")
+	assert.Error(t, err)
+}
+
+func TestSanitizeRepoPathResolved_InternalSymlinkAllowed(t *testing.T) {
+	root := t.TempDir()
+	target := filepath.Join(root, "real.txt")
+	require.NoError(t, os.WriteFile(target, []byte("data"), 0644))
+	require.NoError(t, os.Symlink(target, filepath.Join(root, "link.txt")))
+
+	got, err := SanitizeRepoPathResolved(root, "/link.txt")
+	require.NoError(t, err)
+
+	realRoot, err := filepath.EvalSymlinks(root)
+	require.NoError(t, err)
+	assert.Equal(t, filepath.Join(realRoot, "real.txt"), got)
+}
+
+func TestSanitizeRepoPathResolved_ExternalSymlinkRejected(t *testing.T) {
+	root := t.TempDir()
+	outside := t.TempDir()
+	secret := filepath.Join(outside, "secret.txt")
+	require.NoError(t, os.WriteFile(secret, []byte("secret"), 0644))
+	require.NoError(t, os.Symlink(secret, filepath.Join(root, "escape.txt")))
+
+	_, err := SanitizeRepoPathResolved(root, "/escape.txt")
+	assert.ErrorIs(t, err, ErrPathOutsideRoot)
+
+	// A symlinked *directory* pointing outside must be rejected too.
+	require.NoError(t, os.Symlink(outside, filepath.Join(root, "escape_dir")))
+	_, err = SanitizeRepoPathResolved(root, "/escape_dir/secret.txt")
+	assert.ErrorIs(t, err, ErrPathOutsideRoot)
+}
+
+func TestSanitizeRepoPathResolved_ReserveViaSymlinkRejected(t *testing.T) {
+	root := t.TempDir()
+	reserve := filepath.Join(root, CloudReserveDirName)
+	require.NoError(t, os.MkdirAll(reserve, 0755))
+	secret := filepath.Join(reserve, "config.db")
+	require.NoError(t, os.WriteFile(secret, []byte("secret"), 0600))
+	require.NoError(t, os.Symlink(secret, filepath.Join(root, "leak.txt")))
+
+	_, err := SanitizeRepoPathResolved(root, "/leak.txt")
+	assert.ErrorIs(t, err, ErrPathOutsideRoot)
+}
+
+func TestSanitizeRepoPathResolved_RecycleBinAliasAllowed(t *testing.T) {
+	root := t.TempDir()
+	bin := filepath.Join(root, CloudReserveDirName, CloudDeleteDirName)
+	require.NoError(t, os.MkdirAll(bin, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(bin, "gone.txt"), []byte("x"), 0644))
+
+	got, err := SanitizeRepoPathResolved(root, "/.cloud_delete/gone.txt")
+	require.NoError(t, err)
+
+	realRoot, err := filepath.EvalSymlinks(root)
+	require.NoError(t, err)
+	assert.Equal(t, filepath.Join(realRoot, CloudReserveDirName, CloudDeleteDirName, "gone.txt"), got)
+}
+
+func TestSanitizeRepoPathResolved_MissingTarget(t *testing.T) {
+	root := t.TempDir()
+
+	_, err := SanitizeRepoPathResolved(root, "/nope.txt")
+	assert.True(t, os.IsNotExist(err))
 }
