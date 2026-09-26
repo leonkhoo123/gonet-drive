@@ -20,7 +20,7 @@ export function VideoRenameDialog({
           onChange={(e) => {
             onChangeName(e.target.value);
           }}
-          className="w-full bg-black/5 p-2 rounded mb-4 text-black placeholder:text-black/50 outline-none focus:ring-2 focus:ring-black/30"
+          className="w-full bg-black/5 p-2 rounded mb-4 text-base text-black placeholder:text-black/50 outline-none focus:ring-2 focus:ring-black/30"
           placeholder="New Video Name"
           autoFocus
         />
