@@ -11,7 +11,7 @@ export interface ConfigItem {
 }
 
 export const getConfigs = async (): Promise<ConfigItem[]> => {
-  const response = await axios.get<ApiEnvelope<{ configs: ConfigItem[] }>>("/user/config");
+  const response = await axios.get<ApiEnvelope<{ configs: ConfigItem[] }>>("/user/admin/config");
   return unwrap<{ configs: ConfigItem[] }>(response).configs;
 };
 
@@ -19,6 +19,6 @@ export const updateConfig = async (
   id: number,
   data: { config_value?: string | null; is_enabled?: boolean; is_deleted?: boolean }
 ): Promise<void> => {
-  const response = await axios.put<ApiEnvelope<unknown>>(`/user/config/${String(id)}`, data);
+  const response = await axios.put<ApiEnvelope<unknown>>(`/user/admin/config/${String(id)}`, data);
   unwrap<unknown>(response);
 };

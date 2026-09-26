@@ -107,7 +107,7 @@ make test-race     # Race detection
 ### Routing conventions
 
 - Public routes (no auth): `/api/login`, `/api/refresh`, `/api/mfa/verify`, `/api/mfa/recovery`, `/api/logout`, `/api/setup/status`, `/api/setup/admin` (first-run admin provisioning), `/api/config/*`, `/api/shares/*`, `/api/share-files/*`
-- Authenticated routes: `/api/user/*`, `/api/user/files/*`, `/api/user/video/*`, `/api/user/photo/*`, `/api/user/music/*`, `/api/user/documents/*`, `/api/user/share/*`, `/api/user/audiobooks/*`, `/api/user/config/*`, `/api/user/me`, `/api/user/me/sessions`, `/api/user/me/sessions/revoke`
+- Authenticated routes: `/api/user/*`, `/api/user/files/*`, `/api/user/video/*`, `/api/user/photo/*`, `/api/user/music/*`, `/api/user/documents/*`, `/api/user/share/*`, `/api/user/audiobooks/*`, `/api/user/me`, `/api/user/me/sessions`, `/api/user/me/sessions/revoke`
 - Admin-only: `/api/user/admin/*` (requires admin middleware), incl. `/api/user/admin/users` (create/list), `/api/user/admin/users/:id` (delete), `/api/user/admin/users/:id/revoke-all`
 - Mobile (custom, token-in-body): `/api/mobile/login`, `/api/mobile/refresh`, `/api/mobile/mfa/verify`, `/api/mobile/logout`
 - WebSocket: `/api/user/ws` (authenticated)

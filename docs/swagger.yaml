@@ -144,13 +144,6 @@ definitions:
     required:
     - sources
     type: object
-  service.MFAVerifyRequest:
-    properties:
-      code:
-        type: string
-      device_id:
-        type: string
-    type: object
   service.MoveReq:
     properties:
       destDir:
@@ -965,7 +958,7 @@ paths:
       summary: Stream Audiobook
       tags:
       - Audiobooks
-  /api/user/config:
+  /api/user/admin/config:
     get:
       description: Get all cloud configuration entries.
       produces:
@@ -988,7 +981,7 @@ paths:
       summary: List Configs
       tags:
       - Config
-  /api/user/config/{id}:
+  /api/user/admin/config/{id}:
     put:
       consumes:
       - application/json
@@ -1575,42 +1568,6 @@ paths:
       - BearerAuth: []
       - CookieAuth: []
       summary: Current User Info
-      tags:
-      - User
-  /api/user/mfa/enable:
-    post:
-      consumes:
-      - application/json
-      description: Enable MFA after setting up a TOTP secret via /api/user/mfa/setup.
-      parameters:
-      - description: TOTP code
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/service.MFAVerifyRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      - CookieAuth: []
-      summary: Enable MFA
       tags:
       - User
   /api/user/mfa/setup:

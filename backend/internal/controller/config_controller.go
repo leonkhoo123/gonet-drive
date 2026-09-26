@@ -133,7 +133,7 @@ func ConfigRoutes(router *gin.RouterGroup, repo repository.CloudConfigRepository
 // @Security     CookieAuth
 // @Success      200  {array}   model.CloudConfig
 // @Failure      500  {object}  map[string]interface{}
-// @Router       /api/user/config [get]
+// @Router       /api/user/admin/config [get]
 func listConfigs(repo repository.CloudConfigRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		configs, err := repo.ListAllNotDeleted()
@@ -170,7 +170,7 @@ type UpdateConfigRequest struct {
 // @Success      200   {object}  map[string]interface{}
 // @Failure      400   {object}  map[string]interface{}
 // @Failure      404   {object}  map[string]interface{}
-// @Router       /api/user/config/{id} [put]
+// @Router       /api/user/admin/config/{id} [put]
 func updateConfig(repo repository.CloudConfigRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		idParam := c.Param("id")

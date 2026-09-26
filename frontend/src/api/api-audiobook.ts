@@ -35,11 +35,11 @@ export const addAudioPath = async (path: string, is_enabled = true): Promise<voi
 };
 
 export const updateAudioPath = async (id: number, is_enabled: boolean): Promise<void> => {
-  await axiosInstance.put(`/audiobook/path/${String(id)}`, { is_enabled });
+  await axiosInstance.put(`/user/audiobook/path/${String(id)}`, { is_enabled });
 };
 
 export const deleteAudioPath = async (id: number): Promise<void> => {
-  await axiosInstance.delete(`/audiobook/path/${String(id)}`);
+  await axiosInstance.delete(`/user/audiobook/path/${String(id)}`);
 };
 
 export const reportAudioBookProgress = async (audiobook_name: string, progress_time: number): Promise<void> => {

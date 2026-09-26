@@ -76,7 +76,7 @@ Full MFA enrollment and verification flow through the router.
 | `TestMFASetup_Success` | authenticated user → GET `/api/user/mfa/setup` → 200, returns `secret` and `qr_code` |
 | `TestMFASetup_AlreadyEnabled` | MFA already enabled → 400 "MFA already enabled" |
 | `TestMFASetup_Unauthenticated` | no token → 401 |
-| `TestMFAEnable_Success` | call setup, then POST `/api/user/mfa/enable` with valid TOTP → 200, user.MFAEnabled=true |
+| `TestMFAEnable_Success` | call setup, then POST `/api/user/mfa/confirm` with valid TOTP → 200, user.MFAEnabled=true |
 | `TestMFAEnable_WrongCode` | POST with wrong TOTP → 400/401 |
 | `TestMFAEnable_NoSetupFirst` | enable without calling setup first → error (no secret stored) |
 | `TestMFAVerify_Success` | login as MFA user → gets `mfa_required:true` + mfa_pending cookie; POST `/api/mfa/verify` with correct TOTP → 200, access_token + refresh_token |

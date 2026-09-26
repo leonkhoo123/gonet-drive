@@ -1131,7 +1131,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/user/config": {
+        "/api/user/admin/config": {
             "get": {
                 "security": [
                     {
@@ -1169,7 +1169,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/user/config/{id}": {
+        "/api/user/admin/config/{id}": {
             "put": {
                 "security": [
                     {
@@ -2104,63 +2104,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/user/mfa/enable": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    },
-                    {
-                        "CookieAuth": []
-                    }
-                ],
-                "description": "Enable MFA after setting up a TOTP secret via /api/user/mfa/setup.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "User"
-                ],
-                "summary": "Enable MFA",
-                "parameters": [
-                    {
-                        "description": "TOTP code",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/service.MFAVerifyRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
         "/api/user/mfa/setup": {
             "get": {
                 "security": [
@@ -3049,17 +2992,6 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
-                }
-            }
-        },
-        "service.MFAVerifyRequest": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string"
-                },
-                "device_id": {
-                    "type": "string"
                 }
             }
         },
