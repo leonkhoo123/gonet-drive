@@ -5,10 +5,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"image/png"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strconv"
 	"testing"
 
 	"go-file-server/internal/config"
@@ -91,17 +93,70 @@ func TestGetManifest_Valid(t *testing.T) {
 	router.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Contains(t, rec.Header().Get("Content-Type"), "application/manifest+json")
 
-	var envelope map[string]interface{}
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &envelope))
-	resp := envelope["data"].(map[string]interface{})
+	var resp map[string]interface{}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+
+	// The manifest must be a top-level object; the API envelope is not a valid
+	// Web App Manifest and makes browsers fall back to the document title.
+	_, hasEnvelope := resp["data"]
+	assert.False(t, hasEnvelope, "manifest must not be wrapped in the API envelope")
 
 	assert.Equal(t, "GoNet Drive Test", resp["name"])
+	assert.Equal(t, "GoNet Drive Test", resp["short_name"])
 	assert.Equal(t, "standalone", resp["display"])
 
 	icons, ok := resp["icons"].([]interface{})
 	require.True(t, ok, "icons should be present")
-	assert.GreaterOrEqual(t, len(icons), 1)
+	require.Len(t, icons, 2)
+
+	sizes := make(map[string]string, len(icons))
+	for _, raw := range icons {
+		icon, ok := raw.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "image/png", icon["type"])
+		assert.Contains(t, icon["src"], "/api/config/icon/")
+		sizes[icon["sizes"].(string)] = icon["src"].(string)
+	}
+	// Chrome requires both a 192x192 and a 512x512 icon for installability.
+	assert.Equal(t, "/api/config/icon/192", sizes["192x192"])
+	assert.Equal(t, "/api/config/icon/512", sizes["512x512"])
+}
+
+// ---------- 7.2 Icon ----------
+
+func TestGetIcon_Valid(t *testing.T) {
+	router, _, _, _, _, _ := setupConfigRouter(t)
+
+	for _, size := range []string{"192", "512"} {
+		req := httptest.NewRequest(http.MethodGet, "/api/config/icon/"+size, nil)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Contains(t, rec.Header().Get("Content-Type"), "image/png")
+
+		cfg, err := png.DecodeConfig(bytes.NewReader(rec.Body.Bytes()))
+		require.NoError(t, err)
+		want, _ := strconv.Atoi(size)
+		assert.Equal(t, want, cfg.Width, "icon width")
+		assert.Equal(t, want, cfg.Height, "icon height")
+	}
+}
+
+func TestGetIcon_UnsupportedSize(t *testing.T) {
+	router, _, _, _, _, _ := setupConfigRouter(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/config/icon/64", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var resp map[string]interface{}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	assert.Equal(t, "unsupported icon size", resp["error"])
 }
 
 // ---------- 7.2 Logo ----------

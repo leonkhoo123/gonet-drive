@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -21,6 +22,7 @@ func PublicConfigRoutes(router *gin.RouterGroup) {
 	{
 		configGroup.GET("/logo", getLogo)
 		configGroup.GET("/manifest", getManifest)
+		configGroup.GET("/icon/:size", getIcon)
 	}
 }
 
@@ -38,20 +40,62 @@ func getManifest(c *gin.Context) {
 		serviceName = cloudConfig.ServiceName
 	}
 
+	// The Web App Manifest must be served as a top-level JSON object. Do NOT use
+	// httpx.OK here: the {"status":"success","data":{...}} envelope is not a valid
+	// manifest, so browsers ignore it and fall back to the document <title>
+	// ("GoNet Drive") for the installed PWA name.
+	//
+	// Icons point at /api/config/icon/{size}, which renders exactly square PNGs of
+	// those sizes. Advertising a single arbitrary-size logo at fixed sizes makes
+	// Chrome log a size mismatch and can fail installability.
 	c.Header("Content-Type", "application/manifest+json")
-	httpx.OK(c, http.StatusOK, gin.H{
+	c.Header("Cache-Control", "no-cache")
+	c.JSON(http.StatusOK, gin.H{
+		"id":               "/",
 		"name":             serviceName,
 		"short_name":       serviceName,
 		"description":      serviceName,
 		"start_url":        "/",
+		"scope":            "/",
 		"display":          "standalone",
 		"theme_color":      "#ffffff",
 		"background_color": "#ffffff",
 		"icons": []gin.H{
-			{"src": "/api/config/logo", "sizes": "192x192", "type": "image/png", "purpose": "any"},
-			{"src": "/api/config/logo", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+			{"src": "/api/config/icon/192", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+			{"src": "/api/config/icon/512", "sizes": "512x512", "type": "image/png", "purpose": "any"},
 		},
 	})
+}
+
+// getIcon returns the service logo resized to a square PNG of the requested
+// size. Only sizes advertised in the manifest are allowed.
+// @Summary      Get App Icon
+// @Description  Return the service logo as a square PNG at the requested size.
+// @Tags         Config
+// @Produce      image/png
+// @Param        size  path      int  true  "Icon size in pixels (192 or 512)"
+// @Success      200   {file}    binary
+// @Failure      400   {object}  map[string]interface{}
+// @Router       /api/config/icon/{size} [get]
+func getIcon(c *gin.Context) {
+	size, err := strconv.Atoi(c.Param("size"))
+	if err != nil || !slices.Contains(config.LogoSizes, size) {
+		httpx.Err(c, http.StatusBadRequest, "unsupported icon size")
+		return
+	}
+
+	iconPath, err := config.EnsureLogoIcon(size)
+	if err != nil {
+		logger.L.Error("failed to generate logo icon", "err", err, "size", size)
+		httpx.Err(c, http.StatusInternalServerError, "failed to generate icon")
+		return
+	}
+
+	// no-cache (not max-age) so a re-uploaded logo propagates immediately: the
+	// cached icon file gets a new mtime, which http.ServeFile revalidates via
+	// Last-Modified.
+	c.Header("Cache-Control", "no-cache")
+	c.File(iconPath)
 }
 
 // getLogo returns the service logo image.
