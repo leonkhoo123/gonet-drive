@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -13,6 +12,45 @@ import (
 
 	"go-file-server/internal/logger"
 )
+
+// ProbeVideoRotation returns the current display rotation (0/90/180/270) that
+// ffmpeg would apply to the video stream, read from either the stream tag or
+// the side data rotation matrix. A missing value is reported as 0.
+func ProbeVideoRotation(ctx context.Context, path string) (int, error) {
+	probeCtx, probeCancel := context.WithTimeout(ctx, 60*time.Second)
+	defer probeCancel()
+
+	cmd := NewCommand(probeCtx,
+		"prlimit", "--as=524288000",
+		"ffprobe", "-v", "error", "-select_streams", "v:0",
+		"-show_entries", "stream_tags=rotate:stream_side_data=rotation",
+		"-of", "default=noprint_wrappers=1:nokey=1", path)
+
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	if err := cmd.Run(); err != nil {
+		return 0, fmt.Errorf("ffprobe error: %w", err)
+	}
+
+	if s := strings.TrimSpace(out.String()); s != "" {
+		if v, err := strconv.Atoi(strings.Split(s, "\n")[0]); err == nil {
+			return v, nil
+		}
+	}
+	return 0, nil
+}
+
+// AdjustRotationAngle mirrors the ffmpeg display_rotation convention: it applies
+// a clockwise `rotateAngle` on top of the current angle and normalises the
+// result into the (-360, 0] range used by the -display_rotation input option.
+func AdjustRotationAngle(current, rotateAngle int) int {
+	newAngle := (current - rotateAngle) % 360
+	// ffmpeg uses counter clockwise rotation...
+	if newAngle > 0 {
+		newAngle -= 360
+	}
+	return newAngle
+}
 
 func AdjustVideoRotationTemp(ctx context.Context, fileRoot, srcPath string, rotateAngle int) (string, error) {
 	tempDir := filepath.Join(fileRoot, ".cloud_reserve", "tmp_rotate")
@@ -40,38 +78,13 @@ func AdjustVideoRotationTemp(ctx context.Context, fileRoot, srcPath string, rota
 		}
 	}()
 
-	// Use a context with timeout to prevent runaway ffprobe/ffmpeg
-	probeCtx, probeCancel := context.WithTimeout(ctx, 60*time.Second)
-	defer probeCancel()
-
-	cmd := exec.CommandContext(probeCtx,
-		"prlimit", "--as=524288000",
-		"ffprobe", "-v", "error", "-select_streams", "v:0",
-		"-show_entries", "stream_tags=rotate:stream_side_data=rotation",
-		"-of", "default=noprint_wrappers=1:nokey=1", tempSrc)
-	logger.L.Debug("running ffprobe", "input", tempSrc)
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("ffprobe error: %w", err)
-	}
-
-	ffprobeOutput := out.String()
-	logger.L.Debug("ffprobe output", "output", ffprobeOutput, "file", filename)
-
-	current := 0
-	if s := strings.TrimSpace(ffprobeOutput); s != "" {
-		if v, err := strconv.Atoi(strings.Split(s, "\n")[0]); err == nil {
-			current = v
-		}
+	current, err := ProbeVideoRotation(ctx, tempSrc)
+	if err != nil {
+		return "", err
 	}
 
 	// Calculate new angle (normalize to 0-360)
-	newAngle := (current - rotateAngle) % 360
-	// ffmpeg use counter clockwise rotation...
-	if newAngle > 0 {
-		newAngle -= 360
-	}
+	newAngle := AdjustRotationAngle(current, rotateAngle)
 
 	logger.L.Debug("video rotation calculation", "file", filename, "current", current, "adjust_by", rotateAngle, "new_angle", newAngle)
 
@@ -80,7 +93,7 @@ func AdjustVideoRotationTemp(ctx context.Context, fileRoot, srcPath string, rota
 	defer ffmpegCancel()
 
 	tempOutput := filepath.Join(tempDir, fmt.Sprintf("%d_rotated_%s", time.Now().UnixNano(), filename))
-	cmd = exec.CommandContext(ffmpegCtx,
+	cmd := NewCommand(ffmpegCtx,
 		"prlimit", "--as=524288000",
 		"ffmpeg",
 		"-display_rotation", fmt.Sprintf("%d", newAngle),

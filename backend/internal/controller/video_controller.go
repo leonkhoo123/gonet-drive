@@ -27,6 +27,10 @@ func VideoRoutes(router *gin.RouterGroup, cfg *config.CloudConfig) {
 		service.VideoRenameDone(c, cfg)
 	})
 
+	api.GET("/metadata/file/*filepath", func(c *gin.Context) {
+		service.GetVideoMetadata(c, cfg)
+	})
+
 	api.GET("/video-test", videoTestHandler)
 
 	api.Static("/static", "./static")

@@ -1,17 +1,14 @@
 import { useEffect, useState } from "react";
-import axiosLayer from "@/api/axiosLayer";
-import {
-  METADATA_DIRNAME,
-  parseEventSpans,
-  type EventSpan,
-} from "@/utils/videoPlayerV2Events";
+import { getVideoEvents } from "@/api/api-video";
+import { parseEventSpans, type EventSpan } from "@/utils/videoPlayerV2Events";
 
 /**
- * Load the sibling metadata JSON written by the AI pipeline:
- * `<video folder>/.vid_metadata/<video filename>_timestamps.json`
- * (e.g. `clip.mp4_timestamps.json` - the extension is kept in the name).
+ * Load the detected event spans for a video from the backend.
  *
- * A missing or malformed file is non-fatal - the player just shows no markers.
+ * The backend prefers the metadata embedded in the container and falls back to
+ * the sibling `<video folder>/.vid_metadata/<video filename>_timestamps.json`
+ * sidecar. A 404 (no metadata anywhere) is non-fatal - the player just shows
+ * no markers.
  */
 export function useVideoEventMetadata(
   isOpen: boolean,
@@ -26,22 +23,13 @@ export function useVideoEventMetadata(
       return;
     }
 
-    const slash = filePath.lastIndexOf("/");
-    const dir = slash >= 0 ? filePath.slice(0, slash) : "";
-    const metaPath = `${dir}/${METADATA_DIRNAME}/${fileName}_timestamps.json`;
-
     let cancelled = false;
     setEvents([]);
 
-    axiosLayer
-      .get<unknown>(`/user/document/read/file${encodeURI(metaPath)}`)
+    getVideoEvents(filePath)
       .then((res) => {
         if (cancelled) return;
-        const payload: unknown =
-          typeof res.data === "string"
-            ? (JSON.parse(res.data) as unknown)
-            : res.data;
-        setEvents(parseEventSpans(payload));
+        setEvents(parseEventSpans(res.events));
       })
       .catch(() => {
         if (!cancelled) setEvents([]);

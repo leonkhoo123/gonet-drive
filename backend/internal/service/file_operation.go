@@ -122,7 +122,7 @@ func submitAsyncJob(opID, opType, opName string, tracker *util.ProgressTracker, 
 
 		tracker.OnProgress = func(pt *util.ProgressTracker) {
 			percentage := 0.0
-			if pt.TotalBytes > 0 && opType == "copy" {
+			if pt.TotalBytes > 0 && (opType == "copy" || opType == VideoDoneOpType) {
 				percentage = float64(pt.CopiedBytes) / float64(pt.TotalBytes) * 100
 			} else if pt.TotalFiles > 0 {
 				percentage = float64(pt.CopiedFiles) / float64(pt.TotalFiles) * 100

@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 
 	"github.com/h2non/bimg"
 
 	"go-file-server/internal/logger"
 	"go-file-server/internal/repository"
+	"go-file-server/internal/util"
 )
 
 const ffmpegMemoryLimit = "524288000"
@@ -22,7 +22,7 @@ func SetThumbnailRepo(repo repository.ThumbnailRepository) {
 
 func GenerateVideoThumbnail(ctx context.Context, fullPath, thumbPath string) error {
 	logger.L.Debug("generating video thumbnail", "input", fullPath, "output", thumbPath)
-	cmd := exec.CommandContext(ctx,
+	cmd := util.NewCommand(ctx,
 		"prlimit",
 		"--as="+ffmpegMemoryLimit,
 		"ffmpeg",

@@ -3,8 +3,7 @@ import { postDisqualified, renameFileMoveToDone } from "@/api/api-video";
 import { type FileInterface } from "@/api/api-file";
 
 export function useVideoOperations({
-  handleRefresh,
-  setIsLoading
+  handleRefresh
 }: {
   currentPath: string;
   handleRefresh: () => Promise<void>;
@@ -20,9 +19,10 @@ export function useVideoOperations({
         await postDisqualified(oriPath);
         await handleRefresh();
       } else if (isNewName) {
-        setIsLoading(true);
+        // The server atomically moves the video into done/tmp before it
+        // responds, so refresh now to make it disappear from the browse list
+        // while the rotate/embed job runs in the background.
         await renameFileMoveToDone(oriPath, newName, rotation);
-        setIsLoading(false);
         await handleRefresh();
       }
     } catch (error) {

@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
@@ -15,6 +14,7 @@ import (
 
 	"go-file-server/internal/logger"
 	"go-file-server/internal/repository"
+	"go-file-server/internal/util"
 	"go-file-server/internal/ws"
 )
 
@@ -220,9 +220,9 @@ func ScanVideoIntegrity(rootPath string) (*ScanResult, error) {
 }
 
 type ffprobeStream struct {
-	CodecName        string `json:"codec_name"`
-	MimeCodecString  string `json:"mime_codec_string"`
-	CodecType        string `json:"codec_type"`
+	CodecName       string `json:"codec_name"`
+	MimeCodecString string `json:"mime_codec_string"`
+	CodecType       string `json:"codec_type"`
 }
 
 type ffprobeOutput struct {
@@ -233,7 +233,7 @@ func probeVideoStream(path string) (mimeCodec, codecName string, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx,
+	cmd := util.NewCommand(ctx,
 		"ffprobe", "-v", "error",
 		"-show_streams", "-select_streams", "v:0",
 		"-of", "json",
@@ -269,7 +269,7 @@ func probeVideoStream(path string) (mimeCodec, codecName string, err error) {
 func logFFprobeVersion() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "ffprobe", "-version")
+	cmd := util.NewCommand(ctx, "ffprobe", "-version")
 	out, err := cmd.Output()
 	if err != nil {
 		logger.L.Warn("ffprobe version check failed", "err", err)

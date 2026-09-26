@@ -26,7 +26,7 @@ export function OperationQueueProgress() {
         for (const id of currentIds) {
             if (!prevIds.has(id)) {
                 const opType = operations[id].opType;
-                if (['copy', 'move', 'delete', 'delete_permanent', 'upload'].includes(opType)) {
+                if (['copy', 'move', 'delete', 'delete_permanent', 'upload', 'video-done'].includes(opType)) {
                     hasNewTargetOp = true;
                     break;
                 }
@@ -122,6 +122,7 @@ export function OperationQueueProgress() {
             case 'delete': return <Trash2 className="w-4 h-4" />;
             case 'delete_permanent': return <Trash2 className="w-4 h-4 text-red-500" />;
             case 'rename': return <Edit className="w-4 h-4" />;
+            case 'video-done': return <Edit className="w-4 h-4" />;
             case 'upload': return <UploadCloud className="w-4 h-4" />;
             case 'integrity-scan': return <ScanSearch className="w-4 h-4" />;
             default: return <Files className="w-4 h-4" />;
