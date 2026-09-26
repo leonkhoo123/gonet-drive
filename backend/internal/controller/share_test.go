@@ -168,6 +168,33 @@ func TestCreateShare_ModifyAuthority(t *testing.T) {
 	assert.Equal(t, "modify", share["authority"])
 }
 
+// TestCreateShare_SingleFileForcesViewOnly verifies that requesting modify
+// authority for a single file is downgraded to view: a single-file share is
+// pinned to one path, so modification would break the link.
+func TestCreateShare_SingleFileForcesViewOnly(t *testing.T) {
+	router, db := setupShareRouter(t)
+	testutil.CreateTestUser(t, db, "creator", "pass123", "user")
+
+	workDir := config.AppConfig.Server.FileRoot
+	require.NoError(t, os.WriteFile(filepath.Join(workDir, "lonely.txt"), []byte("hi"), 0o644))
+
+	accessCookie := testutil.LoginAndGetCookie(t, router, "creator", "pass123")
+
+	body := map[string]interface{}{
+		"path":             "lonely.txt",
+		"description":      "single file modify request",
+		"expires_in_hours": 24,
+		"authority":        "modify",
+	}
+	rec := testutil.MakeAuthRequestJSON(t, router, http.MethodPost, "/api/user/share/create", body, accessCookie)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	resp := testutil.DecodeData(t, rec)
+	share, ok := resp["share"].(map[string]interface{})
+	require.True(t, ok)
+	assert.Equal(t, "view", share["authority"])
+}
+
 func TestCreateShare_ViewAuthorityDefault(t *testing.T) {
 	router, db := setupShareRouter(t)
 	testutil.CreateTestUser(t, db, "creator", "pass123", "user")

@@ -129,6 +129,14 @@ export default function HomePage() {
     : null;
   const isPinned = selectedFolderPath ? pinnedPaths.has(selectedFolderPath) : false;
 
+  // Single-file shares are forced read-only by the backend (renaming/deleting
+  // the shared file would break the link). Detect the type here so the share
+  // dialog can hide the modification option for files.
+  const sharedItemName = itemToShare ? itemToShare.split('/').filter(Boolean).pop() : null;
+  const sharedItemIsFile = sharedItemName
+    ? (items?.items ?? []).some(i => i.name === sharedItemName && i.type === 'file')
+    : false;
+
   // Video files of the current folder, in the list's current sort order, used
   // by the player's auto-play to advance to the next clip.
   const videoFiles = (items?.items ?? []).filter(
@@ -393,6 +401,7 @@ export default function HomePage() {
         isOpen={isShareDialogOpen}
         onOpenChange={setIsShareDialogOpen}
         itemPath={itemToShare}
+        isFile={sharedItemIsFile}
       />
 
       <HomeDownloadDirDialog

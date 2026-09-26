@@ -78,6 +78,18 @@ func (s *SharingService) CreateShareEndpoint(c *gin.Context) {
 		req.Authority = "view"
 	}
 
+	// Modification only makes sense for a directory share. A single-file share
+	// is pinned to one exact path, so renaming or deleting that file would break
+	// the link and there is nothing inside a file to add or reorganize. Force
+	// such shares to be read-only regardless of what the client requested.
+	if req.Authority == "modify" {
+		if fullPath, err := util.SanitizeRepoPath(s.BaseDir, req.Path); err == nil {
+			if info, statErr := os.Stat(fullPath); statErr == nil && !info.IsDir() {
+				req.Authority = "view"
+			}
+		}
+	}
+
 	// Validate expires_in_hours: -1 = never, >= 1 = hours
 	if req.ExpiresIn != -1 && req.ExpiresIn < 1 {
 		httpx.Err(c, http.StatusBadRequest, "expires_in_hours must be -1 (never) or >= 1")

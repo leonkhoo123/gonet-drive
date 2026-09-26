@@ -37,7 +37,7 @@ func ShareFileRoutes(router *gin.Engine, shareRepo repository.SharingRepository,
 
 		// Modify Authority required
 		modify := fileAccess.Group("")
-		modify.Use(middleware.ShareModifyAuthorityMiddleware())
+		modify.Use(middleware.ShareModifyAuthorityMiddleware(config.AppConfig))
 		{
 			modify.POST("/upload-chunk", ShareFileUpload)
 			modify.POST("/delete", ShareFileDeleteSoft)

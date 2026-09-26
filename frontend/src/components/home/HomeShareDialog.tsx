@@ -13,12 +13,14 @@ interface HomeShareDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   itemPath: string | null;
+  isFile?: boolean;
 }
 
 export default function HomeShareDialog({
   isOpen,
   onOpenChange,
-  itemPath
+  itemPath,
+  isFile = false,
 }: HomeShareDialogProps) {
   const [loading, setLoading] = useState(false);
   const [successData, setSuccessData] = useState<CreateShareResponse | null>(null);
@@ -43,6 +45,12 @@ export default function HomeShareDialog({
     }
   }, [isOpen, itemPath]);
 
+  // A single-file share is pinned to one path, so modification is not
+  // meaningful and would break the link. Always fall back to view-only.
+  useEffect(() => {
+    if (isFile) setAuthority("view");
+  }, [isFile]);
+
   const handleShare = async () => {
     if (!itemPath || !description.trim()) {
       if (!description.trim()) {
@@ -57,7 +65,7 @@ export default function HomeShareDialog({
         path: itemPath,
         description: description.trim(),
         expires_in_hours: parseInt(expiresInHours, 10),
-        authority: authority,
+        authority: isFile ? "view" : authority,
       };
       
       const response = await createShare(req);
@@ -175,12 +183,17 @@ export default function HomeShareDialog({
               <select 
                 value={authority} 
                 onChange={(e) => { setAuthority(e.target.value as "view" | "modify"); }}
-                disabled={loading}
+                disabled={loading || isFile}
                 className="flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="view" className="bg-background text-foreground">View Only</option>
                 <option value="modify" className="bg-background text-foreground">Allow Modification</option>
               </select>
+              {isFile && (
+                <p className="text-xs text-muted-foreground">
+                  Single files are always shared as view-only.
+                </p>
+              )}
             </div>
           </div>
         )}

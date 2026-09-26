@@ -94,6 +94,52 @@ func setupShareFileRouter(t *testing.T, authority string) *shareFileFixture {
 	}
 }
 
+// setupSingleFileShareRouter builds a router whose share points at a single
+// regular file rather than a directory. The JWT is generated with the requested
+// authority so we can verify that the runtime guard blocks modification even
+// when a "modify" token is presented (e.g. links issued before the restriction).
+func setupSingleFileShareRouter(t *testing.T, authority string) *shareFileFixture {
+	t.Helper()
+	db := testutil.SetupTestDB(t)
+	cfg := config.AppConfig
+	workDir := cfg.Server.FileRoot
+
+	startWorkerOnce.Do(service.StartFileOperationWorker)
+	startWSOnce.Do(func() { go ws.Manager.Start() })
+
+	shareRepo := repository.NewSQLiteSharingRepo(db)
+	_, _, _, authInstance, _ := testutil.SetupServices(t, db, workDir)
+
+	require.NoError(t, os.WriteFile(filepath.Join(workDir, "single.txt"), []byte("single file share\n"), 0o644))
+
+	shareID := "share-single-file-" + authority
+	share := &model.SharingInfo{
+		ID:          shareID,
+		Path:        "single.txt",
+		PinHash:     "$2a$10$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		ExpiresAt:   time.Now().Add(24 * time.Hour),
+		Blocked:     false,
+		Authority:   authority,
+		Username:    "fileowner",
+		Description: "single file share test",
+		CreatedAt:   time.Now(),
+	}
+	require.NoError(t, shareRepo.Create(share))
+
+	tokenStr, err := middleware.GenerateShareJWT(authInstance.JWT, share.ID, share.Path, share.Authority, cfg.Auth.ShareJwtMaxAge)
+	require.NoError(t, err)
+
+	router := gin.New()
+	controller.SetupShareFileRoutes(router, shareRepo, authInstance)
+
+	return &shareFileFixture{
+		Router:   router,
+		WorkDir:  workDir,
+		Share:    share,
+		ShareJWT: tokenStr,
+	}
+}
+
 // makeShareFileReq makes a JSON request with share JWT cookie and share_id query param.
 func makeShareFileReq(t *testing.T, fix *shareFileFixture, method, urlPath string, body interface{}) *httptest.ResponseRecorder {
 	t.Helper()
@@ -255,6 +301,59 @@ func TestShareFileModify_DeniedView(t *testing.T) {
 	// Attempt upload on view-only share
 	rec3 := makeShareFileMultipartReq(t, fix, http.MethodPost, "/api/share/file/upload-chunk", "readme.txt", []byte("data"))
 	assert.Equal(t, http.StatusForbidden, rec3.Code)
+}
+
+// ---------------------------------------------------------------------------
+// Single-file share — always read-only
+// ---------------------------------------------------------------------------
+
+// TestShareFileList_SingleFile verifies a single-file share still lists (and
+// therefore can be viewed/downloaded) after the modification restriction.
+func TestShareFileList_SingleFile(t *testing.T) {
+	fix := setupSingleFileShareRouter(t, "modify")
+
+	rec := makeShareFileReq(t, fix, http.MethodGet, "/api/share/file/list", nil)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var resp map[string]interface{}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	data := resp["data"].(map[string]interface{})
+	assert.Equal(t, true, data["is_single_file"])
+}
+
+// TestShareFileModify_DeniedSingleFile verifies that even a share token carrying
+// "modify" authority cannot change a single-file share. Renaming or deleting the
+// file would break the share link, so all modify endpoints must be rejected.
+func TestShareFileModify_DeniedSingleFile(t *testing.T) {
+	fix := setupSingleFileShareRouter(t, "modify")
+
+	renameBody := map[string]string{
+		"source":  "/",
+		"newName": "renamed.txt",
+	}
+	rec := makeShareFileReq(t, fix, http.MethodPost, "/api/share/file/rename", renameBody)
+	assert.Equal(t, http.StatusForbidden, rec.Code)
+
+	deleteBody := map[string]interface{}{
+		"sources": []string{"/"},
+	}
+	rec2 := makeShareFileReq(t, fix, http.MethodPost, "/api/share/file/delete", deleteBody)
+	assert.Equal(t, http.StatusForbidden, rec2.Code)
+
+	folderBody := map[string]string{
+		"dir":        "",
+		"folderName": "newfolder",
+	}
+	rec3 := makeShareFileReq(t, fix, http.MethodPost, "/api/share/file/create-folder", folderBody)
+	assert.Equal(t, http.StatusForbidden, rec3.Code)
+
+	rec4 := makeShareFileMultipartReq(t, fix, http.MethodPost, "/api/share/file/upload-chunk", "", []byte("data"))
+	assert.Equal(t, http.StatusForbidden, rec4.Code)
+
+	// The shared file must be untouched.
+	content, err := os.ReadFile(filepath.Join(fix.WorkDir, "single.txt"))
+	require.NoError(t, err)
+	assert.Equal(t, "single file share\n", string(content))
 }
 
 // ---------------------------------------------------------------------------

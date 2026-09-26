@@ -9,6 +9,7 @@ import (
 	"go-file-server/internal/state"
 	"go-file-server/internal/util"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -120,8 +121,12 @@ func ShareAuthMiddleware(cfg *config.CloudConfig, shareRepo repository.SharingRe
 	}
 }
 
-// ShareModifyAuthorityMiddleware ensures the shareJwt has 'modify' authority
-func ShareModifyAuthorityMiddleware() gin.HandlerFunc {
+// ShareModifyAuthorityMiddleware ensures the shareJwt has 'modify' authority.
+// It also rejects modification of single-file shares: such a share is bound to
+// one exact path, so renaming or deleting the file would break the link. The
+// check is done at request time so links issued before this restriction (or a
+// share whose target changed into a file) are still blocked.
+func ShareModifyAuthorityMiddleware(cfg *config.CloudConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authority, exists := c.Get("authority")
 		if !exists {
@@ -133,6 +138,20 @@ func ShareModifyAuthorityMiddleware() gin.HandlerFunc {
 			httpx.Abort(c, http.StatusForbidden, "share link does not have modify authority")
 			return
 		}
+
+		if cfg != nil {
+			if authorizedPath, ok := c.Get("authorized_path"); ok {
+				if p, ok := authorizedPath.(string); ok {
+					if fullPath, err := util.SanitizeRepoPath(cfg.Server.FileRoot, p); err == nil {
+						if info, statErr := os.Stat(fullPath); statErr == nil && !info.IsDir() {
+							httpx.Abort(c, http.StatusForbidden, "modification is not allowed on a single-file share")
+							return
+						}
+					}
+				}
+			}
+		}
+
 		c.Next()
 	}
 }

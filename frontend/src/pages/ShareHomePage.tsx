@@ -131,11 +131,17 @@ export default function ShareHomePage() {
     itemToRename,
   } = useFileManager({ baseRoute: `/share/${id ?? ''}/home`, uploadChunkSize: healthData?.upload_chunk_size });
 
+  // A single-file share is read-only: the item is pinned to one path, so the
+  // backend rejects modification and the UI must not offer it. Collapse the
+  // authority so every modify control is hidden for single-file shares.
+  const isSingleFile = items?.is_single_file ?? false;
+  const effectiveAuthority = authority === 'modify' && !isSingleFile ? 'modify' : 'view';
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (authority !== 'modify') return;
+    if (effectiveAuthority !== 'modify') return;
     if (e.target.files && e.target.files.length > 0) {
       void handleUploadFiles(Array.from(e.target.files), currentPath);
     }
@@ -234,7 +240,7 @@ export default function ShareHomePage() {
                   <span className="text-[10px] text-muted-foreground/80 font-mono tracking-wider leading-none">/health</span>
                   <div className={`w-1.5 h-1.5 rounded-full ${isHealthConnected ? 'bg-green-500 shadow-[0_0_4px_#22c55e]' : 'bg-red-500 shadow-[0_0_4px_#ef4444]'}`} />
                 </div>
-                {authority === 'modify' && (
+                {effectiveAuthority === 'modify' && (
                   <div className="flex items-center gap-1.5" title={`WS: ${isWsConnected ? 'Connected' : 'Disconnected'}`}>
                     <span className="text-[10px] text-muted-foreground/80 font-mono tracking-wider leading-none">WebSocket</span>
                     <div className={`w-1.5 h-1.5 rounded-full ${isWsConnected ? 'bg-green-500 shadow-[0_0_4px_#22c55e]' : 'bg-red-500 shadow-[0_0_4px_#ef4444]'}`} />
@@ -257,7 +263,7 @@ export default function ShareHomePage() {
                 onDelete={handleDelete}
                 onProperties={() => { void handleProperties(); }}
                 onDownload={handleDownload}
-                authority={authority}
+                authority={effectiveAuthority}
               />
             ) : (
               <ShareBreadcrumb
@@ -269,7 +275,7 @@ export default function ShareHomePage() {
                 onRefresh={() => { void handleRefresh(); }}
                 onDownload={() => { handleDownload(); }}
                 onCreateFolder={handleCreateFolder}
-                authority={authority}
+                authority={effectiveAuthority}
                 isRefreshing={isLoading}
               />
             )}
@@ -283,7 +289,7 @@ export default function ShareHomePage() {
               onProperties={(name?: string, isCurrentDir?: boolean) => { void handleProperties(name, isCurrentDir); }}
               onRefresh={() => { void handleRefresh(); }}
               onCreateFolder={handleCreateFolder}
-              authority={authority}
+              authority={effectiveAuthority}
               isRefreshing={isLoading}
             />
           </div>
@@ -308,7 +314,7 @@ export default function ShareHomePage() {
               onRefresh={() => { void handleRefresh(); }}
               onCreateFolder={handleCreateFolder}
               onUploadFiles={(files: File[]) => { void handleUploadFiles(files, currentPath); }}
-              authority={authority}
+              authority={effectiveAuthority}
               isRefreshing={isLoading}
             />
           </div>
@@ -341,17 +347,17 @@ export default function ShareHomePage() {
             sortOrder={sortOrder}
             setSortOrder={setSortOrder}
             onSortChange={handleSortChange}
-            authority={authority}
+            authority={effectiveAuthority}
           />
         </div>
 
-        {authority === 'modify' && (
+        {effectiveAuthority === 'modify' && (
           <div className={clipboardItems.items.length > 0 ? "hidden md:block" : ""}>
             <OperationQueueProgress />
           </div>
         )}
 
-        {authority === 'modify' && (
+        {effectiveAuthority === 'modify' && (
           <MobileClipboardToast
             clipboardItemsCount={clipboardItems.items.length}
             operation={clipboardItems.operation}
@@ -363,7 +369,7 @@ export default function ShareHomePage() {
         )}
 
         {/* Mobile Floating Action Button */}
-        {authority === 'modify' && !items?.is_single_file && (
+        {effectiveAuthority === 'modify' && !items?.is_single_file && (
           <div className="md:hidden absolute bottom-4 right-4 z-50">
             <input 
               type="file" 
