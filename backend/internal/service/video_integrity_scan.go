@@ -50,6 +50,27 @@ func SetScanStopForTest(stop bool) {
 	scanStop.Store(stop)
 }
 
+// scanRunner executes a video integrity scan. It is a package-level variable so
+// tests can substitute a fake and avoid launching real background scans that
+// mutate process-global gate state across test boundaries. Production always
+// uses ScanVideoIntegrity.
+var scanRunner = ScanVideoIntegrity
+
+// VideoIntegrityScanRunner returns the current scan runner. Callers that launch
+// a scan in a goroutine should capture the returned function before the
+// goroutine starts, so a test substitution cannot race with an in-flight scan.
+func VideoIntegrityScanRunner() func(rootPath string) (*ScanResult, error) {
+	return scanRunner
+}
+
+// SetVideoIntegrityScanRunnerForTest swaps the scan runner and returns a
+// restore function. Not intended for production use.
+func SetVideoIntegrityScanRunnerForTest(fn func(rootPath string) (*ScanResult, error)) (restore func()) {
+	prev := scanRunner
+	scanRunner = fn
+	return func() { scanRunner = prev }
+}
+
 // RequestScanStop signals a running scan to stop after the current file completes.
 // Returns false if no scan is running.
 func RequestScanStop() bool {

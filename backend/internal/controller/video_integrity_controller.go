@@ -56,8 +56,9 @@ func startVideoIntegrityScan(cfg *config.CloudConfig) gin.HandlerFunc {
 
 		logger.L.Info("video integrity scan triggered via API")
 
+		scan := service.VideoIntegrityScanRunner()
 		go func() {
-			if _, err := service.ScanVideoIntegrity(cfg.Server.FileRoot); err != nil {
+			if _, err := scan(cfg.Server.FileRoot); err != nil {
 				logger.L.Error("video integrity scan failed", "err", err)
 			}
 		}()

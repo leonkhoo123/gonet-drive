@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"go-file-server/internal/config"
 	"go-file-server/internal/controller"
@@ -27,6 +28,19 @@ func setupVideoIntegrityRouter(t *testing.T) (*gin.Engine, *config.CloudConfig, 
 
 	viRepo := repository.NewSQLiteVideoIntegrityRepo(db)
 	service.SetVideoIntegrityRepo(viRepo)
+
+	// These tests exercise the HTTP contract, not the scan itself (covered by
+	// the service tests). Substitute a fake runner so starting a scan does not
+	// launch a real background goroutine that mutates global gate state across
+	// test boundaries, which caused flaky conflicts in later tests.
+	restoreRunner := service.SetVideoIntegrityScanRunnerForTest(func(string) (*service.ScanResult, error) {
+		return &service.ScanResult{}, nil
+	})
+	service.ResetIntegrityScanForTest()
+	t.Cleanup(func() {
+		restoreRunner()
+		service.ResetIntegrityScanForTest()
+	})
 
 	userService, _, _, authInstance, authCfg := testutil.SetupServices(t, db, workDir)
 
@@ -64,9 +78,18 @@ func TestVideoIntegrityScan_RegularUser(t *testing.T) {
 }
 
 func TestVideoIntegrityScan_Admin(t *testing.T) {
-	router, _, _, db := setupVideoIntegrityRouter(t)
+	router, cfg, _, db := setupVideoIntegrityRouter(t)
 	testutil.CreateTestUser(t, db, "adminuser", "pass123", "admin")
 	accessCookie := testutil.LoginAndGetCookie(t, router, "adminuser", "pass123")
+
+	// Observe the asynchronously launched scan without running a real one, so
+	// this test does not leave a background scan mutating global gate state.
+	called := make(chan string, 1)
+	restore := service.SetVideoIntegrityScanRunnerForTest(func(root string) (*service.ScanResult, error) {
+		called <- root
+		return &service.ScanResult{}, nil
+	})
+	defer restore()
 
 	rec := testutil.MakeAuthRequest(t, router, http.MethodPost, "/api/user/admin/video-integrity/scan", nil, accessCookie)
 
@@ -74,6 +97,13 @@ func TestVideoIntegrityScan_Admin(t *testing.T) {
 	resp := testutil.DecodeData(t, rec)
 	assert.Equal(t, "integrity-scan", resp["opId"])
 	assert.Equal(t, "started", resp["status"])
+
+	select {
+	case root := <-called:
+		assert.Equal(t, cfg.Server.FileRoot, root)
+	case <-time.After(2 * time.Second):
+		t.Fatal("scan runner was not invoked")
+	}
 }
 
 func TestVideoIntegrityScan_DoubleStart(t *testing.T) {
@@ -166,9 +196,9 @@ func TestVideoIntegrityList_Empty(t *testing.T) {
 
 func TestVideoIntegrityScan_StopWhenRunning(t *testing.T) {
 	defer service.ResetIntegrityScanForTest()
-	service.SetScanRunningForTest(true)
 
 	router, _, _, db := setupVideoIntegrityRouter(t)
+	service.SetScanRunningForTest(true)
 	testutil.CreateTestUser(t, db, "adminuser", "pass123", "admin")
 	accessCookie := testutil.LoginAndGetCookie(t, router, "adminuser", "pass123")
 
