@@ -250,12 +250,6 @@ export function VideoControls({
           title="Playback speed"
           className={`${CONTROL} relative w-full flex-1 min-h-[32px] max-h-12 px-1`}
         >
-          {/* Chevron pinned left; rotates when the speed slider is open */}
-          <ChevronLeft
-            className={`absolute left-2 h-4 w-4 sm:h-5 sm:w-5 text-gray-500 transition-transform duration-300 ${
-              openPanel === "speed" ? "rotate-180" : ""
-            }`}
-          />
           <Zap className="h-4 w-4 mr-1" />
           {playbackRate}x
         </Button>
@@ -273,11 +267,6 @@ export function VideoControls({
             title="Playback quality"
             className={`${CONTROL} relative w-full flex-1 min-h-[32px] max-h-12 px-1`}
           >
-            <ChevronLeft
-              className={`absolute left-2 h-4 w-4 sm:h-5 sm:w-5 text-gray-500 transition-transform duration-300 ${
-                openPanel === "quality" ? "rotate-180" : ""
-              }`}
-            />
             <Gauge className="h-4 w-4 mr-1" />
             {qualityLabel(quality)}
           </Button>
