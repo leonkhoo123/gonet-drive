@@ -107,6 +107,22 @@ func TestBuildCompressArgs_ZeroStartOmitsSeek(t *testing.T) {
 	assert.NotContains(t, args, "-ss")
 }
 
+// TestBuildCompressArgs_PinsCodecProfileAndLevel guards the MSE contract: the
+// frontend feeds this stream into a SourceBuffer with the codec string
+// "avc1.64002a", which only matches if the encoder is pinned to High profile
+// level 4.2. If these flags drift, iOS playback silently breaks.
+func TestBuildCompressArgs_PinsCodecProfileAndLevel(t *testing.T) {
+	args := buildCompressArgs("/videos/clip.mp4", 0, 480, 20, "veryfast")
+
+	profileIndex := slices.Index(args, "-profile:v")
+	require.NotEqual(t, -1, profileIndex, "expected -profile:v flag")
+	assert.Equal(t, "high", args[profileIndex+1])
+
+	levelIndex := slices.Index(args, "-level:v")
+	require.NotEqual(t, -1, levelIndex, "expected -level:v flag")
+	assert.Equal(t, "4.2", args[levelIndex+1])
+}
+
 // newCompressRouter wires the two endpoints exactly like VideoRoutes so path
 // params and gin behaviour match production.
 func newCompressRouter(cfg *config.CloudConfig) *gin.Engine {

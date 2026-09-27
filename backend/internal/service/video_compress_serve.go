@@ -39,6 +39,15 @@ const (
 	// they are produced so the response can be streamed with chunked encoding.
 	compressMovFlags = "+frag_keyframe+empty_moov+default_base_moof"
 
+	// Pin the H.264 profile/level so the browser-side MSE (Media Source
+	// Extensions) codec string is deterministic: "avc1.64002a" is High profile
+	// (0x64) + level 4.2 (0x2a). CRF/preset control quality; the profile only
+	// enables tools x264 already uses by default, and the level is just a
+	// capability ceiling (covers up to 1080p60, and the player only requests
+	// 480/720/1080 so the scale filter caps the short side at 1080).
+	compressProfile = "high"
+	compressLevel   = "4.2"
+
 	// Bounds for a client-requested compression resolution (the shorter side,
 	// in px). A malformed query outside this range falls back to the default.
 	qualityMinShortSide = 144
@@ -98,6 +107,8 @@ func buildCompressArgs(path string, start, shortSide, crf int, preset string) []
 	args = append(args,
 		"-vf", compressScaleFilter(shortSide),
 		"-c:v", "libx264",
+		"-profile:v", compressProfile,
+		"-level:v", compressLevel,
 		"-preset", preset,
 		"-crf", strconv.Itoa(crf),
 		"-pix_fmt", "yuv420p",
