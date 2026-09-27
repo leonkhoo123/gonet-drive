@@ -4,10 +4,8 @@ import { toast } from "sonner";
 import { useDialogHistory } from "@/hooks/useDialogHistory";
 import { useForceDarkStatusBar } from "@/hooks/useForceDarkStatusBar";
 import { useVideoEventMetadata } from "@/hooks/useVideoPlayerV2/useVideoEventMetadata";
-import {
-  useVideoPlaybackController,
-  type VideoQuality,
-} from "@/hooks/useVideoPlayerV2/useVideoPlaybackController";
+import { useVideoPlaybackController } from "@/hooks/useVideoPlayerV2/useVideoPlaybackController";
+import { useVideoQualityPreference } from "@/hooks/useVideoPlayerV2/useVideoQualityPreference";
 import { useLongPressSpeed } from "@/hooks/useVideoPlayerV2/useLongPressSpeed";
 import { useVideoControlsVisibility } from "@/hooks/useVideoPlayerV2/useVideoControlsVisibility";
 import { useVideoRename } from "@/hooks/useVideoPlayerV2/useVideoRename";
@@ -37,8 +35,9 @@ const VideoPlayerCompressModalV2 = ({
   onSelectVideo,
 }: VideoPlayerModalProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  // Start at original quality; the user drops to 480/720/1080 if bandwidth bites.
-  const [quality, setQuality] = useState<VideoQuality>("original");
+  // Start at the quality chosen earlier in this tab/PWA session; falls back to
+  // original on a fresh session. The user drops to 480/720/1080 if bandwidth bites.
+  const { quality, selectQuality, forceQuality } = useVideoQualityPreference();
 
   /* -------------------- playback (native or virtual timeline) -------------------- */
   const {
@@ -130,10 +129,12 @@ const VideoPlayerCompressModalV2 = ({
   useForceDarkStatusBar(isOpen);
 
   /* -------------------- graceful fallback to original -------------------- */
-  // The compressed stream could not start: either the server is already
-  // transcoding at capacity (busy) or ffmpeg failed. Original playback uses the
-  // Range endpoint and needs no ffmpeg, so degrade instead of showing a dead
-  // player.
+  /* The compressed stream could not start: either the server is already
+   * transcoding at capacity (busy) or ffmpeg failed. Original playback uses the
+   * Range endpoint and needs no ffmpeg, so degrade instead of showing a dead
+   * player. This is an error fallback, not a user choice, so it deliberately
+   * does not overwrite the remembered quality: the next clip retries it.
+   */
   useEffect(() => {
     if (!compressedUnavailable || quality === "original") return;
     toast.warning(
@@ -141,8 +142,8 @@ const VideoPlayerCompressModalV2 = ({
         ? "Transcoding server is busy — switched to Original quality."
         : "Compressed playback unavailable — switched to Original quality."
     );
-    setQuality("original");
-  }, [compressedUnavailable, quality]);
+    forceQuality("original");
+  }, [compressedUnavailable, quality, forceQuality]);
 
   /* -------------------- press and hold for 2x speed -------------------- */
   const {
@@ -336,7 +337,7 @@ const VideoPlayerCompressModalV2 = ({
           onClose(disqualified, file.path, isNewName, newName, rotation);
         }}
         quality={quality}
-        onChangeQuality={setQuality}
+        onChangeQuality={selectQuality}
       />
 
       {/* RENAME MODAL */}

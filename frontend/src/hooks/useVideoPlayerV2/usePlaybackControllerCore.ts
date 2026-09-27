@@ -13,6 +13,11 @@ import { createMseStreamer, type MseStreamer } from "./mseStream";
  */
 export type VideoQuality = "original" | 480 | 720 | 1080;
 
+/** Runtime guard for the `VideoQuality` union, e.g. for stored input. */
+export function isVideoQuality(value: unknown): value is VideoQuality {
+  return value === "original" || value === 480 || value === 720 || value === 1080;
+}
+
 /**
  * How a compressed source reaches the media element:
  * - `"native"` — `<video src>` the chunked fMP4 (Chromium/Firefox).
