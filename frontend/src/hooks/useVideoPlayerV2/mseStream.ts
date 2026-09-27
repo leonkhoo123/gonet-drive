@@ -236,6 +236,12 @@ export interface MseStreamerCallbacks {
   /** End of the appended buffer in engine seconds (relative to stream start). */
   onBufferedEnd: (endSeconds: number) => void;
   onError: (message: string) => void;
+  /**
+   * The server rejected the stream because it is already transcoding at
+   * capacity (HTTP 429). The player uses this to fall back to original
+   * playback instead of showing a hard error.
+   */
+  onBusy?: (retryAfterSeconds: number | null) => void;
 }
 
 export interface MseStreamer {
@@ -427,7 +433,16 @@ export function createMseStreamer(
       return;
     }
     if (!response.ok || !response.body) {
-      if (!isDisposed()) callbacks.onError("Unable to load compressed stream.");
+      if (isDisposed()) return;
+      if (response.status === 429 && callbacks.onBusy) {
+        const raw = response.headers.get("Retry-After");
+        const retryAfter = raw === null ? null : Number(raw);
+        callbacks.onBusy(
+          retryAfter !== null && Number.isFinite(retryAfter) ? retryAfter : null
+        );
+      } else {
+        callbacks.onError("Unable to load compressed stream.");
+      }
       return;
     }
     reader = response.body.getReader();

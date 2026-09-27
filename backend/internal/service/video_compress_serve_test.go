@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	"go-file-server/internal/config"
@@ -77,8 +78,51 @@ func TestParseQualityParam(t *testing.T) {
 	}
 }
 
+// testCompressParams returns a representative 480p request; individual tests
+// override the field they exercise.
+func testCompressParams() compressParams {
+	return compressParams{
+		Path:      "/videos/clip.mp4",
+		ShortSide: 480,
+		Tier:      tierForShortSide(480),
+		SourceFPS: 60,
+		CRF:       20,
+		Threads:   2,
+		Preset:    "veryfast",
+	}
+}
+
+// argValue returns the value following flag, or "" when absent.
+func argValue(args []string, flag string) string {
+	i := slices.Index(args, flag)
+	if i < 0 || i+1 >= len(args) {
+		return ""
+	}
+	return args[i+1]
+}
+
+func TestTierForShortSide(t *testing.T) {
+	cases := []struct {
+		request int
+		want    int
+	}{
+		{480, 480},
+		{720, 720},
+		{1080, 1080},
+		{144, 480},   // below the smallest tier -> smallest
+		{300, 480},   // below the smallest tier -> smallest
+		{900, 1080},  // in-between -> next tier up
+		{2160, 1080}, // above the largest -> largest
+	}
+	for _, tc := range cases {
+		assert.Equal(t, tc.want, tierForShortSide(tc.request).ShortSide, "request=%d", tc.request)
+	}
+}
+
 func TestBuildCompressArgs_StartUsesInputSeek(t *testing.T) {
-	args := buildCompressArgs("/videos/clip.mp4", 30, 480, 20, "veryfast")
+	p := testCompressParams()
+	p.Start = 30
+	args := buildCompressArgs(p)
 
 	ssIndex := slices.Index(args, "-ss")
 	iIndex := slices.Index(args, "-i")
@@ -103,8 +147,72 @@ func TestBuildCompressArgs_StartUsesInputSeek(t *testing.T) {
 }
 
 func TestBuildCompressArgs_ZeroStartOmitsSeek(t *testing.T) {
-	args := buildCompressArgs("/videos/clip.mp4", 0, 480, 20, "veryfast")
+	args := buildCompressArgs(testCompressParams())
 	assert.NotContains(t, args, "-ss")
+}
+
+// TestBuildCompressArgs_AppliesBandwidthCeiling guards the predictable-ceiling
+// contract: every compressed stream carries a maxrate/bufsize pair and a
+// per-tier audio bitrate, which is what makes the declared ceiling meaningful.
+func TestBuildCompressArgs_AppliesBandwidthCeiling(t *testing.T) {
+	args := buildCompressArgs(testCompressParams())
+
+	tier := tierForShortSide(480)
+	assert.Equal(t, strconv.Itoa(tier.MaxRate), argValue(args, "-maxrate"))
+	assert.Equal(t, strconv.Itoa(tier.BufSize), argValue(args, "-bufsize"))
+	assert.Equal(t, strconv.Itoa(tier.AudioRate), argValue(args, "-b:a"))
+	// bufsize is 3x maxrate: the 3s VBV window absorbs scene-cut bursts.
+	assert.Equal(t, 3, tier.BufSize/tier.MaxRate)
+}
+
+// TestBuildCompressArgs_TimeBasedKeyframes guards the fps-independent keyframe
+// cadence: the interval is expressed in output seconds, not frames.
+func TestBuildCompressArgs_TimeBasedKeyframes(t *testing.T) {
+	args := buildCompressArgs(testCompressParams())
+
+	assert.Equal(t, "expr:gte(t,n_forced*1)", argValue(args, "-force_key_frames"))
+	assert.Equal(t, strconv.Itoa(compressSceneCutThreshold), argValue(args, "-sc_threshold"))
+	// 60fps output -> 0.5s floor = 30 frames.
+	assert.Equal(t, "30", argValue(args, "-keyint_min"))
+	// -g must be gone: a frame count would mean different intervals per fps.
+	assert.NotContains(t, args, "-g")
+}
+
+// TestBuildCompressArgs_LeavesSourceFPSBelowCapUntouched checks that we do not
+// force a constant rate when there is nothing to cap: re-quantizing a source at
+// or below the cap can introduce judder on variable-frame-rate input.
+func TestBuildCompressArgs_LeavesSourceFPSBelowCapUntouched(t *testing.T) {
+	p := testCompressParams() // 480 tier caps at 60fps
+	p.SourceFPS = 24
+	args := buildCompressArgs(p)
+
+	vf := argValue(args, "-vf")
+	assert.NotContains(t, vf, "fps=", "no frame-rate filter below the cap")
+	assert.Contains(t, vf, "scale=")
+	// The keyframe floor still follows the source rate: 24fps * 0.5s = 12.
+	assert.Equal(t, "12", argValue(args, "-keyint_min"))
+}
+
+// TestBuildCompressArgs_DownsamplesAboveCap checks the cap still applies when
+// the source really is faster than the tier allows.
+func TestBuildCompressArgs_DownsamplesAboveCap(t *testing.T) {
+	p := testCompressParams()
+	p.SourceFPS = 120
+	args := buildCompressArgs(p)
+
+	assert.Contains(t, argValue(args, "-vf"), "fps=60")
+	assert.Equal(t, "30", argValue(args, "-keyint_min"), "60fps output * 0.5s")
+}
+
+func TestBuildCompressArgs_UnknownSourceFPSClampsInFilter(t *testing.T) {
+	p := testCompressParams()
+	p.SourceFPS = 0
+	args := buildCompressArgs(p)
+
+	// With no probe result the filter must clamp against source_fps instead of
+	// pinning the cap, so a low-rate source is never upscaled.
+	assert.Contains(t, argValue(args, "-vf"), "min(source_fps,60)")
+	assert.Equal(t, "30", argValue(args, "-keyint_min"))
 }
 
 // TestBuildCompressArgs_PinsCodecProfileAndLevel guards the MSE contract: the
@@ -112,7 +220,7 @@ func TestBuildCompressArgs_ZeroStartOmitsSeek(t *testing.T) {
 // "avc1.64002a", which only matches if the encoder is pinned to High profile
 // level 4.2. If these flags drift, iOS playback silently breaks.
 func TestBuildCompressArgs_PinsCodecProfileAndLevel(t *testing.T) {
-	args := buildCompressArgs("/videos/clip.mp4", 0, 480, 20, "veryfast")
+	args := buildCompressArgs(testCompressParams())
 
 	profileIndex := slices.Index(args, "-profile:v")
 	require.NotEqual(t, -1, profileIndex, "expected -profile:v flag")
@@ -121,6 +229,25 @@ func TestBuildCompressArgs_PinsCodecProfileAndLevel(t *testing.T) {
 	levelIndex := slices.Index(args, "-level:v")
 	require.NotEqual(t, -1, levelIndex, "expected -level:v flag")
 	assert.Equal(t, "4.2", args[levelIndex+1])
+}
+
+func TestParseFrameRate(t *testing.T) {
+	cases := []struct {
+		raw  string
+		want float64
+	}{
+		{"60/1", 60},
+		{"30000/1001", 29.97002997},
+		{"25", 25},
+		{"0/0", 0},
+		{"30/0", 0},
+		{"-30/1", 0},
+		{"", 0},
+		{"abc", 0},
+	}
+	for _, tc := range cases {
+		assert.InDelta(t, tc.want, parseFrameRate(tc.raw), 0.001, "raw=%q", tc.raw)
+	}
 }
 
 // newCompressRouter wires the two endpoints exactly like VideoRoutes so path
@@ -211,6 +338,28 @@ func TestProbeVideoMeta(t *testing.T) {
 	assert.InDelta(t, 1.0, meta.Duration, 0.5)
 	assert.Equal(t, 32, meta.Width)
 	assert.Equal(t, 32, meta.Height)
+	// createTestMP4 encodes at rate=1.
+	assert.InDelta(t, 1.0, meta.FPS, 0.1)
+}
+
+func TestGetVideoQualityTiers(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.GET("/api/user/video/capabilities", GetVideoQualityTiers)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/user/video/capabilities", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	body := w.Body.String()
+	assert.Contains(t, body, `"shortSide":480`)
+	assert.Contains(t, body, `"shortSide":720`)
+	assert.Contains(t, body, `"shortSide":1080`)
+	assert.Contains(t, body, `"maxBitrate":8000000`)
+	assert.Contains(t, body, `"audioBitrate":128000`)
+	// 1080p ceiling = (8_000_000 + 128_000) * 1.01.
+	assert.Contains(t, body, `"ceiling":8209280`)
 }
 
 func TestServeCompressedStream_StreamsFragmentedMP4(t *testing.T) {
@@ -322,4 +471,113 @@ func TestServeCompressedStream_RejectsDirectory(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestBuildCompressArgs_BoundsThreads(t *testing.T) {
+	p := testCompressParams()
+	p.Threads = 3
+	args := buildCompressArgs(p)
+
+	threadsIndex := slices.Index(args, "-threads")
+	require.NotEqual(t, -1, threadsIndex, "expected -threads flag")
+	assert.Equal(t, "3", args[threadsIndex+1])
+	// -threads is an output option, so it must follow the input.
+	assert.Greater(t, threadsIndex, slices.Index(args, "-i"))
+}
+
+func TestCompressThreads_DefaultAndOverride(t *testing.T) {
+	assert.Equal(t, compressDefaultThreads, compressThreads(&config.CloudConfig{}))
+
+	cfg := &config.CloudConfig{}
+	cfg.Server.VideoCompressThreads = 1
+	assert.Equal(t, 1, compressThreads(cfg))
+}
+
+func TestNewCompressedCommand_WrapsPrlimitWhenConfigured(t *testing.T) {
+	args := buildCompressArgs(testCompressParams())
+	ctx := context.Background()
+
+	cfg := &config.CloudConfig{}
+	cfg.Server.VideoCompressMemoryLimitMB = 512
+	wrapped := newCompressedCommand(ctx, cfg, args)
+	require.NotEmpty(t, wrapped.Args)
+	assert.Equal(t, "prlimit", wrapped.Args[0])
+	assert.Contains(t, wrapped.Args, "--as=536870912")
+	assert.Contains(t, wrapped.Args, "ffmpeg")
+	// The transcode args still ride along.
+	assert.Contains(t, wrapped.Args, "pipe:1")
+
+	// Disabled (0) runs ffmpeg directly with no prlimit wrapper.
+	cfg.Server.VideoCompressMemoryLimitMB = 0
+	plain := newCompressedCommand(ctx, cfg, args)
+	require.NotEmpty(t, plain.Args)
+	assert.Equal(t, "ffmpeg", plain.Args[0])
+	assert.NotContains(t, plain.Args, "--as=")
+}
+
+func TestLimiter_TryAcquire(t *testing.T) {
+	l := newLimiter(1, "test")
+
+	assert.True(t, l.TryAcquire())
+	assert.False(t, l.TryAcquire(), "a full limiter must not block")
+	assert.Equal(t, 1, l.Acquiring())
+
+	l.Release()
+	assert.True(t, l.TryAcquire())
+	l.Release()
+	assert.Equal(t, 0, l.Acquiring())
+}
+
+func TestGetVideoCompressSemaphore_PicksUpConfig(t *testing.T) {
+	prev := globalVideoCompressSemaphore
+	prevCfg := config.AppConfig
+	globalVideoCompressSemaphore = nil
+	videoCompressOnce = sync.Once{}
+	defer func() {
+		globalVideoCompressSemaphore = prev
+		videoCompressOnce = sync.Once{}
+		config.AppConfig = prevCfg
+	}()
+
+	config.AppConfig = &config.CloudConfig{
+		Server: config.ServerConfig{VideoCompressMaxConcurrent: 3},
+	}
+
+	sem := GetVideoCompressSemaphore()
+	assert.Equal(t, 3, sem.limit, "should use VideoCompressMaxConcurrent from config")
+	assert.Same(t, sem, GetVideoCompressSemaphore(), "second call must reuse the singleton")
+}
+
+// TestServeCompressedStream_BusyReturns429 verifies the client-facing contract
+// when the host is already transcoding at capacity: an immediate 429 with
+// Retry-After (not a queued, hung connection).
+func TestServeCompressedStream_BusyReturns429(t *testing.T) {
+	dir := t.TempDir()
+	// Existence and non-directory is all that is needed: the semaphore gate
+	// runs before ffmpeg is invoked, so the file never has to be decodable.
+	video := filepath.Join(dir, "clip.mp4")
+	require.NoError(t, os.WriteFile(video, []byte("stub"), 0o644))
+
+	cfg := &config.CloudConfig{}
+	cfg.Server.FileRoot = dir
+	router := newCompressRouter(cfg)
+
+	prev := globalVideoCompressSemaphore
+	globalVideoCompressSemaphore = newLimiter(1, "video-compress")
+	videoCompressOnce.Do(func() {}) // mark initialised so Get() returns ours
+	defer func() {
+		globalVideoCompressSemaphore = prev
+		videoCompressOnce = sync.Once{}
+	}()
+
+	require.True(t, globalVideoCompressSemaphore.TryAcquire(), "occupy the only slot")
+	defer globalVideoCompressSemaphore.Release()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/user/video/stream/file/clip.mp4", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusTooManyRequests, w.Code)
+	assert.Equal(t, "5", w.Header().Get("Retry-After"))
+	assert.Contains(t, w.Body.String(), "busy")
 }

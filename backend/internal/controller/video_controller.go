@@ -41,6 +41,12 @@ func VideoRoutes(router *gin.RouterGroup, cfg *config.CloudConfig) {
 		service.ServeCompressedStream(c, cfg)
 	})
 
+	// Static list of the selectable compressed qualities and their bandwidth
+	// ceilings, for client-side network prediction / quality selection.
+	api.GET("/capabilities", func(c *gin.Context) {
+		service.GetVideoQualityTiers(c)
+	})
+
 	api.GET("/video-test", videoTestHandler)
 
 	api.Static("/static", "./static")

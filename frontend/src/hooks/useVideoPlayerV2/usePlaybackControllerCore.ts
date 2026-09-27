@@ -23,6 +23,9 @@ export type PlaybackTransport = "native" | "mse";
 /** Delay before the first load so the modal has painted the element. */
 const INITIAL_LOAD_DELAY = 100;
 
+/** Why compressed playback was abandoned, for the UI fallback message. */
+export type CompressedUnavailableReason = "busy" | "error";
+
 export interface PlaybackControllerState {
   isPlaying: boolean;
   isBuffering: boolean;
@@ -34,6 +37,12 @@ export interface PlaybackControllerState {
   progress: number;
   bufferedProgress: number;
   error: string | null;
+  /**
+   * Set when a compressed stream could not start — the server is at transcoding
+   * capacity ("busy") or the transcode failed ("error"). The player reacts by
+   * falling back to `original` playback. Reset to `null` on every load.
+   */
+  compressedUnavailable: CompressedUnavailableReason | null;
   togglePlay: () => void;
   skip: (seconds: number) => void;
   changeSpeed: (rate: number) => void;
@@ -87,6 +96,8 @@ export function usePlaybackControllerCore(
   const [isBuffering, setIsBuffering] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [error, setError] = useState<string | null>(null);
+  const [compressedUnavailable, setCompressedUnavailable] =
+    useState<CompressedUnavailableReason | null>(null);
 
   // Refs mirror the latest values so stable DOM handlers and the load effect
   // never read a stale render snapshot.
@@ -102,6 +113,8 @@ export function usePlaybackControllerCore(
   const pendingNativePlay = useRef(false);
   const loadedFileRef = useRef<string | null>(null);
   const prevQualityRef = useRef<VideoQuality>(quality);
+  // Current quality, readable from stable DOM handlers without stale closures.
+  const qualityRef = useRef<VideoQuality>(quality);
   // Active MSE session (only when transport === "mse" and quality is not
   // original); torn down and recreated on every seek / quality switch.
   const mseRef = useRef<MseStreamer | null>(null);
@@ -111,6 +124,7 @@ export function usePlaybackControllerCore(
   engineTimeRef.current = engineTime;
   nativeTimeRef.current = nativeTime;
   realDurationRef.current = realDuration;
+  qualityRef.current = quality;
 
   const disposeMse = useCallback(() => {
     if (mseRef.current) {
@@ -183,7 +197,15 @@ export function usePlaybackControllerCore(
     const onError = () => {
       // Ignore the spurious error Safari fires while a source is torn down.
       if (!video.currentSrc && !mseRef.current) return;
-      setError("Unable to load video.");
+      // A compressed load that fails (e.g. the server is at transcoding
+      // capacity and returned 429, or ffmpeg could not start) must not be a
+      // dead end: signal the UI to fall back to original playback instead.
+      if (qualityRef.current !== "original") {
+        setCompressedUnavailable("error");
+        setError(null);
+      } else {
+        setError("Unable to load video.");
+      }
       setIsBuffering(false);
     };
 
@@ -229,6 +251,7 @@ export function usePlaybackControllerCore(
       previewRef.current = null;
       setPreviewSeconds(null);
       setError(null);
+      setCompressedUnavailable(null);
       video.pause();
       // Show the loading spinner immediately on a quality change / restart,
       // before the media element has had a chance to fire waiting.
@@ -269,9 +292,18 @@ export function usePlaybackControllerCore(
           onBufferedEnd: (end) => {
             setEngineBufferedEnd(end);
           },
-          onError: (message) => {
-            setError(message);
+          onError: () => {
+            // Compressed playback failed to start; fall back to original
+            // rather than showing a dead-end error.
+            setError(null);
             setIsBuffering(false);
+            setCompressedUnavailable("error");
+          },
+          onBusy: () => {
+            // Server is already transcoding at capacity (HTTP 429).
+            setError(null);
+            setIsBuffering(false);
+            setCompressedUnavailable("busy");
           },
         });
         mseRef.current = streamer;
@@ -466,6 +498,7 @@ export function usePlaybackControllerCore(
     progress,
     bufferedProgress,
     error,
+    compressedUnavailable,
     togglePlay,
     skip,
     changeSpeed,

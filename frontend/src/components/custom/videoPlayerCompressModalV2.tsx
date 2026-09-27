@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { useDialogHistory } from "@/hooks/useDialogHistory";
 import { useForceDarkStatusBar } from "@/hooks/useForceDarkStatusBar";
 import { useVideoEventMetadata } from "@/hooks/useVideoPlayerV2/useVideoEventMetadata";
@@ -49,6 +50,7 @@ const VideoPlayerCompressModalV2 = ({
     duration,
     currentTime,
     error,
+    compressedUnavailable,
     togglePlay,
     skip,
     changeSpeed,
@@ -126,6 +128,21 @@ const VideoPlayerCompressModalV2 = ({
   }, [file.path, resetRename]);
 
   useForceDarkStatusBar(isOpen);
+
+  /* -------------------- graceful fallback to original -------------------- */
+  // The compressed stream could not start: either the server is already
+  // transcoding at capacity (busy) or ffmpeg failed. Original playback uses the
+  // Range endpoint and needs no ffmpeg, so degrade instead of showing a dead
+  // player.
+  useEffect(() => {
+    if (!compressedUnavailable || quality === "original") return;
+    toast.warning(
+      compressedUnavailable === "busy"
+        ? "Transcoding server is busy — switched to Original quality."
+        : "Compressed playback unavailable — switched to Original quality."
+    );
+    setQuality("original");
+  }, [compressedUnavailable, quality]);
 
   /* -------------------- press and hold for 2x speed -------------------- */
   const {
