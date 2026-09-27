@@ -53,8 +53,8 @@ export interface PlaybackControllerState {
   changeSpeed: (rate: number) => void;
   /** Show a seek target in the UI without committing (native moves live). */
   previewAbsolute: (seconds: number) => void;
-  /** Perform the seek at an absolute second, optionally resuming play. */
-  commitSeek: (seconds: number, autoplay: boolean) => void;
+  /** Perform the seek at an absolute second, resuming according to intent. */
+  commitSeek: (seconds: number, autoplay?: boolean) => void;
   scrubStart: () => void;
   scrubEnd: () => void;
   scrubTo: (progressPercent: number) => void;
@@ -113,7 +113,15 @@ export function usePlaybackControllerCore(
   const realDurationRef = useRef(0);
   const previewRef = useRef<number | null>(null);
   const absoluteTimeRef = useRef(0);
-  const wasPlayingBeforeScrub = useRef(false);
+  /**
+   * The user's intent to be playing, tracked separately from `video.paused`.
+   * The element is transiently paused while a compressed stream loads (and
+   * right after opening, before the deferred autoplay starts), so deriving
+   * "resume after seek" from `!video.paused` can read false mid-load and leave
+   * the player stuck paused. This only changes on an explicit play/pause or a
+   * load, and is what seeks resume from.
+   */
+  const playIntentRef = useRef(true);
   const pendingNativeSeek = useRef<number | null>(null);
   const pendingNativePlay = useRef(false);
   const loadedFileRef = useRef<string | null>(null);
@@ -249,6 +257,10 @@ export function usePlaybackControllerCore(
       const video = videoRef.current;
       if (!video) return;
 
+      // A load reflects the current play intent (autoplay on open/clip change,
+      // or whatever the user last chose on a quality switch).
+      playIntentRef.current = autoplay;
+
       const max = realDurationRef.current;
       const target =
         max > 0 ? clamp(targetSeconds, 0, max) : Math.max(0, targetSeconds);
@@ -365,8 +377,7 @@ export function usePlaybackControllerCore(
     setPreviewSeconds(null);
     setError(null);
 
-    const video = videoRef.current;
-    const resume = isNewFile ? true : video ? !video.paused : true;
+    const resume = isNewFile ? true : playIntentRef.current;
 
     // Deferred so React StrictMode's double-invoked effect cannot start two
     // loads; the cleanup cancels the first one.
@@ -416,8 +427,10 @@ export function usePlaybackControllerCore(
     const video = videoRef.current;
     if (!video) return;
     if (video.paused) {
+      playIntentRef.current = true;
       video.play().catch(() => { setIsPlaying(false); });
     } else {
+      playIntentRef.current = false;
       video.pause();
     }
   }, [videoRef]);
@@ -436,7 +449,7 @@ export function usePlaybackControllerCore(
   );
 
   const commitSeek = useCallback(
-    (seconds: number, autoplay: boolean) => {
+    (seconds: number, autoplay = playIntentRef.current) => {
       if (quality === "original") {
         const video = videoRef.current;
         if (!video) return;
@@ -455,12 +468,10 @@ export function usePlaybackControllerCore(
 
   const skip = useCallback(
     (seconds: number) => {
-      const video = videoRef.current;
       const base = previewRef.current ?? absoluteTimeRef.current;
-      const autoplay = video ? !video.paused : true;
-      commitSeek(base + seconds, autoplay);
+      commitSeek(base + seconds);
     },
-    [commitSeek, videoRef]
+    [commitSeek]
   );
 
   const changeSpeed = useCallback(
@@ -476,7 +487,6 @@ export function usePlaybackControllerCore(
   const scrubStart = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
-    wasPlayingBeforeScrub.current = !video.paused;
     video.pause();
   }, [videoRef]);
 
@@ -491,7 +501,7 @@ export function usePlaybackControllerCore(
   const scrubEnd = useCallback(() => {
     const target = previewRef.current;
     if (target === null) return;
-    commitSeek(target, wasPlayingBeforeScrub.current);
+    commitSeek(target);
   }, [commitSeek]);
 
   return {

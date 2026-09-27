@@ -177,7 +177,7 @@ const VideoPlayerCompressModalV2 = ({
   /** Jump to the next detected event start after the playhead. */
   const nextEvent = useCallback(() => {
     const next = events.find(([start]) => start > currentTime + 0.05);
-    if (next) commitSeek(next[0], !videoRef.current?.paused);
+    if (next) commitSeek(next[0]);
   }, [events, currentTime, commitSeek]);
 
   /** Jump to the previous detected event start before the playhead. */
@@ -187,7 +187,7 @@ const VideoPlayerCompressModalV2 = ({
       if (start < currentTime - 0.05) candidate = start;
       else break;
     }
-    if (candidate !== null) commitSeek(candidate, !videoRef.current?.paused);
+    if (candidate !== null) commitSeek(candidate);
   }, [events, currentTime, commitSeek]);
 
   const handleRotation = () => {
