@@ -47,3 +47,24 @@ export const getVideoEvents = async (filePath: string): Promise<VideoEventsRespo
   );
   return unwrap(response);
 };
+
+export interface VideoDurationResponse {
+  /** Absolute source duration in seconds (0 when unknown). */
+  duration: number;
+  width?: number;
+  height?: number;
+}
+
+/**
+ * Fetch the absolute duration of a video. Needed by the compressed player
+ * because every transcoded segment starts at 0, so the browser can never learn
+ * the real total from the media element.
+ */
+export const getVideoDuration = async (
+  filePath: string
+): Promise<VideoDurationResponse> => {
+  const response = await axiosLayer.get<ApiEnvelope<VideoDurationResponse>>(
+    `/user/video/duration/file${encodeURI(filePath)}`
+  );
+  return unwrap(response);
+};

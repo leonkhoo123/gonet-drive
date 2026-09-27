@@ -1,6 +1,7 @@
 import type { RefObject, TouchEvent } from "react";
 import type { FileInterface } from "@/api/api-file";
 import type { AutoPlayMode } from "@/hooks/useVideoPlayerV2/useVideoAutoPlay";
+import type { VideoQuality } from "@/hooks/useVideoPlayerV2/useVideoPlaybackController";
 import type { EventSpan } from "@/utils/videoPlayerV2Events";
 
 export interface VideoPlayerModalProps {
@@ -80,6 +81,9 @@ export interface VideoControlsProps {
   onToggleDisqualified: () => void;
   onRotate: () => void;
   onClose: () => void;
+  /** Current playback quality (only shown when `onChangeQuality` is provided). */
+  quality?: VideoQuality;
+  onChangeQuality?: (quality: VideoQuality) => void;
 }
 
 export interface VideoRenameDialogProps {

@@ -31,6 +31,16 @@ func VideoRoutes(router *gin.RouterGroup, cfg *config.CloudConfig) {
 		service.GetVideoMetadata(c, cfg)
 	})
 
+	// On-the-fly compression: the player uses these to build its virtual
+	// timeline (real duration) and to restart the transcode on seek.
+	api.GET("/duration/file/*filepath", func(c *gin.Context) {
+		service.GetVideoDuration(c, cfg)
+	})
+
+	api.GET("/stream/file/*filepath", func(c *gin.Context) {
+		service.ServeCompressedStream(c, cfg)
+	})
+
 	api.GET("/video-test", videoTestHandler)
 
 	api.Static("/static", "./static")

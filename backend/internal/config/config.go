@@ -22,7 +22,13 @@ type ServerConfig struct {
 	VideoMode                  string
 	ThumbnailMaxConcurrent     int
 	ThumbnailGenerationTimeout time.Duration
-	LogLevel                   string
+
+	// On-the-fly video compression (see service.ServeCompressedStream).
+	VideoCompressShortSide int    // target shorter side in px (480p-ish); 0 = default
+	VideoCompressCRF       int    // libx264 CRF quality; 0 = default
+	VideoCompressPreset    string // libx264 preset; "" = default
+
+	LogLevel string
 }
 
 type AuthConfig struct {
@@ -84,6 +90,9 @@ func Load() *CloudConfig {
 			VideoMode:                  getEnv("VIDEO_MODE", "normal"),
 			ThumbnailMaxConcurrent:     getEnvInt("THUMBNAIL_MAX_CONCURRENT", 1),
 			ThumbnailGenerationTimeout: getEnvDuration("THUMBNAIL_GENERATION_TIMEOUT", 30*time.Second),
+			VideoCompressShortSide:     getEnvInt("VIDEO_COMPRESS_SHORT_SIDE", 480),
+			VideoCompressCRF:           getEnvInt("VIDEO_COMPRESS_CRF", 20),
+			VideoCompressPreset:        getEnv("VIDEO_COMPRESS_PRESET", "faster"),
 			LogLevel:                   getEnv("LOG_LEVEL", "info"),
 		},
 		Auth: AuthConfig{

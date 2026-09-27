@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 
 	"go-file-server/internal/config"
 	"go-file-server/internal/httpx"
@@ -57,32 +59,105 @@ func ServeVideo(c *gin.Context, cfg *config.CloudConfig) {
 
 	rangeHeader := c.GetHeader("Range")
 	if rangeHeader != "" {
-		var start, end int64
-		n, _ := fmt.Sscanf(rangeHeader, "bytes=%d-%d", &start, &end)
-		if n == 1 {
-			end = stat.Size() - 1
+		start, end, ok := parseRangeHeader(rangeHeader, stat.Size())
+		if ok {
+			chunkSize := (end - start) + 1
+
+			c.Status(http.StatusPartialContent)
+			c.Header("Content-Range", fmt.Sprintf("bytes %d-%d/%d", start, end, stat.Size()))
+			c.Header("Accept-Ranges", "bytes")
+			c.Header("Content-Length", strconv.FormatInt(chunkSize, 10))
+			c.Header("Content-Type", util.MimeType(fullPath))
+
+			// Stream directly from file descriptor (no full buffering)
+			if _, err := file.Seek(start, io.SeekStart); err == nil {
+				io.CopyN(c.Writer, file, chunkSize)
+			}
+			return
 		}
-		if end >= stat.Size() {
-			end = stat.Size() - 1
-		}
-
-		chunkSize := (end - start) + 1
-
-		c.Status(http.StatusPartialContent)
-		c.Header("Content-Range", fmt.Sprintf("bytes %d-%d/%d", start, end, stat.Size()))
-		c.Header("Accept-Ranges", "bytes")
-		c.Header("Content-Length", fmt.Sprintf("%d", chunkSize))
-		c.Header("Content-Type", util.MimeType(fullPath))
-
-		// Stream directly from file descriptor (no full buffering)
-		file.Seek(start, io.SeekStart)
-		io.CopyN(c.Writer, file, chunkSize)
-		return
+		// Unparseable or unsatisfiable range: delegate to c.File, which
+		// re-parses the header and answers 416 with `Content-Range: bytes */size`.
 	}
 
 	// no Range header → stream entire file
 	c.Header("Accept-Ranges", "bytes")
 	c.File(fullPath)
+}
+
+// parseRangeHeader parses a single-range `bytes=` header (RFC 7233) against a
+// known file size. It supports the three forms browsers actually send:
+//
+//	bytes=<start>-<end>   explicit range
+//	bytes=<start>-        open-ended range to EOF
+//	bytes=-<suffix>       last N bytes (e.g. Safari reading a trailing moov)
+//
+// ok is false when the header is absent, malformed, multi-range, or
+// unsatisfiable; the caller then serves the whole file (a 200 response to a
+// Range request is valid when the server chooses not to honour it).
+func parseRangeHeader(header string, size int64) (start, end int64, ok bool) {
+	const prefix = "bytes="
+	if size <= 0 || !strings.HasPrefix(header, prefix) {
+		return 0, 0, false
+	}
+
+	spec := strings.TrimSpace(strings.TrimPrefix(header, prefix))
+	// Only single ranges are supported; multi-range requests are ignored.
+	if spec == "" || strings.Contains(spec, ",") {
+		return 0, 0, false
+	}
+
+	dash := strings.Index(spec, "-")
+	if dash < 0 {
+		return 0, 0, false
+	}
+	startStr := strings.TrimSpace(spec[:dash])
+	endStr := strings.TrimSpace(spec[dash+1:])
+
+	switch {
+	case startStr == "" && endStr == "":
+		return 0, 0, false
+
+	case startStr == "":
+		// Suffix range: the final N bytes.
+		n, err := strconv.ParseInt(endStr, 10, 64)
+		if err != nil || n <= 0 {
+			return 0, 0, false
+		}
+		if n > size {
+			n = size
+		}
+		start, end = size-n, size-1
+
+	default:
+		s, err := strconv.ParseInt(startStr, 10, 64)
+		if err != nil || s < 0 || s > size-1 {
+			return 0, 0, false
+		}
+		start = s
+		if endStr == "" {
+			end = size - 1
+		} else {
+			e, err := strconv.ParseInt(endStr, 10, 64)
+			if err != nil || e < s {
+				return 0, 0, false
+			}
+			if e > size-1 {
+				e = size - 1
+			}
+			end = e
+		}
+	}
+
+	if start < 0 {
+		start = 0
+	}
+	if end > size-1 {
+		end = size - 1
+	}
+	if start > end {
+		return 0, 0, false
+	}
+	return start, end, true
 }
 
 // ServeVideoThumbnail serves a generated thumbnail for a video file

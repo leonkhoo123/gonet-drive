@@ -4,7 +4,8 @@ import VersionTag from "@/components/custom/versionTag";
 
 // Lazy load heavy viewer components
 const VideoPlayerModalGeneric = lazy(() => import("@/components/custom/videoPlayerModalGeneric"));
-const VideoPlayerModalV2 = lazy(() => import("@/components/custom/videoPlayerModalV2"));
+// POC: the compressed (on-the-fly transcode) player is the default for custom mode.
+const VideoPlayerCompressModalV2 = lazy(() => import("@/components/custom/videoPlayerCompressModalV2"));
 const PhotoViewerModal = lazy(() => import("@/components/custom/photoViewerModal"));
 const TextViewerModal = lazy(() => import("@/components/custom/textViewerModal"));
 const PdfViewerModal = lazy(() => import("@/components/custom/pdfViewerModal"));
@@ -336,7 +337,7 @@ export default function HomePage() {
       {selectedVideo && (
         <Suspense fallback={null}>
           {healthData?.video_mode === "custom" ? (
-            <VideoPlayerModalV2
+            <VideoPlayerCompressModalV2
               file={selectedVideo}
               isOpen={!!selectedVideo}
               videoFiles={videoFiles}

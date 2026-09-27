@@ -17,8 +17,10 @@ import {
   ListVideo,
   Shuffle,
   CircleOff,
+  Gauge,
 } from "lucide-react";
 import type { AutoPlayMode } from "@/hooks/useVideoPlayerV2/useVideoAutoPlay";
+import type { VideoQuality } from "@/hooks/useVideoPlayerV2/useVideoPlaybackController";
 import type { VideoControlsProps } from "./types";
 import {
   CONTROL,
@@ -43,8 +45,20 @@ const AUTO_PLAY_LOOK: Record<
   shuffle: { label: "Shuffle", icon: Shuffle, className: CONTROL_BLUE },
 };
 
+/** Selectable qualities, in the order shown in the flyout. */
+const QUALITY_OPTIONS: { value: VideoQuality; label: string }[] = [
+  { value: "original", label: "Original" },
+  { value: 1080, label: "1080p" },
+  { value: 720, label: "720p" },
+  { value: 480, label: "480p" },
+];
+
+/** Short label for the quality button. */
+const qualityLabel = (quality: VideoQuality): string =>
+  quality === "original" ? "Orig" : `${String(quality)}p`;
+
 /** Which collapsible flyout is currently open. */
-type Panel = "actions" | "speed" | null;
+type Panel = "actions" | "speed" | "quality" | null;
 
 /** Right-hand vertical control column. */
 export function VideoControls({
@@ -69,6 +83,8 @@ export function VideoControls({
   onToggleDisqualified,
   onRotate,
   onClose,
+  quality,
+  onChangeQuality,
 }: VideoControlsProps) {
   /** Rename / disqualified / rotate plus the speed slider are collapsible. */
   const [openPanel, setOpenPanel] = useState<Panel>(null);
@@ -79,6 +95,7 @@ export function VideoControls({
   } | null>(null);
   const actionsRef = useRef<HTMLButtonElement>(null);
   const speedRef = useRef<HTMLButtonElement>(null);
+  const qualityRef = useRef<HTMLButtonElement>(null);
 
   // Always start collapsed each time the overlay hides and reappears.
   useEffect(() => {
@@ -243,6 +260,29 @@ export function VideoControls({
           {playbackRate}x
         </Button>
 
+        {/* quality - opens the resolution flyout (only for the compress player) */}
+        {onChangeQuality && quality !== undefined && (
+          <Button
+            ref={qualityRef}
+            variant="ghost"
+            onClick={() => {
+              togglePanel("quality", qualityRef);
+            }}
+            aria-expanded={openPanel === "quality"}
+            aria-label="Playback quality"
+            title="Playback quality"
+            className={`${CONTROL} relative w-full flex-1 min-h-[32px] max-h-12 px-1`}
+          >
+            <ChevronLeft
+              className={`absolute left-2 h-4 w-4 sm:h-5 sm:w-5 text-gray-500 transition-transform duration-300 ${
+                openPanel === "quality" ? "rotate-180" : ""
+              }`}
+            />
+            <Gauge className="h-4 w-4 mr-1" />
+            {qualityLabel(quality)}
+          </Button>
+        )}
+
         {/* --- Collapsible actions toggle (Rename / Disqualify / Rotate) --- */}
         <Button
           ref={actionsRef}
@@ -311,6 +351,45 @@ export function VideoControls({
                   }`}
                 >
                   {speed}x
+                </Button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* -------- Quality flyout (fixed so the column cannot clip it) -------- */}
+      <div
+        style={flyoutPos ? { top: flyoutPos.top, right: flyoutPos.right } : undefined}
+        className={`fixed z-40 -translate-y-1/2 transition-all duration-300 ${
+          openPanel === "quality"
+            ? "opacity-100 translate-x-0 pointer-events-auto"
+            : "opacity-0 translate-x-3 pointer-events-none"
+        }`}
+      >
+        <div className={`flex w-[calc(100vw-7rem)] max-w-sm flex-col gap-2 rounded-md px-3 py-2 ${PANEL}`}>
+          <div className="flex items-center justify-between text-xs">
+            <span className="opacity-80">Quality</span>
+            <span className="font-semibold">
+              {quality !== undefined ? qualityLabel(quality) : ""}
+            </span>
+          </div>
+          <div className="grid grid-cols-4 gap-1">
+            {QUALITY_OPTIONS.map((option) => {
+              const isActive = option.value === quality;
+              return (
+                <Button
+                  key={String(option.value)}
+                  variant="ghost"
+                  onClick={() => {
+                    onChangeQuality?.(option.value);
+                    setOpenPanel(null);
+                  }}
+                  aria-pressed={isActive}
+                  aria-label={`Set quality to ${option.label}`}
+                  className={`h-9 px-0 text-xs ${isActive ? CONTROL_ACTIVE : CONTROL}`}
+                >
+                  {option.label}
                 </Button>
               );
             })}
