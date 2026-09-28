@@ -77,9 +77,9 @@ export function EventEditToolbar({
             disabled={!canUndo}
             title="Undo"
             aria-label="Undo"
-            className={`${CONTROL} mt-1 h-8 w-full min-w-0 min-h-[32px] disabled:opacity-40`}
+            className={`${CONTROL} mt-1 h-8 w-full min-w-0 min-h-[32px] px-1 text-[11px] disabled:opacity-40`}
           >
-            <Undo2 className="h-4 w-4" />
+            <Undo2 className="h-3.5 w-3.5 mr-1" /> Undo
           </Button>
 
           <Button
@@ -88,9 +88,9 @@ export function EventEditToolbar({
             disabled={!canRedo}
             title="Redo"
             aria-label="Redo"
-            className={`${CONTROL} mt-1 h-8 w-full min-w-0 min-h-[32px] disabled:opacity-40`}
+            className={`${CONTROL} mt-1 h-8 w-full min-w-0 min-h-[32px] px-1 text-[11px] disabled:opacity-40`}
           >
-            <Redo2 className="h-4 w-4" />
+            <Redo2 className="h-3.5 w-3.5 mr-1" /> Redo
           </Button>
 
           <Button
