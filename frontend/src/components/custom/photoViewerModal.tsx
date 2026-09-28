@@ -3,6 +3,8 @@ import { X, Download, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { type FileInterface, downloadFiles } from "@/api/api-file";
 import { useDialogHistory } from "@/hooks/useDialogHistory";
 import { useForceDarkStatusBar } from "@/hooks/useForceDarkStatusBar";
+import { thumbUrl } from "./photoViewer/thumbUrl";
+import { ThumbnailItem } from "./photoViewer/ThumbnailItem";
 
 const HIT_FLASH_DURATION = 300; // ms
 const CLOSE_ANIM_DURATION = 200; // ms
@@ -17,63 +19,6 @@ interface PhotoViewerModalProps {
 const SWIPE_THRESHOLD = 80; // px to trigger prev/next on swipe
 const SWIPE_CLOSE_THRESHOLD = 100; // px vertical to trigger close
 const SWIPE_CLOSE_VELOCITY = 0.5; // px/ms flick threshold
-
-const thumbUrl = (f: FileInterface) => f.url.replace("/photo/play/", "/photo/thumbnail/");
-
-const ThumbnailItem = React.memo(
-  ({
-    file,
-    isActive,
-    index,
-    onGoTo,
-    onLoad,
-  }: {
-    file: FileInterface;
-    isActive: boolean;
-    index: number;
-    onGoTo: (idx: number) => void;
-    onLoad: (index: number) => void;
-  }) => {
-    const imgRef = useRef<HTMLImageElement>(null);
-
-    useEffect(() => {
-      const img = imgRef.current;
-      if (img && img.complete && img.naturalWidth > 0) {
-        onLoad(index);
-      }
-    }, [index, onLoad]);
-
-    return (
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onGoTo(index);
-        }}
-        className={`flex-shrink-0 h-16 transition-all focus:outline-none ${
-          isActive
-            ? "scale-105"
-            : "opacity-60 hover:opacity-100"
-        }`}
-      >
-        <img
-          ref={imgRef}
-          src={thumbUrl(file)}
-          alt={file.name}
-          className={`h-full w-auto rounded-md ${
-            isActive
-              ? "ring-2 ring-white ring-offset-1 ring-offset-transparent"
-              : ""
-          }`}
-          loading="lazy"
-          decoding="async"
-          onLoad={() => { onLoad(index); }}
-        />
-      </button>
-    );
-  }
-);
-
-ThumbnailItem.displayName = "ThumbnailItem";
 
 export const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({
   initialFile,
