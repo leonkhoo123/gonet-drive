@@ -114,13 +114,15 @@ export function EventEditToolbar({
             onClick={onRotate}
             title="Rotate the video"
             aria-label="Rotate the video"
-            className={`${CONTROL_YELLOW} h-8 w-full min-h-[32px] px-1 text-[11px]`}
+            className={`${CONTROL_YELLOW} h-8 w-full min-w-0 min-h-[32px] px-1 text-[11px]`}
           >
             <RotateCw className="h-3.5 w-3.5 mr-1" /> Rotate
-            {rotation !== 0 && (
-              <span className="ml-1 tabular-nums">{String(rotation)}°</span>
-            )}
           </Button>
+          {rotation !== 0 && (
+            <span className="mt-0.5 truncate text-center text-[10px] tabular-nums text-white/60">
+              {String(rotation)}°
+            </span>
+          )}
           <Button
             variant="ghost"
             onClick={onOpenRename}
