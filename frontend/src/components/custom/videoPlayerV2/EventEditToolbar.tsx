@@ -110,7 +110,7 @@ export function EventEditToolbar({
             as "review, then cancel or commit". Lights up green while a rename is
             staged (the new name shows at the seek bar). */}
         <div
-          className={`mt-1 flex w-full shrink-0 flex-col rounded-md border bg-white/5 p-1 transition-colors ${
+          className={`flex w-full shrink-0 flex-col rounded-md border bg-white/5 p-1 transition-colors ${
             isRenamed ? "border-emerald-400/70" : "border-white/15"
           }`}
         >
