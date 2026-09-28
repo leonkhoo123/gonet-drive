@@ -482,7 +482,6 @@ const VideoPlayerCompressModalV2 = ({
             canAdd={editor.canAddAtPlayhead}
             rotation={rotation}
             isRenamed={isNewName}
-            pendingName={newName}
             onAdd={editor.addAtPlayhead}
             onUndo={editor.undo}
             onRedo={editor.redo}

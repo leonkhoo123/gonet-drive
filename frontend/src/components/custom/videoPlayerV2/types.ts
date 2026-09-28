@@ -123,8 +123,6 @@ export interface EventEditToolbarProps {
   rotation: number;
   /** True when a rename is staged for the terminal Done. */
   isRenamed: boolean;
-  /** The staged new file name, shown as the rename preview. */
-  pendingName: string;
   onAdd: () => void;
   onUndo: () => void;
   onRedo: () => void;

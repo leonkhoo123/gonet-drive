@@ -23,7 +23,6 @@ export function EventEditToolbar({
   canAdd,
   rotation,
   isRenamed,
-  pendingName,
   onAdd,
   onUndo,
   onRedo,
@@ -104,8 +103,15 @@ export function EventEditToolbar({
         </Button>
 
         {/* Review box: rotate/rename fold into the same Done action. Kept below
-            Done so the terminal actions read as "review, then commit". */}
-        <div className="mt-1 flex w-full shrink-0 flex-col rounded-md border border-white/15 bg-white/5 p-1">
+            Done so the terminal actions read as "review, then commit". Lights up
+            green while a rename is staged (the new name shows at the seek bar). */}
+        <div
+          className={`mt-1 flex w-full shrink-0 flex-col rounded-md border p-1 transition-colors ${
+            isRenamed
+              ? "border-emerald-400/70 bg-emerald-500/10 shadow-md shadow-emerald-500/40"
+              : "border-white/15 bg-white/5"
+          }`}
+        >
           <span className="mb-1 text-center text-[10px] font-semibold uppercase tracking-wide text-white/50">
             Review
           </span>
@@ -132,15 +138,6 @@ export function EventEditToolbar({
           >
             <TextCursorInput className="h-3.5 w-3.5 mr-1" /> Rename
           </Button>
-          {/* Pending file name, shown once a rename is staged. */}
-          {isRenamed && pendingName && (
-            <span
-              className="mt-1 truncate text-center text-[10px] text-white/60"
-              title={pendingName}
-            >
-              {pendingName}
-            </span>
-          )}
         </div>
       </div>
     </div>
