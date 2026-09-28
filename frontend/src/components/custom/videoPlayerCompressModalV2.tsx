@@ -253,11 +253,17 @@ const VideoPlayerCompressModalV2 = ({
    * rename (no rename, no rotate).
    */
   const requestCommit = useCallback(() => {
+    // Nothing to save or apply: skip the confirmation and just leave the editor
+    // (rotation alone is discarded without a rename).
+    if (!editor.isDirty && !isNewName) {
+      editor.cancel();
+      return;
+    }
     setPendingCommit({
       newName: isNewName ? newName : "",
       rotation: isNewName ? rotation : 0,
     });
-  }, [isNewName, newName, rotation]);
+  }, [editor, isNewName, newName, rotation]);
 
   const runCommit = useCallback(async () => {
     const action = pendingCommit;
