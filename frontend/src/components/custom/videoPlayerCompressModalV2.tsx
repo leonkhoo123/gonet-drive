@@ -282,6 +282,24 @@ const VideoPlayerCompressModalV2 = ({
     await onVideoMutation?.();
   }, [pendingCommit, saveEvents, onVideoMutation, onClose, file.path]);
 
+  /** Drop the review-box marks (staged rename and rotation). */
+  const resetReviewMarks = useCallback(() => {
+    handleRenameDefault();
+    setRotation(0);
+    setisRotation(false);
+  }, [handleRenameDefault]);
+
+  /**
+   * Leave the editor, confirming first when the event draft changed, and clear
+   * the staged rename/rotation so exiting discards the whole review session.
+   */
+  const exitEditor = useCallback(() => {
+    requestDiscard(() => {
+      editor.cancel();
+      resetReviewMarks();
+    });
+  }, [requestDiscard, editor, resetReviewMarks]);
+
   /* =====================================================
      BACK BUTTON
      ===================================================== */
@@ -305,10 +323,10 @@ const VideoPlayerCompressModalV2 = ({
       setPendingRevert(false);
       return;
     }
-    // Back mirrors the editor's Cancel: discard the draft (with a confirm when
-    // it differs from the saved highlights) rather than closing the player.
+    // Back mirrors the editor's Cancel: leave the editor, confirming first when
+    // the draft differs from the saved highlights, rather than closing the player.
     if (editor.isEditing) {
-      requestDiscard(editor.cancel);
+      exitEditor();
       return;
     }
     onClose(false, file.path, false, newName, 0);
@@ -321,7 +339,7 @@ const VideoPlayerCompressModalV2 = ({
     file.path,
     newName,
     handleRenameCancel,
-    requestDiscard,
+    exitEditor,
     onClose,
   ]);
 
@@ -498,7 +516,7 @@ const VideoPlayerCompressModalV2 = ({
             onRevert={() => { setPendingRevert(true); }}
             onRotate={handleRotation}
             onOpenRename={openRenameModal}
-            onCancel={() => { requestDiscard(editor.cancel); }}
+            onCancel={exitEditor}
             onSave={requestCommit}
           />
           <EventInspector
@@ -536,7 +554,7 @@ const VideoPlayerCompressModalV2 = ({
         onClose={() => {
           // While editing, the close action exits the editor first.
           if (editor.isEditing) {
-            requestDiscard(editor.cancel);
+            exitEditor();
             return;
           }
           onClose(disqualified, file.path, isNewName, newName, rotation);
@@ -545,7 +563,7 @@ const VideoPlayerCompressModalV2 = ({
         onChangeQuality={selectQuality}
         onEditEvents={() => {
           if (editor.isEditing) {
-            requestDiscard(editor.cancel);
+            exitEditor();
           } else {
             // Entering the editor pauses playback so the playhead is stable
             // while you line up event edges.

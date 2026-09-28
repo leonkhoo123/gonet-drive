@@ -147,7 +147,7 @@ export function EventEditToolbar({
           disabled={isSaving}
           title="Discard changes"
           aria-label="Discard changes"
-          className={`${CONTROL_RED} w-full flex-1 min-h-[36px] max-h-12 px-1 text-xs`}
+          className={`${CONTROL_RED} w-full flex-1 min-h-[40px] max-h-14 px-1 text-xs`}
         >
           <X className="h-4 w-4 mr-1" /> Cancel
         </Button>
