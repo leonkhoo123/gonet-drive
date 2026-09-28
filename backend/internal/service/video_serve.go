@@ -57,7 +57,24 @@ func ServeVideo(c *gin.Context, cfg *config.CloudConfig) {
 		return
 	}
 
+	// Never let the browser keep a copy of the media. A cached partial from
+	// before an in-place highlight edit makes the player re-request byte ranges
+	// that no longer fit the replaced file, which is the source of the 416 /
+	// stuck-on-reopen trouble. ETag is still emitted for logging/debugging.
+	etag := fmt.Sprintf(`"%x-%x"`, stat.ModTime().UnixNano(), stat.Size())
+	c.Header("ETag", etag)
+	c.Header("Cache-Control", "no-store")
+
 	rangeHeader := c.GetHeader("Range")
+	// Range + a non-matching If-Range means the client holds a stale copy (the
+	// file was replaced in place by a highlight edit): drop the Range and send
+	// the whole file so the player re-reads the new container.
+	if rangeHeader != "" {
+		if ifRange := c.GetHeader("If-Range"); ifRange != "" && ifRange != etag {
+			rangeHeader = ""
+		}
+	}
+
 	if rangeHeader != "" {
 		start, end, ok := parseRangeHeader(rangeHeader, stat.Size())
 		if ok {
@@ -75,11 +92,19 @@ func ServeVideo(c *gin.Context, cfg *config.CloudConfig) {
 			}
 			return
 		}
-		// Unparseable or unsatisfiable range: delegate to c.File, which
-		// re-parses the header and answers 416 with `Content-Range: bytes */size`.
+		// Any range we cannot satisfy — stale offsets after an in-place replace,
+		// a momentarily empty file mid-swap on a network share, a multi-range,
+		// or malformed input — is ignored and the whole file is served. A 200 to
+		// a Range request is valid (RFC 7233 permits ignoring Range), and it is
+		// far more stable than a 416 that wedges media elements.
+		rangeHeader = ""
 	}
 
-	// no Range header → stream entire file
+	if rangeHeader == "" {
+		// Deleting the header keeps c.File/ServeContent from re-parsing it and
+		// answering 416 for the unsatisfiable case handled above.
+		c.Request.Header.Del("Range")
+	}
 	c.Header("Accept-Ranges", "bytes")
 	c.File(fullPath)
 }

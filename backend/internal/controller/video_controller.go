@@ -31,6 +31,13 @@ func VideoRoutes(router *gin.RouterGroup, cfg *config.CloudConfig) {
 		service.GetVideoMetadata(c, cfg)
 	})
 
+	// Highlight editing: overwrite the sidecar and (for MP4-family files) the
+	// embedded container tags in place, without moving the video out of its
+	// folder. Runs as an async job that streams progress over the WebSocket.
+	api.POST("/metadata/commit", func(c *gin.Context) {
+		service.VideoMetadataCommit(c, cfg)
+	})
+
 	// On-the-fly compression: the player uses these to build its virtual
 	// timeline (real duration) and to restart the transcode on seek.
 	api.GET("/duration/file/*filepath", func(c *gin.Context) {

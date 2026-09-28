@@ -84,6 +84,58 @@ export interface VideoControlsProps {
   /** Current playback quality (only shown when `onChangeQuality` is provided). */
   quality?: VideoQuality;
   onChangeQuality?: (quality: VideoQuality) => void;
+  /** Enter the highlight editor (only shown when provided). */
+  onEditEvents?: () => void;
+  /** True while the highlight editor is open, for the active button state. */
+  isEditingEvents?: boolean;
+}
+
+/** Which edge of a selected event a nudge/edit targets. */
+export type EventEdge = "start" | "end";
+
+export interface EventEditorBarProps {
+  events: EventSpan[];
+  duration: number;
+  currentTime: number;
+  selectedIndex: number | null;
+  onSelect: (index: number | null) => void;
+  onSeek: (seconds: number) => void;
+  /** Snapshot the draft before a drag so it becomes one undo step. */
+  onBeginChange: () => void;
+  onPreviewChange: (index: number, span: EventSpan) => void;
+  onEndChange: () => void;
+}
+
+export interface EventEditToolbarProps {
+  count: number;
+  isSaving: boolean;
+  canUndo: boolean;
+  canRedo: boolean;
+  /** False when the playhead sits on the shared edge of two events. */
+  canAdd: boolean;
+  onAdd: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  onCancel: () => void;
+  onSave: () => void;
+}
+
+export interface EventInspectorProps {
+  span: EventSpan | null;
+  currentTime: number;
+  onNudge: (edge: EventEdge, delta: number) => void;
+  onSetToPlayhead: (edge: EventEdge) => void;
+  onDelete: () => void;
+}
+
+export interface ConfirmDialogProps {
+  title: string;
+  description?: string;
+  confirmLabel: string;
+  /** Tint the confirm button red for a destructive action. */
+  destructive?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
 }
 
 export interface VideoRenameDialogProps {

@@ -22,6 +22,16 @@ interface UseVideoKeyboardParams {
   playbackRate?: number;
   /** Change the playback rate; enables the `<` / `>` speed shortcuts. */
   onChangeSpeed?: (rate: number) => void;
+  /**
+   * Highlight-editor shortcuts, present only while the editor is open:
+   * `[` sets the selected event's start to the playhead, `]` its end, and
+   * Delete/Backspace removes it.
+   */
+  eventEditor?: {
+    onSetIn: () => void;
+    onSetOut: () => void;
+    onDelete: () => void;
+  };
 }
 
 /**
@@ -42,6 +52,7 @@ export function useVideoKeyboard({
   onEscape,
   playbackRate,
   onChangeSpeed,
+  eventEditor,
 }: UseVideoKeyboardParams) {
   const handleKeyPress = useCallback(
     (event: KeyboardEvent) => {
@@ -121,6 +132,30 @@ export function useVideoKeyboard({
           onChangeSpeed(stepPlaybackRate(playbackRate ?? 1, 1));
           break;
 
+        // `[` / `]` set the selected event's start / end to the playhead.
+        case "[":
+          if (showRenameModal || !eventEditor) return;
+          actionDescription = "setEventStart";
+          eventEditor.onSetIn();
+          break;
+
+        case "]":
+          if (showRenameModal || !eventEditor) return;
+          actionDescription = "setEventEnd";
+          eventEditor.onSetOut();
+          break;
+
+        // Remove the selected event. Backspace is included because it is the
+        // muscle-memory "delete" on Mac, and preventDefault stops its browser
+        // history-back behaviour.
+        case "Delete":
+        case "Backspace":
+          if (showRenameModal || !eventEditor) return;
+          actionDescription = "deleteEvent";
+          eventEditor.onDelete();
+          event.preventDefault();
+          break;
+
         case "Enter":
           if (showRenameModal) {
             actionDescription = "handleRenameSave";
@@ -156,6 +191,7 @@ export function useVideoKeyboard({
       onEscape,
       playbackRate,
       onChangeSpeed,
+      eventEditor,
     ]
   );
 

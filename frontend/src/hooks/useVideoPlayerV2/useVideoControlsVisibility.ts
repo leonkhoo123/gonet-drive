@@ -12,11 +12,18 @@ const CONTROL_TIMEOUT = 5000;
  * Interaction state lives in refs (not state) so the hide timer always reads
  * the live value and the handlers stay referentially stable.
  */
-export function useVideoControlsVisibility(isOpen: boolean, isPlaying: boolean) {
+export function useVideoControlsVisibility(
+  isOpen: boolean,
+  isPlaying: boolean,
+  /** Pin the overlay open (e.g. while the highlight editor is active). */
+  holdOpen = false,
+) {
   const [showControls, setShowControls] = useState(true);
   const isPressingRef = useRef(false);
   const isHoveringRef = useRef(false);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const holdRef = useRef(holdOpen);
+  holdRef.current = holdOpen;
 
   const clearHideTimer = useCallback(() => {
     if (hideTimerRef.current) {
@@ -34,7 +41,7 @@ export function useVideoControlsVisibility(isOpen: boolean, isPlaying: boolean) 
   const startHideTimer = useCallback(() => {
     clearHideTimer();
     hideTimerRef.current = setTimeout(() => {
-      if (!isInteracting()) {
+      if (!isInteracting() && !holdRef.current) {
         setShowControls(false);
       }
     }, CONTROL_TIMEOUT);
@@ -72,15 +79,17 @@ export function useVideoControlsVisibility(isOpen: boolean, isPlaying: boolean) 
     return clearHideTimer;
   }, [isOpen, startHideTimer, clearHideTimer]);
 
-  /* Paused → keep controls visible; playing → resume the countdown. */
+  /* Pinned open by the editor, or paused → keep controls visible; otherwise
+   * resume the idle countdown. Listing holdOpen here also restarts the countdown
+   * when the editor closes, instead of leaving the overlay stuck visible. */
   useEffect(() => {
-    if (!isPlaying) {
+    if (holdOpen || !isPlaying) {
       clearHideTimer();
       setShowControls(true);
     } else {
       startHideTimer();
     }
-  }, [isPlaying, startHideTimer, clearHideTimer]);
+  }, [isPlaying, holdOpen, startHideTimer, clearHideTimer]);
 
   return {
     showControls,

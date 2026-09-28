@@ -85,9 +85,8 @@ func IsMP4FamilyExt(ext string) bool {
 
 // RemuxVideoWithMetadata stream-copies srcPath into destPath, optionally
 // applying a clockwise rotation delta and embedding format-level metadata tags
-// (e.g. description/comment). It performs a single ffmpeg pass for both, writes
-// to a hidden temp file in destPath's directory (same filesystem, so the final
-// rename is atomic), then renames it over destPath.
+// (e.g. description/comment). The intermediate file is written to destPath's
+// directory; use RemuxVideoAtomic to control where the temp file lives.
 //
 // srcPath is left untouched on any failure. The caller is responsible for
 // removing srcPath after a successful return. onProgress (optional) receives
@@ -99,6 +98,30 @@ func RemuxVideoWithMetadata(
 	metadata map[string]string,
 	onProgress func(delta int64),
 ) error {
+	return RemuxVideoAtomic(ctx, srcPath, destPath, filepath.Dir(destPath), rotateAngle, metadata, onProgress)
+}
+
+// RemuxVideoAtomic is the shared remux primitive behind rename-done and in-place
+// highlight editing. It stream-copies srcPath into destPath (the two may be the
+// same path for an in-place edit), applying an optional clockwise rotation delta
+// and format-level metadata tags in a single ffmpeg pass, then:
+//
+//  1. writes the output to tmpDir under a hidden .embed-* name;
+//  2. verifies it via VerifyVideoOutput (readable, has a video stream, duration
+//     matches the source, requested tags round-trip);
+//  3. preserves the source permission bits;
+//  4. atomically renames it over destPath.
+//
+// tmpDir MUST live on the same filesystem as destPath, otherwise the final
+// rename is not atomic. On any failure tmpDir is cleaned up and destPath is left
+// exactly as it was. onProgress (optional) receives byte deltas as it grows.
+func RemuxVideoAtomic(
+	ctx context.Context,
+	srcPath, destPath, tmpDir string,
+	rotateAngle int,
+	metadata map[string]string,
+	onProgress func(delta int64),
+) error {
 	ctx, cancel := context.WithTimeout(ctx, remuxTimeout)
 	defer cancel()
 
@@ -106,9 +129,12 @@ func RemuxVideoWithMetadata(
 	if err := os.MkdirAll(destDir, 0777); err != nil {
 		return fmt.Errorf("failed to create destination directory: %w", err)
 	}
+	if err := os.MkdirAll(tmpDir, 0777); err != nil {
+		return fmt.Errorf("failed to create remux temp directory: %w", err)
+	}
 
 	ext := filepath.Ext(destPath)
-	tmpPath := filepath.Join(destDir, fmt.Sprintf(".embed-%d-%d.tmp%s", os.Getpid(), time.Now().UnixNano(), ext))
+	tmpPath := filepath.Join(tmpDir, fmt.Sprintf(".embed-%d-%d.tmp%s", os.Getpid(), time.Now().UnixNano(), ext))
 	defer func() {
 		if _, err := os.Stat(tmpPath); err == nil {
 			_ = os.Remove(tmpPath)
@@ -186,6 +212,20 @@ func RemuxVideoWithMetadata(
 
 	if waitErr != nil {
 		return fmt.Errorf("ffmpeg remux failed: %w: %s", waitErr, strings.TrimSpace(stderr.String()))
+	}
+
+	// Verify before the atomic swap so a truncated or untagged output can never
+	// replace the original.
+	if err := VerifyVideoOutput(tmpPath, srcPath, metadata); err != nil {
+		return err
+	}
+
+	// ffmpeg creates the temp with the process umask; keep the source's mode so
+	// an in-place replace does not silently drop group/other permission bits.
+	if info, err := os.Stat(srcPath); err == nil {
+		if err := os.Chmod(tmpPath, info.Mode().Perm()); err != nil {
+			logger.L.Debug("could not preserve remux output permissions", "path", tmpPath, "err", err)
+		}
 	}
 
 	if err := os.Rename(tmpPath, destPath); err != nil {

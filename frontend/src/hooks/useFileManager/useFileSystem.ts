@@ -8,6 +8,13 @@ import { decodeUrlToPath } from "@/utils/utils";
 export type SortField = 'name' | 'size' | 'modified';
 export type SortOrder = 'asc' | 'desc';
 
+/** Compare virtual directories tolerating a missing/extra leading/trailing slash. */
+const normalizeDir = (path?: string | null): string => {
+  if (!path) return '/';
+  const withLeading = path.startsWith('/') ? path : `/${path}`;
+  return withLeading.length > 1 ? withLeading.replace(/\/+$/, '') : withLeading;
+};
+
 export function useFileSystem(baseRoute = "/home") {
   const location = useLocation();
   const navigate = useNavigate();
@@ -149,14 +156,18 @@ export function useFileSystem(baseRoute = "/home") {
 
   useEffect(() => {
     const unsubscribe = wsClient.subscribe((msg: OperationMessage) => {
-      if (msg.opStatus === 'completed') {
-        if (
-          msg.destDir === currentPath || 
-          msg.opType === 'delete_permanent' || 
-          msg.opType === 'delete'
-        ) {
-          void handleRefresh();
-        }
+      if (msg.opStatus !== 'completed') return;
+      // Copy/move/upload/video-edit all report the directory that changed as
+      // `destDir`; refresh when the list is currently showing it.
+      const sameDir =
+        msg.destDir !== undefined &&
+        normalizeDir(msg.destDir) === normalizeDir(currentPath);
+      if (
+        sameDir ||
+        msg.opType === 'delete_permanent' ||
+        msg.opType === 'delete'
+      ) {
+        void handleRefresh();
       }
     });
 

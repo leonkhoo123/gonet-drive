@@ -51,6 +51,52 @@ func TestParseRangeHeader(t *testing.T) {
 	}
 }
 
+func TestServeVideo_StaleIfRangeServesFull(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "clip.mp4"), []byte("0123456789"), 0o644))
+
+	cfg := &config.CloudConfig{}
+	cfg.Server.FileRoot = dir
+	router := newServeVideoRouter(cfg)
+
+	// The client cached the old copy and sends its validator; the file changed,
+	// so the range must be ignored and the whole file returned (no 416).
+	req := httptest.NewRequest(http.MethodGet, "/api/user/video/play/file/clip.mp4", nil)
+	req.Header.Set("Range", "bytes=0-1")
+	req.Header.Set("If-Range", `"stale-etag"`)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "0123456789", w.Body.String())
+	assert.NotEmpty(t, w.Header().Get("ETag"))
+}
+
+func TestServeVideo_MatchingIfRangeServesPartial(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "clip.mp4"), []byte("0123456789"), 0o644))
+
+	cfg := &config.CloudConfig{}
+	cfg.Server.FileRoot = dir
+	router := newServeVideoRouter(cfg)
+
+	// Fetch the validator, then reuse it: a matching If-Range keeps the 206.
+	head := httptest.NewRecorder()
+	router.ServeHTTP(head, httptest.NewRequest(http.MethodGet, "/api/user/video/play/file/clip.mp4", nil))
+	etag := head.Header().Get("ETag")
+	require.NotEmpty(t, etag)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/user/video/play/file/clip.mp4", nil)
+	req.Header.Set("Range", "bytes=0-1")
+	req.Header.Set("If-Range", etag)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusPartialContent, w.Code)
+	assert.Equal(t, "bytes 0-1/10", w.Header().Get("Content-Range"))
+	assert.Equal(t, "01", w.Body.String())
+}
+
 func newServeVideoRouter(cfg *config.CloudConfig) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
@@ -96,8 +142,11 @@ func TestServeVideo_RangeForms(t *testing.T) {
 		{"safari probe", "bytes=0-1", http.StatusPartialContent, "bytes 0-1/10", "01"},
 		{"open ended", "bytes=3-", http.StatusPartialContent, "bytes 3-9/10", "3456789"},
 		{"explicit", "bytes=2-4", http.StatusPartialContent, "bytes 2-4/10", "234"},
-		// An unsatisfiable range is answered 416 by the delegated c.File.
-		{"invalid", "bytes=abc", http.StatusRequestedRangeNotSatisfiable, "", ""},
+		// Every unsatisfiable range is ignored and the whole file served (200),
+		// never a 416 that wedges the player.
+		{"stale beyond eof", "bytes=5000-", http.StatusOK, "", "0123456789"},
+		{"multi-range", "bytes=0-1,5-6", http.StatusOK, "", "0123456789"},
+		{"malformed", "bytes=abc", http.StatusOK, "", "0123456789"},
 	}
 
 	for _, tc := range cases {

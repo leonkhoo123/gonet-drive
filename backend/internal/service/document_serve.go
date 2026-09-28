@@ -56,6 +56,9 @@ func ServeDocument(c *gin.Context, cfg *config.CloudConfig) {
 	c.Header("Content-Type", contentType)
 	c.Header("Content-Disposition", "inline")
 	c.Header("X-Content-Type-Options", "nosniff")
+	// Never let the browser serve a stale copy: these files are read back into
+	// the editor after being changed, so a heuristic disk cache shows old text.
+	c.Header("Cache-Control", "no-store")
 
 	c.File(fullPath)
 }

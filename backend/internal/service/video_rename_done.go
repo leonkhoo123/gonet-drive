@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -198,7 +197,11 @@ func processVideoRenameDone(procPath, doneDir, sidecarPath, newName string, rota
 			metadata["description"] = payload
 			metadata["comment"] = payload
 		}
-		if err := util.RemuxVideoWithMetadata(context.Background(), procPath, destPath, rotateAngle, metadata, tracker.Update); err != nil {
+		// Remux temp lives in the hidden metadata dir next to the destination:
+		// same filesystem as done/ (so the final rename is atomic) and out of the
+		// browse tree.
+		tmpDir := filepath.Join(filepath.Dir(destPath), util.MetadataDirName, "temp")
+		if err := util.RemuxVideoAtomic(context.Background(), procPath, destPath, tmpDir, rotateAngle, metadata, tracker.Update); err != nil {
 			return failProcessing(err)
 		}
 		// Remux succeeded: drop the staging file, the annotated copy is in done/.
@@ -245,20 +248,11 @@ func buildEmbedPayload(sidecarPath, newName string) (string, bool) {
 		return "", false
 	}
 
-	scenes := make([]map[string]float64, 0, len(events))
-	for _, e := range events {
-		scenes = append(scenes, map[string]float64{"start": e[0], "end": e[1]})
-	}
-
-	payload, err := json.Marshal(map[string]interface{}{
-		"video":  newName,
-		"events": events,
-		"scenes": scenes,
-	})
+	payload, err := buildEmbedPayloadFromEvents(newName, events)
 	if err != nil {
 		return "", false
 	}
-	return string(payload), true
+	return payload, true
 }
 
 // parentVirtualPath returns the client-facing directory that contains the given

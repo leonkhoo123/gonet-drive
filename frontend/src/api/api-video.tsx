@@ -48,6 +48,30 @@ export const getVideoEvents = async (filePath: string): Promise<VideoEventsRespo
   return unwrap(response);
 };
 
+export interface VideoMetadataCommitResponse {
+  message: string;
+  /** Operation id to track the async embed/sidecar job over the WebSocket. */
+  opId: string;
+}
+
+/**
+ * Persist edited event highlights. The backend rewrites the sidecar and, for
+ * MP4-family files, re-embeds the container tags in place as an async job that
+ * reports progress over the WebSocket (same channel as copy/move/rename-done).
+ */
+export const commitVideoEvents = async (
+  filePath: string,
+  events: VideoEventPair[],
+  opId: string = generateOpId()
+): Promise<VideoMetadataCommitResponse> => {
+  const response = await axiosLayer.post<ApiEnvelope<VideoMetadataCommitResponse>>(
+    "/user/video/metadata/commit",
+    { path: filePath, events, opId },
+    { headers: { "Content-Type": "application/json" } }
+  );
+  return unwrap(response);
+};
+
 export interface VideoDurationResponse {
   /** Absolute source duration in seconds (0 when unknown). */
   duration: number;

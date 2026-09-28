@@ -86,6 +86,8 @@ export function VideoControls({
   onClose,
   quality,
   onChangeQuality,
+  onEditEvents,
+  isEditingEvents,
 }: VideoControlsProps) {
   /** Rename / disqualified / rotate plus the speed slider are collapsible. */
   const [openPanel, setOpenPanel] = useState<Panel>(null);
@@ -396,6 +398,24 @@ export function VideoControls({
             : "opacity-0 translate-x-3 pointer-events-none"
         }`}
       >
+        {/* --- edit events (entry point to the event editor) --- */}
+        {onEditEvents && (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              runAction(onEditEvents);
+            }}
+            title="Edit events"
+            aria-label="Edit events"
+            aria-pressed={isEditingEvents}
+            className={`${CONTROL_BLUE} h-12 w-14 p-0 ${
+              isEditingEvents ? "ring-2 ring-white" : ""
+            }`}
+          >
+            <Pencil className="size-5" />
+          </Button>
+        )}
+
         {/* --- disqualified Button --- */}
         <Button
           variant="ghost"

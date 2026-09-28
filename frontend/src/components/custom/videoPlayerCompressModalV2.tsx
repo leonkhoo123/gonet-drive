@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useDialogHistory } from "@/hooks/useDialogHistory";
 import { useForceDarkStatusBar } from "@/hooks/useForceDarkStatusBar";
-import { useVideoEventMetadata } from "@/hooks/useVideoPlayerV2/useVideoEventMetadata";
+import { useVideoEventEditor } from "@/hooks/useVideoPlayerV2/useVideoEventEditor";
 import { useVideoPlaybackController } from "@/hooks/useVideoPlayerV2/useVideoPlaybackController";
 import { useVideoQualityPreference } from "@/hooks/useVideoPlayerV2/useVideoQualityPreference";
 import { useLongPressSpeed } from "@/hooks/useVideoPlayerV2/useLongPressSpeed";
@@ -18,6 +18,10 @@ import { VideoTimeDisplay } from "./videoPlayerV2/VideoTimeDisplay";
 import { VideoProgressBar } from "./videoPlayerV2/VideoProgressBar";
 import { VideoControls } from "./videoPlayerV2/VideoControls";
 import { VideoRenameDialog } from "./videoPlayerV2/VideoRenameDialog";
+import { EventEditorBar } from "./videoPlayerV2/EventEditorBar";
+import { EventEditToolbar } from "./videoPlayerV2/EventEditToolbar";
+import { EventInspector } from "./videoPlayerV2/EventInspector";
+import { ConfirmDialog } from "./videoPlayerV2/ConfirmDialog";
 
 /**
  * POC compressed video player.
@@ -59,8 +63,28 @@ const VideoPlayerCompressModalV2 = ({
     scrubTo,
   } = useVideoPlaybackController(videoRef, file.url, file.path, isOpen, quality);
 
-  /* -------------------- event metadata -------------------- */
-  const events = useVideoEventMetadata(isOpen, file.path, file.name);
+  /* -------------------- highlights (markers + editor) -------------------- */
+  const editor = useVideoEventEditor({
+    isOpen,
+    filePath: file.path,
+    fileName: file.name,
+    duration,
+    currentTime,
+  });
+
+  // Pending action to run once the user confirms discarding unsaved highlights.
+  const [discardAction, setDiscardAction] = useState<(() => void) | null>(null);
+
+  const requestDiscard = useCallback(
+    (action: () => void) => {
+      if (!editor.isDirty) {
+        action();
+        return;
+      }
+      setDiscardAction(() => action);
+    },
+    [editor.isDirty],
+  );
 
   /* -------------------- control overlay -------------------- */
   const {
@@ -72,7 +96,7 @@ const VideoPlayerCompressModalV2 = ({
     handlePressEnd,
     handleHoverStart,
     handleHoverEnd,
-  } = useVideoControlsVisibility(isOpen, isPlaying);
+  } = useVideoControlsVisibility(isOpen, isPlaying, editor.isEditing);
 
   /* -------------------- rename / flags -------------------- */
   const {
@@ -103,7 +127,11 @@ const VideoPlayerCompressModalV2 = ({
   );
 
   const hasUnsavedMarks =
-    disqualified || isNewName || rotation !== 0 || showRenameModal;
+    disqualified ||
+    isNewName ||
+    rotation !== 0 ||
+    showRenameModal ||
+    editor.isEditing;
 
   const {
     mode: autoPlayMode,
@@ -160,6 +188,8 @@ const VideoPlayerCompressModalV2 = ({
 
   const handleVideoTap = () => {
     if (wasLongPress.current) return;
+    // The editor owns the timeline; a tap must not hide the pinned controls.
+    if (editor.isEditing) return;
 
     if (showControls) {
       clearHideTimer();
@@ -174,21 +204,25 @@ const VideoPlayerCompressModalV2 = ({
      ACTIONS
      ===================================================== */
 
-  /** Jump to the next detected event start after the playhead. */
-  const nextEvent = useCallback(() => {
-    const next = events.find(([start]) => start > currentTime + 0.05);
-    if (next) commitSeek(next[0]);
-  }, [events, currentTime, commitSeek]);
+  // Navigation follows the live draft while editing so the Evt buttons land on
+  // the events as you just edited them, not the saved/loaded positions.
+  const navEvents = editor.isEditing ? editor.draft : editor.events;
 
-  /** Jump to the previous detected event start before the playhead. */
+  /** Jump to the next event start after the playhead. */
+  const nextEvent = useCallback(() => {
+    const next = navEvents.find(([start]) => start > currentTime + 0.05);
+    if (next) commitSeek(next[0]);
+  }, [navEvents, currentTime, commitSeek]);
+
+  /** Jump to the previous event start before the playhead. */
   const prevEvent = useCallback(() => {
     let candidate: number | null = null;
-    for (const [start] of events) {
+    for (const [start] of navEvents) {
       if (start < currentTime - 0.05) candidate = start;
       else break;
     }
     if (candidate !== null) commitSeek(candidate);
-  }, [events, currentTime, commitSeek]);
+  }, [navEvents, currentTime, commitSeek]);
 
   const handleRotation = () => {
     const currRotation = (rotation + 90) % 360;
@@ -205,16 +239,58 @@ const VideoPlayerCompressModalV2 = ({
   const handleDismiss = useCallback((): void => {
     if (showRenameModal) {
       handleRenameCancel();
-    } else {
-      onClose(false, file.path, false, newName, 0);
+      return;
     }
-  }, [showRenameModal, file.path, newName, handleRenameCancel, onClose]);
+    // An open discard dialog swallows Back: it just cancels the dialog.
+    if (discardAction) {
+      setDiscardAction(null);
+      return;
+    }
+    // Back mirrors the editor's Cancel: discard the draft (with a confirm when
+    // it differs from the saved highlights) rather than closing the player.
+    if (editor.isEditing) {
+      requestDiscard(editor.cancel);
+      return;
+    }
+    onClose(false, file.path, false, newName, 0);
+  }, [
+    showRenameModal,
+    discardAction,
+    editor,
+    file.path,
+    newName,
+    handleRenameCancel,
+    requestDiscard,
+    onClose,
+  ]);
 
   useDialogHistory(isOpen, handleDismiss);
 
   /* =====================================================
      KEYBOARD LISTENER
      ===================================================== */
+
+  // Destructured so the memo deps are the stable callbacks, not the whole
+  // (per-render) editor object.
+  const {
+    isEditing: isEditingHighlights,
+    setEdgeToPlayhead,
+    deleteSelected,
+  } = editor;
+
+  // Stable identity so the document keydown listener is not re-bound on every
+  // playhead update.
+  const eventEditorShortcuts = useMemo(
+    () =>
+      isEditingHighlights && !discardAction
+        ? {
+            onSetIn: () => { setEdgeToPlayhead("start"); },
+            onSetOut: () => { setEdgeToPlayhead("end"); },
+            onDelete: deleteSelected,
+          }
+        : undefined,
+    [isEditingHighlights, discardAction, setEdgeToPlayhead, deleteSelected]
+  );
 
   useVideoKeyboard({
     showRenameModal,
@@ -227,6 +303,7 @@ const VideoPlayerCompressModalV2 = ({
     // `<`/`,` and `>`/`.` step the playback speed in the compress player.
     playbackRate,
     onChangeSpeed: changeSpeed,
+    eventEditor: eventEditorShortcuts,
   });
 
   /* =====================================================
@@ -307,27 +384,66 @@ const VideoPlayerCompressModalV2 = ({
         rotation={rotation}
       />
 
-      {/* PROGRESS */}
-      <VideoProgressBar
-        showControls={showControls}
-        bufferedProgress={bufferedProgress}
-        progress={progress}
-        duration={duration}
-        currentTime={currentTime}
-        events={events}
-        onScrubStart={scrubStart}
-        onScrubEnd={scrubEnd}
-        onScrub={scrubTo}
-        onHoverStart={handleHoverStart}
-        onHoverEnd={handleHoverEnd}
-      />
+      {/* TIMELINE — the editor bar replaces the scrub bar while editing */}
+      {editor.isEditing ? (
+        <EventEditorBar
+          events={editor.draft}
+          duration={duration}
+          currentTime={currentTime}
+          selectedIndex={editor.selectedIndex}
+          onSelect={editor.select}
+          onSeek={commitSeek}
+          onBeginChange={editor.beginChange}
+          onPreviewChange={editor.previewChange}
+          onEndChange={editor.endChange}
+        />
+      ) : (
+        <VideoProgressBar
+          showControls={showControls}
+          bufferedProgress={bufferedProgress}
+          progress={progress}
+          duration={duration}
+          currentTime={currentTime}
+          events={editor.events}
+          onScrubStart={scrubStart}
+          onScrubEnd={scrubEnd}
+          onScrub={scrubTo}
+          onHoverStart={handleHoverStart}
+          onHoverEnd={handleHoverEnd}
+        />
+      )}
+
+      {/* EDIT TOOLBAR + SELECTED-EVENT INSPECTOR */}
+      {editor.isEditing && (
+        <>
+          <EventEditToolbar
+            count={editor.draft.length}
+            isSaving={editor.isSaving}
+            canUndo={editor.canUndo}
+            canRedo={editor.canRedo}
+            canAdd={editor.canAddAtPlayhead}
+            onAdd={editor.addAtPlayhead}
+            onUndo={editor.undo}
+            onRedo={editor.redo}
+            onCancel={() => { requestDiscard(editor.cancel); }}
+            onSave={() => { void editor.save(); }}
+          />
+          <EventInspector
+            span={editor.selectedSpan}
+            currentTime={currentTime}
+            onNudge={editor.nudgeSelected}
+            onSetToPlayhead={editor.setEdgeToPlayhead}
+            onDelete={editor.deleteSelected}
+          />
+        </>
+      )}
 
       {/* CONTROLS */}
       <VideoControls
         showControls={showControls}
         isPlaying={isPlaying}
         playbackRate={playbackRate}
-        hasEvents={events.length > 0}
+        hasEvents={navEvents.length > 0}
         autoPlayMode={autoPlayMode}
         hasNext={hasNext}
         shuffleRemaining={shuffleRemaining}
@@ -345,10 +461,26 @@ const VideoPlayerCompressModalV2 = ({
         onToggleDisqualified={handleDisqualified}
         onRotate={handleRotation}
         onClose={() => {
+          // While editing, the close action exits the editor first.
+          if (editor.isEditing) {
+            requestDiscard(editor.cancel);
+            return;
+          }
           onClose(disqualified, file.path, isNewName, newName, rotation);
         }}
         quality={quality}
         onChangeQuality={selectQuality}
+        onEditEvents={() => {
+          if (editor.isEditing) {
+            requestDiscard(editor.cancel);
+          } else {
+            // Entering the editor pauses playback so the playhead is stable
+            // while you line up event edges.
+            if (isPlaying) togglePlay();
+            editor.enter();
+          }
+        }}
+        isEditingEvents={editor.isEditing}
       />
 
       {/* RENAME MODAL */}
@@ -359,6 +491,22 @@ const VideoPlayerCompressModalV2 = ({
           onDefault={handleRenameDefault}
           onCancel={handleRenameCancel}
           onSave={handleRenameSave}
+        />
+      )}
+
+      {/* DISCARD-EDITS CONFIRM (player-styled, on top of the editor) */}
+      {discardAction && (
+        <ConfirmDialog
+          title="Discard event changes?"
+          description="Your edits to the events have not been saved and will be lost."
+          confirmLabel="Discard"
+          destructive
+          onConfirm={() => {
+            const action = discardAction;
+            setDiscardAction(null);
+            action();
+          }}
+          onCancel={() => { setDiscardAction(null); }}
         />
       )}
     </div>
