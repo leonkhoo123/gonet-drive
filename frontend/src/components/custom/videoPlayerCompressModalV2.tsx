@@ -223,6 +223,10 @@ const VideoPlayerCompressModalV2 = ({
     onNextEvent: nextEvent,
     onPrevEvent: prevEvent,
     onRenameSave: handleRenameSave,
+    onEscape: handleDismiss,
+    // `<`/`,` and `>`/`.` step the playback speed in the compress player.
+    playbackRate,
+    onChangeSpeed: changeSpeed,
   });
 
   /* =====================================================
@@ -253,6 +257,13 @@ const VideoPlayerCompressModalV2 = ({
       {isBurst && (
         <div className="absolute top-12 left-1/2 -translate-x-1/2 z-20 pointer-events-none rounded-full bg-black/60 px-4 py-2 text-lg font-bold tracking-wider text-white">
           2× ▶▶
+        </div>
+      )}
+
+      {/* CUSTOM SPEED INDICATOR (persistent while the rate is not 1×) */}
+      {!isBurst && playbackRate !== 1 && (
+        <div className="absolute top-12 left-1/2 -translate-x-1/2 z-20 pointer-events-none rounded-full bg-black/60 px-4 py-2 text-lg font-bold tracking-wider text-white">
+          {playbackRate}× {playbackRate > 1 ? "▶▶" : "▶"}
         </div>
       )}
 

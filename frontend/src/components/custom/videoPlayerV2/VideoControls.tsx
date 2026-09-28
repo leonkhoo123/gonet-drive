@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import type { AutoPlayMode } from "@/hooks/useVideoPlayerV2/useVideoAutoPlay";
 import type { VideoQuality } from "@/hooks/useVideoPlayerV2/useVideoPlaybackController";
+import { PLAYBACK_SPEEDS } from "@/utils/videoSpeed";
 import type { VideoControlsProps } from "./types";
 import {
   CONTROL,
@@ -33,7 +34,7 @@ import {
 } from "./controlStyles";
 
 /** Selectable playback speeds, ordered fast -> slow (left -> right). */
-const SPEEDS = [2, 1.5, 1.25, 1, 0.75, 0.5, 0.25] as const;
+const SPEEDS = [...PLAYBACK_SPEEDS].reverse();
 
 /** Per-mode look and copy for the cycling auto-play button. */
 const AUTO_PLAY_LOOK: Record<
@@ -173,7 +174,7 @@ export function VideoControls({
           <Button
             variant="ghost"
             onClick={onPrevEvent}
-            title="Previous event (P or Shift+,)"
+            title="Previous event (Ctrl+←)"
             className={`${CONTROL} w-full flex-1 min-h-[32px] max-h-12 px-1`}
           >
             Evt <ChevronFirst className="h-4 w-4 ml-1" />
@@ -217,7 +218,7 @@ export function VideoControls({
           <Button
             variant="ghost"
             onClick={onNextEvent}
-            title="Next event (N or Shift+.)"
+            title="Next event (Ctrl+→)"
             className={`${CONTROL} w-full flex-1 min-h-[32px] max-h-12 px-1`}
           >
             Evt <ChevronLast className="h-4 w-4 ml-1" />

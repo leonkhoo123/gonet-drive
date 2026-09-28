@@ -17,6 +17,12 @@ import { VideoProgressBar } from "./videoPlayerV2/VideoProgressBar";
 import { VideoControls } from "./videoPlayerV2/VideoControls";
 import { VideoRenameDialog } from "./videoPlayerV2/VideoRenameDialog";
 
+/**
+ * @deprecated Not wired into the app. Superseded by
+ * `videoPlayerCompressModalV2` (custom video mode) and
+ * `videoPlayerModalGeneric` (default mode); kept for now while the compress
+ * player stabilizes. Do not use in new code.
+ */
 const VideoPlayerModalV2 = ({
   file,
   isOpen,
@@ -224,6 +230,7 @@ const VideoPlayerModalV2 = ({
     onNextEvent: nextEvent,
     onPrevEvent: prevEvent,
     onRenameSave: handleRenameSave,
+    onEscape: handleDismiss,
   });
 
   /* =====================================================
@@ -333,4 +340,5 @@ const VideoPlayerModalV2 = ({
   );
 };
 
+// eslint-disable-next-line @typescript-eslint/no-deprecated -- re-exporting the deprecated component itself is intentional
 export default VideoPlayerModalV2;

@@ -1,4 +1,5 @@
 import { useCallback, useEffect } from "react";
+import { stepPlaybackRate } from "@/utils/videoSpeed";
 
 interface UseVideoKeyboardParams {
   /** When true the rename dialog is open and transport keys are ignored. */
@@ -8,14 +9,28 @@ interface UseVideoKeyboardParams {
   onNextEvent: () => void;
   onPrevEvent: () => void;
   onRenameSave: () => void;
+  /**
+   * Close the player (or cancel the rename dialog when it is open). Escape
+   * calls this instead of walking browser history, so the modal's own
+   * `useDialogHistory` entry is popped exactly once.
+   */
+  onEscape: () => void;
+  /**
+   * Current playback rate. When `onChangeSpeed` is also provided, `<` / `,`
+   * step the speed down and `>` / `.` step it up.
+   */
+  playbackRate?: number;
+  /** Change the playback rate; enables the `<` / `>` speed shortcuts. */
+  onChangeSpeed?: (rate: number) => void;
 }
 
 /**
  * Document-level keyboard shortcuts:
- * - ArrowLeft/Right (+Shift) skip ∓1/∓3s
+ * - ArrowLeft/Right skip ∓1s; +Shift skips ∓3s
+ * - Ctrl+ArrowLeft/Right jump to the previous/next detected event
  * - Space toggles play/pause
- * - ,/< and ./> or p/P and n/N jump between detected events
- * - Enter saves the rename dialog, Escape triggers back-navigation
+ * - `<` / `,` lower and `>` / `.` raise the playback speed (when a speed handler is given)
+ * - Enter saves the rename dialog, Escape closes the player
  */
 export function useVideoKeyboard({
   showRenameModal,
@@ -24,6 +39,9 @@ export function useVideoKeyboard({
   onNextEvent,
   onPrevEvent,
   onRenameSave,
+  onEscape,
+  playbackRate,
+  onChangeSpeed,
 }: UseVideoKeyboardParams) {
   const handleKeyPress = useCallback(
     (event: KeyboardEvent) => {
@@ -31,6 +49,8 @@ export function useVideoKeyboard({
       const key: string = event.key;
       // shiftKey property is a boolean indicating if Shift was held
       const isShift: boolean = event.shiftKey;
+      // Ctrl (or Cmd on macOS) is the event-navigation modifier.
+      const isCtrl: boolean = event.ctrlKey || event.metaKey;
 
       let actionDescription = "";
 
@@ -39,7 +59,10 @@ export function useVideoKeyboard({
           if (showRenameModal) {
             return; //dont do anything in rename
           }
-          if (isShift) {
+          if (isCtrl) {
+            actionDescription = "prevEvent";
+            onPrevEvent();
+          } else if (isShift) {
             actionDescription = "skip(-3)";
             onSkip(-3);
           } else {
@@ -52,7 +75,10 @@ export function useVideoKeyboard({
           if (showRenameModal) {
             return; //dont do anything in rename
           }
-          if (isShift) {
+          if (isCtrl) {
+            actionDescription = "nextEvent";
+            onNextEvent();
+          } else if (isShift) {
             actionDescription = "skip(3)";
             onSkip(3);
           } else {
@@ -69,40 +95,30 @@ export function useVideoKeyboard({
           onTogglePlay();
           break;
 
+        // `<` / `,` → slower; the unshifted comma means no Shift is required.
         case "<":
-        case ",": // Shift+comma / comma → previous event start
+        case ",":
           if (showRenameModal) {
             return;
           }
-          actionDescription = "prevEvent";
-          onPrevEvent();
+          if (!onChangeSpeed) {
+            return;
+          }
+          actionDescription = "speedDown";
+          onChangeSpeed(stepPlaybackRate(playbackRate ?? 1, -1));
           break;
 
+        // `>` / `.` → faster; the unshifted period means no Shift is required.
         case ">":
-        case ".": // Shift+period / period → next event start
+        case ".":
           if (showRenameModal) {
             return;
           }
-          actionDescription = "nextEvent";
-          onNextEvent();
-          break;
-
-        case "n":
-        case "N":
-          if (showRenameModal) {
+          if (!onChangeSpeed) {
             return;
           }
-          actionDescription = "nextEvent";
-          onNextEvent();
-          break;
-
-        case "p":
-        case "P":
-          if (showRenameModal) {
-            return;
-          }
-          actionDescription = "prevEvent";
-          onPrevEvent();
+          actionDescription = "speedUp";
+          onChangeSpeed(stepPlaybackRate(playbackRate ?? 1, 1));
           break;
 
         case "Enter":
@@ -114,8 +130,7 @@ export function useVideoKeyboard({
 
         case "Escape":
           actionDescription = "handleDismiss";
-          // handleDismiss();
-          window.history.back();
+          onEscape();
           break;
         default:
           // Ignore other keys
@@ -138,6 +153,9 @@ export function useVideoKeyboard({
       onNextEvent,
       onPrevEvent,
       onRenameSave,
+      onEscape,
+      playbackRate,
+      onChangeSpeed,
     ]
   );
 
