@@ -364,8 +364,10 @@ export function EventEditorBar({
       return;
     }
 
-    if (lane === "ruler" && e.pointerType === "mouse") {
-      // Defer the seek so a horizontal drag can pan; a clean tap still seeks.
+    if (lane === "ruler") {
+      // Defer the seek so a horizontal drag can pan the zoomed window (content
+      // follows the finger); a clean tap still seeks. Works for mouse and touch
+      // alike, so the timestamp lane is a pan handle just like the overview.
       e.preventDefault();
       barRef.current?.setPointerCapture(e.pointerId);
       panRef.current = {
@@ -381,8 +383,8 @@ export function EventEditorBar({
       return;
     }
 
-    // Touch on the ruler / empty rail, or mouse on the rail: seek, snapped to
-    // the 1s grid like every other edit, and drop the selection.
+    // Touch/pen on the empty rail, or mouse on the rail: seek, snapped to the
+    // 1s grid like every other edit, and drop the selection.
     onSeek(clamp(Math.round(clientXToTime(e.clientX, rect)), 0, duration));
     onSelect(null);
   };
@@ -582,7 +584,12 @@ export function EventEditorBar({
       onPointerCancel={handlePointerUp}
     >
       {/* RULER (top, tap to seek / drag to pan) */}
-      <div data-lane="ruler" className="absolute top-0 inset-x-0 h-7">
+      <div
+        data-lane="ruler"
+        className={`absolute top-0 inset-x-0 h-7 ${
+          canZoomOut ? "cursor-grab active:cursor-grabbing" : ""
+        }`}
+      >
         <div
           className="absolute inset-y-0 left-0 bg-white/10 pointer-events-none"
           style={{ width: `${String(progressPct)}%` }}

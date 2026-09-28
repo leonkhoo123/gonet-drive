@@ -25,7 +25,7 @@ export function EventEditToolbar({
     <div className="absolute left-0 top-11 bottom-44 z-40 flex flex-col p-1 lg:p-2 select-none">
       {/* Event count, pinned to the top of the column */}
       <div className="flex shrink-0 justify-center">
-        <span className="w-20 lg:w-24 whitespace-nowrap rounded-md bg-black/50 px-1 py-1.5 text-center text-xs font-semibold tabular-nums text-white/90">
+        <span className="w-20 lg:w-24 whitespace-nowrap rounded-md bg-white/5 px-1 py-1.5 text-center text-xs font-semibold tabular-nums text-white/90">
           {String(count)} event{count === 1 ? "" : "s"}
         </span>
       </div>

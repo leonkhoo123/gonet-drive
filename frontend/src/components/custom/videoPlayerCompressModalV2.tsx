@@ -189,7 +189,12 @@ const VideoPlayerCompressModalV2 = ({
   const handleVideoTap = () => {
     if (wasLongPress.current) return;
     // The editor owns the timeline; a tap must not hide the pinned controls.
-    if (editor.isEditing) return;
+    // It does, however, drop the current event selection (and hide the
+    // inspector), matching the "tap empty space to deselect" convention.
+    if (editor.isEditing) {
+      editor.select(null);
+      return;
+    }
 
     if (showControls) {
       clearHideTimer();

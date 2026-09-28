@@ -100,10 +100,11 @@ export function VideoControls({
   const speedRef = useRef<HTMLButtonElement>(null);
   const qualityRef = useRef<HTMLButtonElement>(null);
 
-  // Always start collapsed each time the overlay hides and reappears.
+  // Always start collapsed each time the overlay hides and reappears, and drop
+  // any open flyout when the editor takes over (its toggle is hidden then).
   useEffect(() => {
-    if (!showControls) setOpenPanel(null);
-  }, [showControls]);
+    if (!showControls || isEditingEvents) setOpenPanel(null);
+  }, [showControls, isEditingEvents]);
 
   /**
    * Toggle a flyout panel. The flyout is rendered with `position: fixed`
@@ -275,38 +276,44 @@ export function VideoControls({
           </Button>
         )}
 
-        {/* --- Collapsible actions toggle (Rename / Disqualify / Rotate) --- */}
-        <Button
-          ref={actionsRef}
-          variant="ghost"
-          size="icon"
-          onClick={() => {
-            togglePanel("actions", actionsRef);
-          }}
-          aria-expanded={openPanel === "actions"}
-          aria-label={openPanel === "actions" ? "Hide actions" : "Show actions"}
-          title={openPanel === "actions" ? "Hide actions" : "Show actions"}
-          className={`${CONTROL} relative w-full flex-1 min-h-[32px] max-h-12`}
-        >
-          {/* Chevron pinned to the left; rotates between < and > when toggled */}
-          <ChevronLeft
-            className={`absolute left-2 h-4 w-4 sm:h-5 sm:w-5 text-white/60 transition-transform duration-300 ${
-              openPanel === "actions" ? "rotate-180" : ""
-            }`}
-          />
-          {/* Pencil hints that this toggle reveals edit actions */}
-          <Pencil className="size-4 opacity-80 sm:size-5" />
-        </Button>
+        {/* --- Collapsible actions toggle (Rename / Disqualify / Rotate).
+            Hidden while editing: the left column owns the editor, and exiting
+            is the left Cancel rather than the column's close. --- */}
+        {!isEditingEvents && (
+          <Button
+            ref={actionsRef}
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              togglePanel("actions", actionsRef);
+            }}
+            aria-expanded={openPanel === "actions"}
+            aria-label={openPanel === "actions" ? "Hide actions" : "Show actions"}
+            title={openPanel === "actions" ? "Hide actions" : "Show actions"}
+            className={`${CONTROL} relative w-full flex-1 min-h-[32px] max-h-12`}
+          >
+            {/* Chevron pinned to the left; rotates between < and > when toggled */}
+            <ChevronLeft
+              className={`absolute left-2 h-4 w-4 sm:h-5 sm:w-5 text-white/60 transition-transform duration-300 ${
+                openPanel === "actions" ? "rotate-180" : ""
+              }`}
+            />
+            {/* Pencil hints that this toggle reveals edit actions */}
+            <Pencil className="size-4 opacity-80 sm:size-5" />
+          </Button>
+        )}
 
-        {/* --- close --- */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onClose}
-          className={`${CONTROL} w-full flex-1 min-h-[32px] max-h-12`}
-        >
-          <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
-        </Button>
+        {/* --- close (hidden while editing; the left Cancel exits) --- */}
+        {!isEditingEvents && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className={`${CONTROL} w-full flex-1 min-h-[32px] max-h-12`}
+          >
+            <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
+          </Button>
+        )}
       </div>
 
       {/* -------- Speed flyout (fixed so the column cannot clip it) -------- */}
