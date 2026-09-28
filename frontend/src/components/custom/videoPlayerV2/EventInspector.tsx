@@ -22,43 +22,25 @@ function EdgeRow({
   onSetToPlayhead: () => void;
 }) {
   return (
-    <div className="flex items-center gap-1">
-      <span className="w-10 text-xs opacity-70">{label}</span>
+    <div className="flex w-full items-center gap-1">
+      <span className="w-10 shrink-0 text-xs opacity-70">{label}</span>
       <Button
         variant="ghost"
         size="sm"
         onClick={() => { onNudge(-1); }}
-        className={`${CONTROL} h-8 px-2 text-xs tabular-nums`}
+        className={`${CONTROL} h-8 flex-1 px-2 text-xs tabular-nums`}
         aria-label={`${label} minus one second`}
       >
         −1
       </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => { onNudge(-0.1); }}
-        className={`${CONTROL} h-8 px-2 text-xs tabular-nums`}
-        aria-label={`${label} minus 0.1 second`}
-      >
-        −.1
-      </Button>
-      <span className="w-16 text-center text-sm font-semibold tabular-nums">
+      <span className="w-16 shrink-0 text-center text-sm font-semibold tabular-nums">
         {preciseTime(value)}
       </span>
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => { onNudge(0.1); }}
-        className={`${CONTROL} h-8 px-2 text-xs tabular-nums`}
-        aria-label={`${label} plus 0.1 second`}
-      >
-        +.1
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
         onClick={() => { onNudge(1); }}
-        className={`${CONTROL} h-8 px-2 text-xs tabular-nums`}
+        className={`${CONTROL} h-8 flex-1 px-2 text-xs tabular-nums`}
         aria-label={`${label} plus one second`}
       >
         +1
@@ -69,7 +51,7 @@ function EdgeRow({
         onClick={onSetToPlayhead}
         title={`Set ${label.toLowerCase()} to playhead`}
         aria-label={`Set ${label.toLowerCase()} to playhead`}
-        className={`${CONTROL} h-8 w-8`}
+        className={`${CONTROL} h-8 w-8 shrink-0`}
       >
         <Crosshair className="h-4 w-4" />
       </Button>
