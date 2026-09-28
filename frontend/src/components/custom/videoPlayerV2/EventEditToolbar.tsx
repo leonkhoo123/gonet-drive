@@ -23,7 +23,7 @@ export function EventEditToolbar({
   canUndo,
   canRedo,
   canAdd,
-  canRevert,
+  eventsDirty,
   rotation,
   isRenamed,
   hasChanges,
@@ -47,8 +47,14 @@ export function EventEditToolbar({
 
       <div className="flex-1 min-h-0 flex flex-col gap-1 lg:gap-2 overflow-y-auto scrollbar-hide w-20 lg:w-24 py-2 justify-center">
         {/* Event card: tag + history + revert-to-loaded, mirroring the Review
-            card. Revert discards every edit back to the embedded/sidecar state. */}
-        <div className="flex w-full shrink-0 flex-col rounded-md border border-white/15 bg-white/5 p-1">
+            card. Lights up green while the event draft differs from loaded. */}
+        <div
+          className={`flex w-full shrink-0 flex-col rounded-md border p-1 transition-colors ${
+            eventsDirty
+              ? "border-emerald-400/70 bg-emerald-500/10 shadow-md shadow-emerald-500/40"
+              : "border-white/15 bg-white/5"
+          }`}
+        >
           <span className="mb-1 text-center text-[10px] font-semibold uppercase tracking-wide text-white/50">
             Event
           </span>
@@ -92,7 +98,7 @@ export function EventEditToolbar({
           <Button
             variant="ghost"
             onClick={onRevert}
-            disabled={!canRevert}
+            disabled={!eventsDirty}
             title="Revert to the loaded events"
             aria-label="Revert to the loaded events"
             className={`${CONTROL} mt-1 h-8 w-full min-w-0 min-h-[32px] px-1 text-[11px] disabled:opacity-40`}
