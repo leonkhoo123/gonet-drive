@@ -26,7 +26,36 @@ func TestNormalizeVideoEvents(t *testing.T) {
 	assert.Equal(t, [][]float64{{0, 3}, {2, 5}, {10, 12}}, got)
 }
 
-func TestProcessVideoMetadataCommit_EmbedsAndWritesSidecar(t *testing.T) {
+type sidecarEvents struct {
+	Events         [][]float64 `json:"events"`
+	EventsOriginal [][]float64 `json:"events_original"`
+}
+
+func readSidecarEvents(t *testing.T, video string) sidecarEvents {
+	t.Helper()
+	data, err := os.ReadFile(util.SidecarPath(video))
+	require.NoError(t, err)
+	var sc sidecarEvents
+	require.NoError(t, json.Unmarshal(data, &sc))
+	return sc
+}
+
+// makeServiceTestVideoTagged writes a one-frame MP4 that already carries an
+// embedded `description` tag, so the commit takes the embed path.
+func makeServiceTestVideoTagged(t *testing.T, path, description string) {
+	t.Helper()
+	out, err := exec.Command("ffmpeg",
+		"-y", "-loglevel", "error",
+		"-f", "lavfi", "-i", "color=c=red:s=160x120:d=1",
+		"-frames:v", "1", "-c:v", "libx264", "-preset", "ultrafast",
+		"-metadata", "description="+description,
+		"-movflags", "+faststart",
+		path,
+	).CombinedOutput()
+	require.NoError(t, err, "failed to create test video: %s", string(out))
+}
+
+func TestProcessVideoMetadataCommit_UntaggedMP4StaysSidecarOnly(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping ffmpeg-dependent test in short mode")
 	}
@@ -36,11 +65,12 @@ func TestProcessVideoMetadataCommit_EmbedsAndWritesSidecar(t *testing.T) {
 
 	dir := t.TempDir()
 	video := filepath.Join(dir, "clip.mp4")
-	makeServiceTestVideo(t, video)
+	makeServiceTestVideo(t, video) // no embedded tag
+	before, err := os.ReadFile(video)
+	require.NoError(t, err)
 
 	// Seed a detected sidecar so events_original has a distinct value to keep.
-	metaDir := filepath.Join(dir, util.MetadataDirName)
-	require.NoError(t, os.MkdirAll(metaDir, 0o755))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, util.MetadataDirName), 0o755))
 	require.NoError(t, os.WriteFile(
 		util.SidecarPath(video),
 		[]byte(`{"video":"clip.mp4","events":[[0.1,0.2]]}`),
@@ -50,32 +80,52 @@ func TestProcessVideoMetadataCommit_EmbedsAndWritesSidecar(t *testing.T) {
 	tracker := util.NewProgressTracker()
 	require.NoError(t, processVideoMetadataCommit(video, [][]float64{{0.0, 0.5}}, tracker))
 
-	// In place: the video keeps its path and gains the embedded tag.
+	// Rule B: a file with no embedded tag is never remuxed, so its bytes are
+	// unchanged and nothing gets embedded.
 	require.FileExists(t, video)
-	events, ok := readEmbeddedVideoEvents(video)
-	require.True(t, ok)
-	assert.Equal(t, [][]float64{{0, 0.5}}, events)
-
-	var sc struct {
-		Events         [][]float64 `json:"events"`
-		EventsOriginal [][]float64 `json:"events_original"`
-	}
-	data, err := os.ReadFile(util.SidecarPath(video))
+	after, err := os.ReadFile(video)
 	require.NoError(t, err)
-	require.NoError(t, json.Unmarshal(data, &sc))
+	assert.Equal(t, before, after, "sidecar-only commit must not touch the video")
+	_, embedded := readEmbeddedVideoEvents(video)
+	assert.False(t, embedded)
+
+	sc := readSidecarEvents(t, video)
 	assert.Equal(t, [][]float64{{0, 0.5}}, sc.Events)
 	assert.Equal(t, [][]float64{{0.1, 0.2}}, sc.EventsOriginal)
 
 	// A second edit refreshes events but keeps the original detected spans.
 	require.NoError(t, processVideoMetadataCommit(video, [][]float64{{0.2, 0.4}}, tracker))
-	data, err = os.ReadFile(util.SidecarPath(video))
-	require.NoError(t, err)
-	require.NoError(t, json.Unmarshal(data, &sc))
+	sc = readSidecarEvents(t, video)
 	assert.Equal(t, [][]float64{{0.2, 0.4}}, sc.Events)
 	assert.Equal(t, [][]float64{{0.1, 0.2}}, sc.EventsOriginal)
+}
+
+func TestProcessVideoMetadataCommit_EmbedsWhenAlreadyEmbedded(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping ffmpeg-dependent test in short mode")
+	}
+	if _, err := exec.LookPath("ffmpeg"); err != nil {
+		t.Skip("ffmpeg not available")
+	}
+
+	dir := t.TempDir()
+	video := filepath.Join(dir, "clip.mp4")
+	makeServiceTestVideoTagged(t, video, `{"video":"clip.mp4","events":[[0.05,0.08]]}`)
+
+	require.NoError(t, processVideoMetadataCommit(video, [][]float64{{0.0, 0.5}}, util.NewProgressTracker()))
+
+	// The embedded tag is rewritten with the new events...
+	events, ok := readEmbeddedVideoEvents(video)
+	require.True(t, ok)
+	assert.Equal(t, [][]float64{{0, 0.5}}, events)
+
+	// ...and the sidecar is kept in sync, preserving the detected originals.
+	sc := readSidecarEvents(t, video)
+	assert.Equal(t, [][]float64{{0, 0.5}}, sc.Events)
+	assert.Equal(t, [][]float64{{0.05, 0.08}}, sc.EventsOriginal)
 
 	// No remux temp files left behind.
-	entries, err := os.ReadDir(filepath.Join(metaDir, "temp"))
+	entries, err := os.ReadDir(filepath.Join(dir, util.MetadataDirName, "temp"))
 	require.NoError(t, err)
 	for _, e := range entries {
 		assert.NotContains(t, e.Name(), ".embed-")

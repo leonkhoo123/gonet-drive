@@ -153,9 +153,10 @@ func processVideoMetadataCommit(fullPath string, events [][]float64, tracker *ut
 		}
 	}
 
-	// Embed when there is something to write, or when a stale tag must be
-	// cleared (an edit that deleted every event).
-	willEmbed := util.IsMP4FamilyExt(filepath.Ext(fullPath)) && (len(events) > 0 || hadEmbedded)
+	// Embed only when the container already carried an embedded tag, so a
+	// sidecar-based file is never remuxed and stays sidecar-only. When a tag
+	// exists it is always rewritten (even to empty, clearing deleted events).
+	willEmbed := util.IsMP4FamilyExt(filepath.Ext(fullPath)) && hadEmbedded
 	if willEmbed {
 		payload, err := buildEmbedPayloadFromEvents(base, events)
 		if err != nil {

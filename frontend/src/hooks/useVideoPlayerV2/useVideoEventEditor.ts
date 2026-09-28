@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { commitVideoEvents } from "@/api/api-video";
-import { useVideoEventMetadata } from "./useVideoEventMetadata";
+import { useVideoEventMetadata, type VideoEventSource } from "./useVideoEventMetadata";
 import type { EventSpan } from "@/utils/videoPlayerV2Events";
 
 /**
@@ -74,7 +74,11 @@ export function useVideoEventEditor({
 
   // Locally applied save result, until the metadata is re-fetched on next open.
   const [committed, setCommitted] = useState<EventSpan[] | null>(null);
-  const events = committed ?? loaded;
+  // Where the saved events live. Rule B: a container that already had an
+  // embedded tag is re-embedded; anything else is written sidecar-only.
+  const [committedSource, setCommittedSource] = useState<VideoEventSource | null>(null);
+  const events = committed ?? loaded.events;
+  const metadataSource = committedSource ?? loaded.source;
 
   const [items, setItems] = useState<EditableEvent[]>([]);
   const [baseline, setBaseline] = useState<EventSpan[]>([]);
@@ -102,6 +106,7 @@ export function useVideoEventEditor({
   // A clip change resets everything: no committed override, no edit session.
   useEffect(() => {
     setCommitted(null);
+    setCommittedSource(null);
     setIsEditing(false);
     setSelectedId(null);
     setPast([]);
@@ -187,6 +192,7 @@ export function useVideoEventEditor({
     try {
       await commitVideoEvents(filePath, polished);
       setCommitted(polished);
+      setCommittedSource(loaded.source === "embedded" ? "embedded" : "sidecar");
       setIsEditing(false);
       setSelectedId(null);
       toast.success("Saving events…");
@@ -195,7 +201,7 @@ export function useVideoEventEditor({
     } finally {
       setIsSaving(false);
     }
-  }, [filePath, isSaving, trimItems]);
+  }, [filePath, isSaving, loaded.source, trimItems]);
 
   /** Apply a transition, pushing one undo step. `selectId` re-targets selection. */
   const commit = useCallback(
@@ -421,6 +427,8 @@ export function useVideoEventEditor({
 
   return {
     events,
+    /** Where the current events live: "embedded" or "sidecar" (null if none). */
+    metadataSource,
     /** Working copy while editing; mirrors `events` otherwise. */
     draft,
     isEditing,

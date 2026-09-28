@@ -52,7 +52,7 @@ const VideoPlayerModalV2 = ({
   } = useVideoPlayback(videoRef);
 
   /* -------------------- event metadata -------------------- */
-  const events = useVideoEventMetadata(isOpen, file.path, file.name);
+  const { events } = useVideoEventMetadata(isOpen, file.path, file.name);
 
   /* -------------------- control overlay -------------------- */
   const {

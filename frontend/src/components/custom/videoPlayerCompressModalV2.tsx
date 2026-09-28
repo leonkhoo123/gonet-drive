@@ -344,12 +344,17 @@ const VideoPlayerCompressModalV2 = ({
         </div>
       )}
 
-      {/* COMPRESSION STATUS */}
-      <div className="absolute top-3 left-3 z-20 pointer-events-none">
+      {/* COMPRESSION STATUS + EVENT METADATA SOURCE */}
+      <div className="absolute top-3 left-3 z-20 pointer-events-none flex items-center gap-1">
         <span className="rounded bg-black/50 px-2 py-1 text-xs font-semibold text-white/80">
           {quality === "original" ? "Original" : `${String(quality)}p`} ·{" "}
           {quality === "original" ? "Direct" : "Compressed"}
         </span>
+        {editor.metadataSource && (
+          <span className="rounded bg-black/50 px-2 py-1 text-xs font-semibold text-white/80">
+            Events: {editor.metadataSource === "embedded" ? "embed" : "sidecar"}
+          </span>
+        )}
       </div>
 
       {error && (
