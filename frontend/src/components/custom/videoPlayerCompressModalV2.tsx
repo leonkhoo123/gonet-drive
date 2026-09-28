@@ -579,8 +579,8 @@ const VideoPlayerCompressModalV2 = ({
           }
           description={
             pendingCommit.newName
-              ? "The events will be modified and embedded, the video rotated if set, and the file moved into the done folder. The player will close so the browser can drop its cache."
-              : "The events will be modified and embedded in the video. The player will close so the browser can drop its cache."
+              ? "The events will be modified and embedded, the video rotated if set, and the file moved into the done folder."
+              : "The events will be modified and embedded in the video."
           }
           confirmLabel={pendingCommit.newName ? "Save & Done" : "Save"}
           onConfirm={() => { void runCommit(); }}
