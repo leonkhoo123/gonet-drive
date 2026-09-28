@@ -461,16 +461,33 @@ export const FileListItem = memo(function FileListItem({
           <Download className="mr-2 h-4 w-4" />
           {file.type === "dir" ? "Download All" : "Download"}
         </ContextMenuItem>
-        <ContextMenuItem onClick={(e) => { e.stopPropagation(); onProperties(file.name); }} disabled={selectedItemsSize === 0}>
-          <Info className="mr-2 h-4 w-4" />
-          Info
-        </ContextMenuItem>
+        {!isRecycleBin && file.type === 'dir' && selectedItemsSize <= 1 && (
+          <ContextMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              if (isFilePinned) {
+                onUnpinFolder?.(fileFullPath);
+              } else {
+                onPinFolder?.(fileFullPath);
+              }
+            }}
+            disabled={selectedItemsSize === 0 || hasSelectedDelete}
+          >
+            {isFilePinned ? <PinOff className="mr-2 h-4 w-4" /> : <Pin className="mr-2 h-4 w-4" />}
+            {isFilePinned ? 'Unpin from sidebar' : 'Pin to sidebar'}
+          </ContextMenuItem>
+        )}
         {!isRecycleBin && selectedItemsSize <= 1 && (
           <ContextMenuItem onClick={(e) => { e.stopPropagation(); onShare?.(file.name); }} disabled={selectedItemsSize === 0 || hasSelectedDelete}>
             <Share2 className="mr-2 h-4 w-4" />
             Share
           </ContextMenuItem>
         )}
+        <ContextMenuSeparator />
+        <ContextMenuItem onClick={(e) => { e.stopPropagation(); onProperties(file.name); }} disabled={selectedItemsSize === 0}>
+          <Info className="mr-2 h-4 w-4" />
+          Info
+        </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
   );
@@ -492,6 +509,7 @@ export const FileListItem = memo(function FileListItem({
     prevProps.selectedItemsSize === nextProps.selectedItemsSize &&
     prevProps.hasSelectedDelete === nextProps.hasSelectedDelete &&
     prevProps.index === nextProps.index &&
-    prevProps.file.integrity_status === nextProps.file.integrity_status
+    prevProps.file.integrity_status === nextProps.file.integrity_status &&
+    prevProps.pinnedPaths === nextProps.pinnedPaths
   );
 });
