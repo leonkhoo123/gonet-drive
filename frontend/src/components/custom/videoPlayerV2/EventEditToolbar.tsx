@@ -118,21 +118,21 @@ export function EventEditToolbar({
           >
             <RotateCw className="h-3.5 w-3.5 mr-1" /> Rotate
           </Button>
-          {rotation !== 0 && (
-            <span className="mt-0.5 truncate text-center text-[10px] tabular-nums text-white/60">
-              {String(rotation)}°
-            </span>
-          )}
+          {/* Always rendered (shows "0°") so the box never changes height. */}
+          <span className="mt-0.5 min-h-[14px] truncate text-center text-[10px] leading-[14px] tabular-nums text-white/60">
+            {String(rotation)}°
+          </span>
           <Button
             variant="ghost"
             onClick={onOpenRename}
             title="Rename the file (sends it to Done when you save)"
             aria-label="Rename the file"
             aria-pressed={isRenamed}
-            className={`${isRenamed ? CONTROL_ACTIVE : CONTROL_GREEN} mt-1 h-8 w-full min-h-[32px] px-1 text-[11px]`}
+            className={`${isRenamed ? CONTROL_ACTIVE : CONTROL_GREEN} h-8 w-full min-w-0 min-h-[32px] px-1 text-[11px]`}
           >
             <TextCursorInput className="h-3.5 w-3.5 mr-1" /> Rename
           </Button>
+          {/* Pending file name, shown once a rename is staged. */}
           {isRenamed && pendingName && (
             <span
               className="mt-1 truncate text-center text-[10px] text-white/60"
