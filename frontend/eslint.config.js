@@ -54,5 +54,14 @@ export default tseslint.config(
     rules: {
       'react-refresh/only-export-components': 'off',
     },
+  },
+
+  // Keep source files small enough to stay reviewable (and context-friendly for AI).
+  // Counts comments, but ignores blank lines.
+  {
+    files: ['**/*.{js,jsx,ts,tsx}'],
+    rules: {
+      'max-lines': ['error', { max: 600, skipBlankLines: true }],
+    },
   }
 )
