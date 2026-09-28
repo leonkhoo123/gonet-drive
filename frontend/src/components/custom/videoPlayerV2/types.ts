@@ -123,6 +123,8 @@ export interface EventEditToolbarProps {
   rotation: number;
   /** True when a rename is staged for the terminal Done. */
   isRenamed: boolean;
+  /** True when events changed or a rename is staged (Done will commit). */
+  hasChanges: boolean;
   onAdd: () => void;
   onUndo: () => void;
   onRedo: () => void;

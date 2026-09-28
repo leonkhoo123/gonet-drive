@@ -19,6 +19,8 @@ const CONTROL_BASE =
 export const CONTROL = `${CONTROL_BASE} bg-white/5 hover:bg-white/10 dark:hover:bg-white/10`;
 /** Same faint wash, tinted for the rename action. */
 export const CONTROL_GREEN = `${CONTROL_BASE} bg-emerald-500/30 hover:bg-emerald-500/45 dark:hover:bg-emerald-500/45`;
+/** Stronger green for the primary action while there are unsaved changes. */
+export const CONTROL_GREEN_STRONG = `${CONTROL_BASE} bg-emerald-500/50 hover:bg-emerald-500/65 dark:hover:bg-emerald-500/65`;
 /** Same faint wash, tinted for the disqualified action. */
 export const CONTROL_RED = `${CONTROL_BASE} bg-red-500/30 hover:bg-red-500/45 dark:hover:bg-red-500/45`;
 /** Same faint wash, tinted for the rotate action. */

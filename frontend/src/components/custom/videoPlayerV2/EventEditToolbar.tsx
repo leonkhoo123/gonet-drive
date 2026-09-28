@@ -5,6 +5,8 @@ import {
   CONTROL_ACTIVE,
   CONTROL_BLUE,
   CONTROL_GREEN,
+  CONTROL_GREEN_STRONG,
+  CONTROL_RED,
   CONTROL_YELLOW,
 } from "./controlStyles";
 import type { EventEditToolbarProps } from "./types";
@@ -23,6 +25,7 @@ export function EventEditToolbar({
   canAdd,
   rotation,
   isRenamed,
+  hasChanges,
   onAdd,
   onUndo,
   onRedo,
@@ -80,31 +83,10 @@ export function EventEditToolbar({
           <Redo2 className="h-4 w-4" />
         </Button>
 
-        <Button
-          variant="ghost"
-          onClick={onCancel}
-          disabled={isSaving}
-          title="Discard changes"
-          aria-label="Discard changes"
-          className={`${CONTROL} w-full flex-1 min-h-[36px] max-h-12 px-1 text-xs`}
-        >
-          <X className="h-4 w-4 mr-1" /> Cancel
-        </Button>
-
-        <Button
-          variant="ghost"
-          onClick={onSave}
-          disabled={isSaving}
-          title="Save events"
-          aria-label="Save events"
-          className={`${isSaving ? CONTROL_ACTIVE : CONTROL_GREEN} w-full flex-1 min-h-[40px] max-h-14 px-1 text-xs`}
-        >
-          <Check className="h-4 w-4 mr-1" /> {isSaving ? "Saving…" : "Done"}
-        </Button>
-
         {/* Review box: rotate/rename fold into the same Done action. Kept below
-            Done so the terminal actions read as "review, then commit". Lights up
-            green while a rename is staged (the new name shows at the seek bar). */}
+            the edit actions and above Cancel/Done, so the terminal actions read
+            as "review, then cancel or commit". Lights up green while a rename is
+            staged (the new name shows at the seek bar). */}
         <div
           className={`mt-1 flex w-full shrink-0 flex-col rounded-md border p-1 transition-colors ${
             isRenamed
@@ -139,6 +121,35 @@ export function EventEditToolbar({
             <TextCursorInput className="h-3.5 w-3.5 mr-1" /> Rename
           </Button>
         </div>
+
+        {/* Terminal actions pinned to the bottom, below the Review box. */}
+        <Button
+          variant="ghost"
+          onClick={onCancel}
+          disabled={isSaving}
+          title="Discard changes"
+          aria-label="Discard changes"
+          className={`${CONTROL_RED} w-full flex-1 min-h-[36px] max-h-12 px-1 text-xs`}
+        >
+          <X className="h-4 w-4 mr-1" /> Cancel
+        </Button>
+
+        <Button
+          variant="ghost"
+          onClick={onSave}
+          disabled={isSaving}
+          title={hasChanges ? "Save events" : "Leave the editor"}
+          aria-label={hasChanges ? "Save events" : "Leave the editor"}
+          className={`${
+            isSaving
+              ? CONTROL_ACTIVE
+              : hasChanges
+                ? CONTROL_GREEN_STRONG
+                : CONTROL_GREEN
+          } w-full flex-1 min-h-[40px] max-h-14 px-1 text-xs`}
+        >
+          <Check className="h-4 w-4 mr-1" /> {isSaving ? "Saving…" : "Done"}
+        </Button>
       </div>
     </div>
   );
