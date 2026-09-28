@@ -342,6 +342,7 @@ export default function HomePage() {
               isOpen={!!selectedVideo}
               videoFiles={videoFiles}
               onSelectVideo={setSelectedVideo}
+              onVideoMutation={handleRefresh}
               onClose={(...args: [boolean, string, boolean, string, number]) => { void handlePlayerClose(...args); }}
             />
           ) : (

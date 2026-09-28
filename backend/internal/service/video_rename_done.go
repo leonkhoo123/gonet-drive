@@ -23,11 +23,14 @@ import (
 var errVideoProcessingFailed = errors.New("Video processing failed")
 
 // VideoRenameDoneReq is the payload for the rename-and-save action.
+// Events is optional: when present (including an empty list, to clear) the
+// edited highlights are committed in the same job as the rename and rotation.
 type VideoRenameDoneReq struct {
-	Path        string `json:"path"`
-	NewName     string `json:"newName"`
-	RotateAngle int    `json:"rotateAngle"`
-	OpID        string `json:"opId"`
+	Path        string      `json:"path"`
+	NewName     string      `json:"newName"`
+	RotateAngle int         `json:"rotateAngle"`
+	Events      [][]float64 `json:"events"`
+	OpID        string      `json:"opId"`
 }
 
 // VideoDoneOpType identifies the async "rename to done + embed metadata" job.
@@ -52,7 +55,7 @@ const VideoProcessingDirName = "temp"
 // @Produce      json
 // @Security     BearerAuth
 // @Security     CookieAuth
-// @Param        body  body      service.VideoRenameDoneReq  true  "Request with path, newName, rotateAngle, opId"
+// @Param        body  body      service.VideoRenameDoneReq  true  "Request with path, newName, rotateAngle, events (optional), opId"
 // @Success      200   {object}  map[string]interface{}
 // @Failure      400   {object}  map[string]interface{}
 // @Failure      403   {object}  map[string]interface{}
@@ -92,6 +95,19 @@ func StartVideoRenameDone(req VideoRenameDoneReq, cfg *config.CloudConfig, reque
 	newName, err := util.SanitizeFilename(req.NewName)
 	if err != nil {
 		return "", fmt.Errorf("invalid filename: %w", err)
+	}
+
+	// Edited highlights may ride along with the rename so events and rotation
+	// commit as one job against the staged file, instead of racing a separate
+	// in-place metadata commit. A non-nil empty list clears the events.
+	hasEvents := req.Events != nil
+	var events [][]float64
+	if hasEvents {
+		duration := 0.0
+		if meta, probeErr := probeVideoMeta(context.Background(), srcPath); probeErr == nil {
+			duration = meta.Duration
+		}
+		events = normalizeVideoEvents(req.Events, duration)
 	}
 
 	parentDir := filepath.Dir(srcPath)
@@ -135,7 +151,7 @@ func StartVideoRenameDone(req VideoRenameDoneReq, cfg *config.CloudConfig, reque
 	submitAsyncJob(opID, VideoDoneOpType, opName, tracker, true, virtualParent, requestID, username, func(t *util.ProgressTracker) error {
 		// The HTTP request context is already gone by the time the worker runs,
 		// so the remux owns its own cancellable context.
-		if err := processVideoRenameDone(procPath, doneDir, sidecarPath, newName, rotateAngle, t); err != nil {
+		if err := processVideoRenameDone(procPath, doneDir, sidecarPath, newName, rotateAngle, events, hasEvents, t); err != nil {
 			// Keep the detailed cause (ffmpeg stderr, IO errors) in the log and
 			// only surface a short, generic message in the operation queue.
 			logger.L.Error("video processing failed", "opId", opID, "path", procPath, "newName", newName, "err", err)
@@ -152,7 +168,7 @@ func StartVideoRenameDone(req VideoRenameDoneReq, cfg *config.CloudConfig, reque
 // The source already lives in .cloud_reserve/temp/<name>; the annotated result is
 // written to done/<newName>. On failure the original is left in
 // .cloud_reserve/temp.
-func processVideoRenameDone(procPath, doneDir, sidecarPath, newName string, rotateAngle int, tracker *util.ProgressTracker) error {
+func processVideoRenameDone(procPath, doneDir, sidecarPath, newName string, rotateAngle int, events [][]float64, hasEvents bool, tracker *util.ProgressTracker) error {
 	procInfo, err := os.Stat(procPath)
 	if err != nil {
 		return fmt.Errorf("processing file not found: %w", err)
@@ -174,8 +190,35 @@ func processVideoRenameDone(procPath, doneDir, sidecarPath, newName string, rota
 
 	_, sidecarStatErr := os.Stat(sidecarPath)
 	sidecarExists := sidecarStatErr == nil
-	payload, hasMetadata := buildEmbedPayload(sidecarPath, newName)
-	willEmbed := hasMetadata && util.IsMP4FamilyExt(filepath.Ext(procPath))
+
+	isMP4 := util.IsMP4FamilyExt(filepath.Ext(procPath))
+
+	// Decide where the metadata lands. Edited events (hasEvents) win over
+	// whatever the sidecar held; otherwise fall back to the sidecar as before.
+	var embedPayload string
+	var sidecarPayload []byte
+	willEmbed := false
+	switch {
+	case hasEvents:
+		embedPayload, err = buildEmbedPayloadFromEvents(newName, events)
+		if err != nil {
+			return err
+		}
+		if isMP4 {
+			willEmbed = true
+		} else {
+			original := detectedEventsBeforeEdit(procPath, sidecarPath, events)
+			sidecarPayload, err = marshalEventsSidecar(newName, events, original)
+			if err != nil {
+				return err
+			}
+		}
+	default:
+		if payload, hasMetadata := buildEmbedPayload(sidecarPath, newName); hasMetadata {
+			embedPayload = payload
+			willEmbed = isMP4
+		}
+	}
 
 	tracker.TotalBytes = procInfo.Size()
 	tracker.TotalFiles = 1
@@ -194,8 +237,8 @@ func processVideoRenameDone(procPath, doneDir, sidecarPath, newName string, rota
 	if rotateAngle != 0 || willEmbed {
 		metadata := map[string]string{}
 		if willEmbed {
-			metadata["description"] = payload
-			metadata["comment"] = payload
+			metadata["description"] = embedPayload
+			metadata["comment"] = embedPayload
 		}
 		// Remux temp lives in the hidden metadata dir next to the destination:
 		// same filesystem as done/ (so the final rename is atomic) and out of the
@@ -218,13 +261,22 @@ func processVideoRenameDone(procPath, doneDir, sidecarPath, newName string, rota
 	tracker.FileCompleted()
 
 	// The container tag is the source of truth on success. When embedding did
-	// not happen (non-MP4 container), move the sidecar into done/.vid_metadata/
-	// instead: its presence there is the "not embedded" signal.
-	if willEmbed {
+	// not happen, the sidecar is: relocate a pre-existing one, or write the
+	// edited events into a fresh one under done/ (its presence there is the
+	// "not embedded" signal).
+	switch {
+	case willEmbed:
 		if err := os.Remove(sidecarPath); err != nil && !os.IsNotExist(err) {
 			logger.L.Warn("failed to remove metadata sidecar after embed", "path", sidecarPath, "err", err)
 		}
-	} else if sidecarExists {
+	case hasEvents:
+		if err := writeSidecarAtomic(destPath, sidecarPayload); err != nil {
+			logger.L.Warn("failed to write events sidecar after rename", "path", destPath, "err", err)
+		}
+		if err := os.Remove(sidecarPath); err != nil && !os.IsNotExist(err) {
+			logger.L.Warn("failed to remove superseded sidecar", "path", sidecarPath, "err", err)
+		}
+	case sidecarExists:
 		if err := util.RelocateSidecar(sidecarPath, destPath); err != nil {
 			logger.L.Warn("failed to relocate sidecar to done folder", "path", sidecarPath, "err", err)
 		}
@@ -264,4 +316,30 @@ func parentVirtualPath(path string) string {
 		return "/"
 	}
 	return dir
+}
+
+// detectedEventsBeforeEdit returns the pre-edit event list to preserve as
+// `events_original`: a previously captured baseline wins, then the container
+// tag, then the sidecar, falling back to the edited list itself.
+func detectedEventsBeforeEdit(procPath, sidecarPath string, edited [][]float64) [][]float64 {
+	if original, ok := readSidecarEventsOriginalAt(sidecarPath); ok {
+		return original
+	}
+	if embedded, ok := readEmbeddedVideoEvents(procPath); ok {
+		return embedded
+	}
+	if sidecar, ok := readSidecarEventsAt(sidecarPath); ok {
+		return sidecar
+	}
+	return edited
+}
+
+// writeSidecarAtomic writes an events sidecar next to destVideoPath using the
+// standard `.vid_metadata/<filename>_timestamps.json` layout.
+func writeSidecarAtomic(destVideoPath string, data []byte) error {
+	sidecar := util.SidecarPath(destVideoPath)
+	if err := os.MkdirAll(filepath.Dir(sidecar), 0777); err != nil {
+		return err
+	}
+	return util.WriteFileAtomic(sidecar, data, 0644)
 }

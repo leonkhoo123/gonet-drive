@@ -143,7 +143,7 @@ func TestProcessVideoRenameDone_EmbedsAndDeletesSidecar(t *testing.T) {
 	procPath, doneDir, sidecarPath := stageVideo(t, dir, "clip.mp4")
 
 	tracker := util.NewProgressTracker()
-	require.NoError(t, processVideoRenameDone(procPath, doneDir, sidecarPath, "final.mp4", 0, tracker))
+	require.NoError(t, processVideoRenameDone(procPath, doneDir, sidecarPath, "final.mp4", 0, nil, false, tracker))
 
 	dest := filepath.Join(dir, "done", "final.mp4")
 	require.FileExists(t, dest)
@@ -165,7 +165,7 @@ func TestProcessVideoRenameDone_NoSidecarJustMoves(t *testing.T) {
 	procPath, doneDir, sidecarPath := stageVideo(t, dir, "clip.mp4")
 
 	tracker := util.NewProgressTracker()
-	require.NoError(t, processVideoRenameDone(procPath, doneDir, sidecarPath, "moved.mp4", 0, tracker))
+	require.NoError(t, processVideoRenameDone(procPath, doneDir, sidecarPath, "moved.mp4", 0, nil, false, tracker))
 
 	dest := filepath.Join(dir, "done", "moved.mp4")
 	require.FileExists(t, dest)
@@ -188,7 +188,7 @@ func TestProcessVideoRenameDone_EmbedFailureLeavesInTmp(t *testing.T) {
 	procPath, doneDir, sidecarPath := stageVideo(t, dir, "broken.mp4")
 
 	tracker := util.NewProgressTracker()
-	err := processVideoRenameDone(procPath, doneDir, sidecarPath, "renamed.mp4", 0, tracker)
+	err := processVideoRenameDone(procPath, doneDir, sidecarPath, "renamed.mp4", 0, nil, false, tracker)
 	require.Error(t, err)
 
 	// The original stays put; nothing lands in done/.
@@ -218,7 +218,7 @@ func TestProcessVideoRenameDone_NonMP4RelocatesSidecar(t *testing.T) {
 	procPath, doneDir, sidecarPath := stageVideo(t, dir, "clip.mkv")
 
 	tracker := util.NewProgressTracker()
-	require.NoError(t, processVideoRenameDone(procPath, doneDir, sidecarPath, "clip.mkv", 0, tracker))
+	require.NoError(t, processVideoRenameDone(procPath, doneDir, sidecarPath, "clip.mkv", 0, nil, false, tracker))
 
 	dest := filepath.Join(dir, "done", "clip.mkv")
 	require.FileExists(t, dest)
@@ -229,6 +229,68 @@ func TestProcessVideoRenameDone_NonMP4RelocatesSidecar(t *testing.T) {
 	require.FileExists(t, relocated)
 	assert.NoFileExists(t, filepath.Join(metaDir, "clip.mkv_timestamps.json"))
 	assert.Equal(t, "clip.mkv", readSidecarVideoField(t, relocated))
+}
+
+func TestProcessVideoRenameDone_EditedEventsEmbedded(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping ffmpeg-dependent test in short mode")
+	}
+	if _, err := exec.LookPath("ffmpeg"); err != nil {
+		t.Skip("ffmpeg not available")
+	}
+
+	dir := t.TempDir()
+	src := filepath.Join(dir, "clip.mp4")
+	makeServiceTestVideo(t, src)
+
+	procPath, doneDir, sidecarPath := stageVideo(t, dir, "clip.mp4")
+
+	tracker := util.NewProgressTracker()
+	want := [][]float64{{1, 3}, {5, 8}}
+	require.NoError(t, processVideoRenameDone(procPath, doneDir, sidecarPath, "edited.mp4", 0, want, true, tracker))
+
+	dest := filepath.Join(dir, "done", "edited.mp4")
+	require.FileExists(t, dest)
+	assert.NoFileExists(t, sidecarPath)
+
+	events, ok := readEmbeddedVideoEvents(dest)
+	require.True(t, ok)
+	assert.Equal(t, want, events)
+}
+
+func TestProcessVideoRenameDone_EditedEventsNonMP4WritesSidecar(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "clip.mkv")
+	require.NoError(t, os.WriteFile(src, []byte("matroska-ish bytes"), 0644))
+
+	// A pre-existing sidecar contributes the preserved `events_original`.
+	metaDir := filepath.Join(dir, util.MetadataDirName)
+	require.NoError(t, os.MkdirAll(metaDir, 0755))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(metaDir, "clip.mkv_timestamps.json"),
+		[]byte(`{"video":"clip.mkv","events":[[9,10]],"events_original":[[9,10]]}`),
+		0644,
+	))
+
+	procPath, doneDir, sidecarPath := stageVideo(t, dir, "clip.mkv")
+
+	tracker := util.NewProgressTracker()
+	want := [][]float64{{3, 4}}
+	require.NoError(t, processVideoRenameDone(procPath, doneDir, sidecarPath, "clip.mkv", 0, want, true, tracker))
+
+	dest := filepath.Join(dir, "done", "clip.mkv")
+	require.FileExists(t, dest)
+	assert.NoFileExists(t, sidecarPath)
+
+	// Non-MP4 containers are never embedded: the edited events land in a fresh
+	// sidecar under done/ with the detected baseline preserved.
+	events, ok := readSidecarVideoEvents(dest)
+	require.True(t, ok)
+	assert.Equal(t, want, events)
+
+	original, ok := readSidecarEventsOriginalAt(util.SidecarPath(dest))
+	require.True(t, ok)
+	assert.Equal(t, [][]float64{{9, 10}}, original)
 }
 
 // stageVideo mirrors StartVideoRenameDone's first step: atomically move the

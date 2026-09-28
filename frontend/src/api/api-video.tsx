@@ -13,22 +13,30 @@ export const postDisqualified = async (filePath: string, opId: string = generate
   );
 };
 
-export const renameFileMoveToDone = async (filePath: string, name: string, angle: number, opId: string = generateOpId()): Promise<void> => {
+/** Event span pair [start, end] in seconds. */
+export type VideoEventPair = [number, number];
 
+export const renameFileMoveToDone = async (
+  filePath: string,
+  name: string,
+  angle: number,
+  events?: VideoEventPair[],
+  opId: string = generateOpId()
+): Promise<void> => {
   await axiosLayer.post(
     "/user/video/rename-done",
     {
       path: filePath,
       newName: name,
       rotateAngle: angle,
+      // Omit the field entirely for a plain rename so the backend keeps its
+      // sidecar-driven behaviour; an empty array intentionally clears events.
+      ...(events !== undefined ? { events } : {}),
       opId
     },
     { headers: { "Content-Type": "application/json" } }
   );
 };
-
-/** Event span pair [start, end] in seconds. */
-export type VideoEventPair = [number, number];
 
 export interface VideoEventsResponse {
   events: VideoEventPair[];

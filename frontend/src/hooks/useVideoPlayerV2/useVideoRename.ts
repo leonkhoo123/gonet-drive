@@ -23,6 +23,10 @@ export function useVideoRename(fileName: string) {
     if (finalName !== fileName) {
       setNewname(finalName);
       setisNewname(true);
+    } else {
+      // Reverted to the original name: drop any previously staged rename.
+      setNewname("");
+      setisNewname(false);
     }
 
     setShowRenameModal(false);

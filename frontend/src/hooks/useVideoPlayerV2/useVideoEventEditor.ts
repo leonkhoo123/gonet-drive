@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { commitVideoEvents } from "@/api/api-video";
+import { commitVideoEvents, renameFileMoveToDone } from "@/api/api-video";
 import { useVideoEventMetadata, type VideoEventSource } from "./useVideoEventMetadata";
 import type { EventSpan } from "@/utils/videoPlayerV2Events";
 
@@ -183,25 +183,42 @@ export function useVideoEventEditor({
     setSelectedId(null);
   }, [isSaving]);
 
-  const save = useCallback(async () => {
-    if (isSaving) return;
-    // Final polish so the payload is overlap-free regardless of how the draft
-    // was left; the backend does not check this.
-    const polished = trimItems(itemsRef.current).map((item) => cloneSpan(item.span));
-    setIsSaving(true);
-    try {
-      await commitVideoEvents(filePath, polished);
-      setCommitted(polished);
-      setCommittedSource(loaded.source === "embedded" ? "embedded" : "sidecar");
-      setIsEditing(false);
-      setSelectedId(null);
-      toast.success("Saving events…");
-    } catch {
-      toast.error("Could not save events");
-    } finally {
-      setIsSaving(false);
-    }
-  }, [filePath, isSaving, loaded.source, trimItems]);
+  const save = useCallback(
+    async (options?: { newName?: string; rotation?: number }): Promise<boolean> => {
+      if (isSaving) return false;
+      // Final polish so the payload is overlap-free regardless of how the draft
+      // was left; the backend does not check this.
+      const polished = trimItems(itemsRef.current).map((item) => cloneSpan(item.span));
+      setIsSaving(true);
+      try {
+        if (options?.newName) {
+          // Terminal save: events, rotation and the rename ship together in one
+          // job, so the file moves to done/ only after the events are written.
+          await renameFileMoveToDone(
+            filePath,
+            options.newName,
+            options.rotation ?? 0,
+            polished
+          );
+          toast.success("Saving events and moving to Done…");
+        } else {
+          await commitVideoEvents(filePath, polished);
+          toast.success("Saving events…");
+        }
+        setCommitted(polished);
+        setCommittedSource(loaded.source === "embedded" ? "embedded" : "sidecar");
+        setIsEditing(false);
+        setSelectedId(null);
+        return true;
+      } catch {
+        toast.error(options?.newName ? "Could not save and rename" : "Could not save events");
+        return false;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [filePath, isSaving, loaded.source, trimItems]
+  );
 
   /** Apply a transition, pushing one undo step. `selectId` re-targets selection. */
   const commit = useCallback(

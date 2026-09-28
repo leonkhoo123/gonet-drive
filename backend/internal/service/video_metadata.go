@@ -84,7 +84,13 @@ func readEmbeddedVideoEvents(fullPath string) ([][]float64, bool) {
 
 // readSidecarVideoEvents reads `<dir>/.vid_metadata/<filename>_timestamps.json`.
 func readSidecarVideoEvents(fullPath string) ([][]float64, bool) {
-	sidecar := util.SidecarPath(fullPath)
+	return readSidecarEventsAt(util.SidecarPath(fullPath))
+}
+
+// readSidecarEventsAt parses the event list from an explicit sidecar path. It is
+// the path-taking form of readSidecarVideoEvents, for callers (e.g. rename-done)
+// that hold the sidecar location rather than the video it belongs to.
+func readSidecarEventsAt(sidecar string) ([][]float64, bool) {
 	data, err := os.ReadFile(sidecar)
 	if err != nil {
 		return nil, false

@@ -1,13 +1,19 @@
 import { Button } from "@/components/ui/button";
-import { Check, Plus, Redo2, Undo2, X } from "lucide-react";
-import { CONTROL, CONTROL_ACTIVE, CONTROL_BLUE, CONTROL_GREEN } from "./controlStyles";
+import { Check, Plus, Redo2, RotateCw, TextCursorInput, Undo2, X } from "lucide-react";
+import {
+  CONTROL,
+  CONTROL_ACTIVE,
+  CONTROL_BLUE,
+  CONTROL_GREEN,
+  CONTROL_YELLOW,
+} from "./controlStyles";
 import type { EventEditToolbarProps } from "./types";
 
 /**
  * Left-hand edit column shown while the event editor is open, mirroring the
  * playback column on the right. Holds the global actions (tag, undo/redo,
- * cancel, save) and the event count, styled like the edit timeline so the two
- * columns frame the video without shouting over it.
+ * cancel, save), the event count, and the "Review" box (rotate / rename) styled
+ * like the edit timeline so the two columns frame the video without shouting.
  */
 export function EventEditToolbar({
   count,
@@ -15,9 +21,14 @@ export function EventEditToolbar({
   canUndo,
   canRedo,
   canAdd,
+  rotation,
+  isRenamed,
+  pendingName,
   onAdd,
   onUndo,
   onRedo,
+  onRotate,
+  onOpenRename,
   onCancel,
   onSave,
 }: EventEditToolbarProps) {
@@ -91,6 +102,44 @@ export function EventEditToolbar({
         >
           <Check className="h-4 w-4 mr-1" /> {isSaving ? "Saving…" : "Done"}
         </Button>
+
+        {/* Review box: rotate/rename fold into the same Done action. Kept below
+            Done so the terminal actions read as "review, then commit". */}
+        <div className="mt-1 flex w-full shrink-0 flex-col rounded-md border border-white/15 bg-white/5 p-1">
+          <span className="mb-1 text-center text-[10px] font-semibold uppercase tracking-wide text-white/50">
+            Review
+          </span>
+          <Button
+            variant="ghost"
+            onClick={onRotate}
+            title="Rotate the video"
+            aria-label="Rotate the video"
+            className={`${CONTROL_YELLOW} h-8 w-full min-h-[32px] px-1 text-[11px]`}
+          >
+            <RotateCw className="h-3.5 w-3.5 mr-1" /> Rotate
+            {rotation !== 0 && (
+              <span className="ml-1 tabular-nums">{String(rotation)}°</span>
+            )}
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={onOpenRename}
+            title="Rename the file (sends it to Done when you save)"
+            aria-label="Rename the file"
+            aria-pressed={isRenamed}
+            className={`${isRenamed ? CONTROL_ACTIVE : CONTROL_GREEN} mt-1 h-8 w-full min-h-[32px] px-1 text-[11px]`}
+          >
+            <TextCursorInput className="h-3.5 w-3.5 mr-1" /> Rename
+          </Button>
+          {isRenamed && pendingName && (
+            <span
+              className="mt-1 truncate text-center text-[10px] text-white/60"
+              title={pendingName}
+            >
+              {pendingName}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );

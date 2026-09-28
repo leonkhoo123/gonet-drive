@@ -273,7 +273,14 @@ func marshalEventsSidecar(video string, events, original [][]float64) ([]byte, e
 // readSidecarEventsOriginal returns the previously captured detected spans, if
 // this sidecar has been edited before.
 func readSidecarEventsOriginal(fullPath string) ([][]float64, bool) {
-	data, err := os.ReadFile(util.SidecarPath(fullPath))
+	return readSidecarEventsOriginalAt(util.SidecarPath(fullPath))
+}
+
+// readSidecarEventsOriginalAt reads the preserved `events_original` list from an
+// explicit sidecar path. Used when the caller already holds the sidecar location
+// (e.g. rename-done captures it before moving the source out of the browse tree).
+func readSidecarEventsOriginalAt(sidecarPath string) ([][]float64, bool) {
+	data, err := os.ReadFile(sidecarPath)
 	if err != nil {
 		return nil, false
 	}

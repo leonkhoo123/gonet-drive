@@ -37,6 +37,7 @@ const VideoPlayerCompressModalV2 = ({
   onClose,
   videoFiles = [],
   onSelectVideo,
+  onVideoMutation,
 }: VideoPlayerModalProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   // Start at the quality chosen earlier in this tab/PWA session; falls back to
@@ -71,9 +72,16 @@ const VideoPlayerCompressModalV2 = ({
     duration,
     currentTime,
   });
+  const { save: saveEvents } = editor;
 
   // Pending action to run once the user confirms discarding unsaved highlights.
   const [discardAction, setDiscardAction] = useState<(() => void) | null>(null);
+  // Pending terminal save: null when no Done confirmation is open. Captures the
+  // rename/rotation at press time so the dialog copy stays stable.
+  const [pendingCommit, setPendingCommit] = useState<{
+    newName: string;
+    rotation: number;
+  } | null>(null);
 
   const requestDiscard = useCallback(
     (action: () => void) => {
@@ -238,6 +246,34 @@ const VideoPlayerCompressModalV2 = ({
     }
   };
 
+  /**
+   * Done in edit mode is terminal: it always confirms, then saves and closes the
+   * player so the browser drops its (now rewritten) media cache. The copy and
+   * the commit differ when a rename is staged; rotation only rides along with a
+   * rename (no rename, no rotate).
+   */
+  const requestCommit = useCallback(() => {
+    setPendingCommit({
+      newName: isNewName ? newName : "",
+      rotation: isNewName ? rotation : 0,
+    });
+  }, [isNewName, newName, rotation]);
+
+  const runCommit = useCallback(async () => {
+    const action = pendingCommit;
+    if (!action) return;
+    setPendingCommit(null);
+    const ok = await saveEvents({
+      newName: action.newName || undefined,
+      rotation: action.rotation,
+    });
+    if (!ok) return;
+    // Close first so the player disappears immediately; the host refresh then
+    // runs against the now-current folder (rename has already moved the file).
+    onClose(false, file.path, false, "", 0);
+    await onVideoMutation?.();
+  }, [pendingCommit, saveEvents, onVideoMutation, onClose, file.path]);
+
   /* =====================================================
      BACK BUTTON
      ===================================================== */
@@ -251,6 +287,11 @@ const VideoPlayerCompressModalV2 = ({
       setDiscardAction(null);
       return;
     }
+    // An open Done confirmation swallows Back too.
+    if (pendingCommit) {
+      setPendingCommit(null);
+      return;
+    }
     // Back mirrors the editor's Cancel: discard the draft (with a confirm when
     // it differs from the saved highlights) rather than closing the player.
     if (editor.isEditing) {
@@ -261,6 +302,7 @@ const VideoPlayerCompressModalV2 = ({
   }, [
     showRenameModal,
     discardAction,
+    pendingCommit,
     editor,
     file.path,
     newName,
@@ -432,11 +474,16 @@ const VideoPlayerCompressModalV2 = ({
             canUndo={editor.canUndo}
             canRedo={editor.canRedo}
             canAdd={editor.canAddAtPlayhead}
+            rotation={rotation}
+            isRenamed={isNewName}
+            pendingName={newName}
             onAdd={editor.addAtPlayhead}
             onUndo={editor.undo}
             onRedo={editor.redo}
+            onRotate={handleRotation}
+            onOpenRename={openRenameModal}
             onCancel={() => { requestDiscard(editor.cancel); }}
-            onSave={() => { void editor.save(); }}
+            onSave={requestCommit}
           />
           <EventInspector
             span={editor.selectedSpan}
@@ -517,6 +564,27 @@ const VideoPlayerCompressModalV2 = ({
             action();
           }}
           onCancel={() => { setDiscardAction(null); }}
+        />
+      )}
+
+      {/* DONE CONFIRM (edit mode): save + optional rename, then close the player.
+          A rename makes it terminal (rotate + move into done/), so the copy and
+          the commit differ from a plain in-place event save. */}
+      {pendingCommit && (
+        <ConfirmDialog
+          title={
+            pendingCommit.newName
+              ? "Save events, rotate and move to Done?"
+              : "Save event changes?"
+          }
+          description={
+            pendingCommit.newName
+              ? "The events will be modified and embedded, the video rotated if set, and the file moved into the done folder. The player will close so the browser can drop its cache."
+              : "The events will be modified and embedded in the video. The player will close so the browser can drop its cache."
+          }
+          confirmLabel={pendingCommit.newName ? "Save & Done" : "Save"}
+          onConfirm={() => { void runCommit(); }}
+          onCancel={() => { setPendingCommit(null); }}
         />
       )}
     </div>

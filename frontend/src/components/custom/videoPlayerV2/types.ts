@@ -18,6 +18,12 @@ export interface VideoPlayerModalProps {
   videoFiles?: FileInterface[];
   /** Swap the open clip without closing the player (auto-play). */
   onSelectVideo?: (file: FileInterface) => void;
+  /**
+   * Called after an in-player mutation (event save / terminal rename-done) has
+   * been queued, so the host can refresh its listing immediately rather than
+   * waiting for the async job's WebSocket completion.
+   */
+  onVideoMutation?: () => void | Promise<void>;
 }
 
 export interface VideoSurfaceProps {
@@ -113,9 +119,17 @@ export interface EventEditToolbarProps {
   canRedo: boolean;
   /** False when the playhead sits on the shared edge of two events. */
   canAdd: boolean;
+  /** Current pending rotation in degrees (0 when unrotated). */
+  rotation: number;
+  /** True when a rename is staged for the terminal Done. */
+  isRenamed: boolean;
+  /** The staged new file name, shown as the rename preview. */
+  pendingName: string;
   onAdd: () => void;
   onUndo: () => void;
   onRedo: () => void;
+  onRotate: () => void;
+  onOpenRename: () => void;
   onCancel: () => void;
   onSave: () => void;
 }
