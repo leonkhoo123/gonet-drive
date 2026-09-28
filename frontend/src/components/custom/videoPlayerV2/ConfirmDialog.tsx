@@ -34,13 +34,13 @@ export function ConfirmDialog({
         }}
       >
         <div className="flex items-start gap-3">
-          <div className="h-9 w-9 shrink-0 rounded-full bg-gray-300/70 flex items-center justify-center">
-            <AlertTriangle className="h-5 w-5 text-amber-600" />
+          <div className="h-9 w-9 shrink-0 rounded-full bg-white/10 flex items-center justify-center">
+            <AlertTriangle className="h-5 w-5 text-amber-400" />
           </div>
           <div className="min-w-0">
             <h3 className="font-semibold">{title}</h3>
             {description && (
-              <p className="text-sm text-gray-600 mt-1">{description}</p>
+              <p className="text-sm text-white/70 mt-1">{description}</p>
             )}
           </div>
         </div>

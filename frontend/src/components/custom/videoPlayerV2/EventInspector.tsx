@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Crosshair, Trash2 } from "lucide-react";
 import { formatTime } from "@/utils/videoPlayerV2Events";
-import { CONTROL, CONTROL_RED } from "./controlStyles";
+import { CONTROL, CONTROL_RED, PANEL } from "./controlStyles";
 import type { EventInspectorProps } from "./types";
 
 /** Format seconds as `m:ss.d` for edge-precision editing. */
@@ -93,7 +93,7 @@ export function EventInspector({
   const [start, end] = span;
 
   return (
-    <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-40 flex flex-col gap-1 rounded-md bg-gray-100/95 px-3 py-2 text-gray-900 shadow-lg">
+    <div className={`absolute bottom-44 left-1/2 -translate-x-1/2 z-40 flex flex-col gap-1 rounded-md px-3 py-2 ${PANEL}`}>
       <div className="flex items-center justify-between gap-4 text-xs">
         <span className="opacity-70">
           Selected · {preciseTime(start)} → {preciseTime(end)}

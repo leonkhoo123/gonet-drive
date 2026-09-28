@@ -290,7 +290,7 @@ export function VideoControls({
         >
           {/* Chevron pinned to the left; rotates between < and > when toggled */}
           <ChevronLeft
-            className={`absolute left-2 h-4 w-4 sm:h-5 sm:w-5 text-gray-500 transition-transform duration-300 ${
+            className={`absolute left-2 h-4 w-4 sm:h-5 sm:w-5 text-white/60 transition-transform duration-300 ${
               openPanel === "actions" ? "rotate-180" : ""
             }`}
           />
