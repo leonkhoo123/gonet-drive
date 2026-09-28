@@ -82,6 +82,8 @@ const VideoPlayerCompressModalV2 = ({
     newName: string;
     rotation: number;
   } | null>(null);
+  // Revert confirmation (discard all event edits back to the loaded state).
+  const [pendingRevert, setPendingRevert] = useState(false);
 
   const requestDiscard = useCallback(
     (action: () => void) => {
@@ -298,6 +300,11 @@ const VideoPlayerCompressModalV2 = ({
       setPendingCommit(null);
       return;
     }
+    // Revert confirmation swallows Back.
+    if (pendingRevert) {
+      setPendingRevert(false);
+      return;
+    }
     // Back mirrors the editor's Cancel: discard the draft (with a confirm when
     // it differs from the saved highlights) rather than closing the player.
     if (editor.isEditing) {
@@ -309,6 +316,7 @@ const VideoPlayerCompressModalV2 = ({
     showRenameModal,
     discardAction,
     pendingCommit,
+    pendingRevert,
     editor,
     file.path,
     newName,
@@ -480,12 +488,14 @@ const VideoPlayerCompressModalV2 = ({
             canUndo={editor.canUndo}
             canRedo={editor.canRedo}
             canAdd={editor.canAddAtPlayhead}
+            canRevert={editor.isDirty}
             rotation={rotation}
             isRenamed={isNewName}
             hasChanges={editor.isDirty || isNewName}
             onAdd={editor.addAtPlayhead}
             onUndo={editor.undo}
             onRedo={editor.redo}
+            onRevert={() => { setPendingRevert(true); }}
             onRotate={handleRotation}
             onOpenRename={openRenameModal}
             onCancel={() => { requestDiscard(editor.cancel); }}
@@ -570,6 +580,22 @@ const VideoPlayerCompressModalV2 = ({
             action();
           }}
           onCancel={() => { setDiscardAction(null); }}
+        />
+      )}
+
+      {/* REVERT CONFIRM (edit mode): discard every edit back to the events
+          loaded from the embedded tag / sidecar. */}
+      {pendingRevert && (
+        <ConfirmDialog
+          title="Revert event changes?"
+          description="All event edits will be discarded and restored to the state loaded from the video."
+          confirmLabel="Revert"
+          destructive
+          onConfirm={() => {
+            setPendingRevert(false);
+            editor.revert();
+          }}
+          onCancel={() => { setPendingRevert(false); }}
         />
       )}
 

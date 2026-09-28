@@ -125,9 +125,12 @@ export interface EventEditToolbarProps {
   isRenamed: boolean;
   /** True when events changed or a rename is staged (Done will commit). */
   hasChanges: boolean;
+  /** Enabled when the draft differs from the loaded events. */
+  canRevert: boolean;
   onAdd: () => void;
   onUndo: () => void;
   onRedo: () => void;
+  onRevert: () => void;
   onRotate: () => void;
   onOpenRename: () => void;
   onCancel: () => void;

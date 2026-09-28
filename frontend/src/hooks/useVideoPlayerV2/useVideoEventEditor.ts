@@ -342,6 +342,18 @@ export function useVideoEventEditor({
     );
   }, [commit, selectedId]);
 
+  /**
+   * Discard every edit and restore the event list loaded from the embedded tag
+   * or sidecar (the session baseline). Pushed as one undo step so it can itself
+   * be undone; a no-op when the draft already matches the baseline.
+   */
+  const revert = useCallback(() => {
+    commit(
+      baseline.map((span) => makeItem(span)),
+      null
+    );
+  }, [baseline, commit, makeItem]);
+
   const setSelectedSpan = useCallback(
     (span: EventSpan) => {
       if (selectedId === null) return;
@@ -464,6 +476,7 @@ export function useVideoEventEditor({
     addEvent,
     addAtPlayhead,
     deleteSelected,
+    revert,
     nudgeSelected,
     setEdgeToPlayhead,
     setSelectedSpan,

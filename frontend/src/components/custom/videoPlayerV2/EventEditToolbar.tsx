@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Check, Plus, Redo2, RotateCw, TextCursorInput, Undo2, X } from "lucide-react";
+import { Check, Plus, Redo2, RotateCcw, RotateCw, TextCursorInput, Undo2, X } from "lucide-react";
 import {
   CONTROL,
   CONTROL_ACTIVE,
@@ -23,12 +23,14 @@ export function EventEditToolbar({
   canUndo,
   canRedo,
   canAdd,
+  canRevert,
   rotation,
   isRenamed,
   hasChanges,
   onAdd,
   onUndo,
   onRedo,
+  onRevert,
   onRotate,
   onOpenRename,
   onCancel,
@@ -44,44 +46,60 @@ export function EventEditToolbar({
       </div>
 
       <div className="flex-1 min-h-0 flex flex-col gap-1 lg:gap-2 overflow-y-auto scrollbar-hide w-20 lg:w-24 py-2 justify-center">
-        <Button
-          variant="ghost"
-          onClick={onAdd}
-          disabled={!canAdd}
-          title={
-            canAdd
-              ? "Add an event at the playhead"
-              : "Can't add on an event boundary"
-          }
-          aria-label="Add an event at the playhead"
-          className={`${CONTROL_BLUE} w-full flex-1 min-h-[40px] max-h-14 px-1 text-xs disabled:opacity-40`}
-        >
-          <Plus className="h-4 w-4 mr-1" /> Event
-        </Button>
+        {/* Event card: tag + history + revert-to-loaded, mirroring the Review
+            card. Revert discards every edit back to the embedded/sidecar state. */}
+        <div className="flex w-full shrink-0 flex-col rounded-md border border-white/15 bg-white/5 p-1">
+          <span className="mb-1 text-center text-[10px] font-semibold uppercase tracking-wide text-white/50">
+            Event
+          </span>
+          <Button
+            variant="ghost"
+            onClick={onAdd}
+            disabled={!canAdd}
+            title={
+              canAdd
+                ? "Add an event at the playhead"
+                : "Can't add on an event boundary"
+            }
+            aria-label="Add an event at the playhead"
+            className={`${CONTROL_BLUE} h-8 w-full min-w-0 min-h-[32px] px-1 text-[11px] disabled:opacity-40`}
+          >
+            <Plus className="h-3.5 w-3.5 mr-1" /> Event
+          </Button>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onUndo}
-          disabled={!canUndo}
-          title="Undo"
-          aria-label="Undo"
-          className={`${CONTROL} w-full flex-1 min-h-[36px] max-h-12 disabled:opacity-40`}
-        >
-          <Undo2 className="h-4 w-4" />
-        </Button>
+          <Button
+            variant="ghost"
+            onClick={onUndo}
+            disabled={!canUndo}
+            title="Undo"
+            aria-label="Undo"
+            className={`${CONTROL} mt-1 h-8 w-full min-w-0 min-h-[32px] disabled:opacity-40`}
+          >
+            <Undo2 className="h-4 w-4" />
+          </Button>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onRedo}
-          disabled={!canRedo}
-          title="Redo"
-          aria-label="Redo"
-          className={`${CONTROL} w-full flex-1 min-h-[36px] max-h-12 disabled:opacity-40`}
-        >
-          <Redo2 className="h-4 w-4" />
-        </Button>
+          <Button
+            variant="ghost"
+            onClick={onRedo}
+            disabled={!canRedo}
+            title="Redo"
+            aria-label="Redo"
+            className={`${CONTROL} mt-1 h-8 w-full min-w-0 min-h-[32px] disabled:opacity-40`}
+          >
+            <Redo2 className="h-4 w-4" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            onClick={onRevert}
+            disabled={!canRevert}
+            title="Revert to the loaded events"
+            aria-label="Revert to the loaded events"
+            className={`${CONTROL} mt-1 h-8 w-full min-w-0 min-h-[32px] px-1 text-[11px] disabled:opacity-40`}
+          >
+            <RotateCcw className="h-3.5 w-3.5 mr-1" /> Revert
+          </Button>
+        </div>
 
         {/* Review box: rotate/rename fold into the same Done action. Kept below
             the edit actions and above Cancel/Done, so the terminal actions read
