@@ -49,10 +49,8 @@ export function EventEditToolbar({
         {/* Event card: tag + history + revert-to-loaded, mirroring the Review
             card. Lights up green while the event draft differs from loaded. */}
         <div
-          className={`flex w-full shrink-0 flex-col rounded-md border p-1 transition-colors ${
-            eventsDirty
-              ? "border-emerald-400/70 bg-emerald-500/10 shadow-md shadow-emerald-500/40"
-              : "border-white/15 bg-white/5"
+          className={`flex w-full shrink-0 flex-col rounded-md border bg-white/5 p-1 transition-colors ${
+            eventsDirty ? "border-emerald-400/70" : "border-white/15"
           }`}
         >
           <span className="mb-1 text-center text-[10px] font-semibold uppercase tracking-wide text-white/50">
@@ -112,10 +110,8 @@ export function EventEditToolbar({
             as "review, then cancel or commit". Lights up green while a rename is
             staged (the new name shows at the seek bar). */}
         <div
-          className={`mt-1 flex w-full shrink-0 flex-col rounded-md border p-1 transition-colors ${
-            isRenamed
-              ? "border-emerald-400/70 bg-emerald-500/10 shadow-md shadow-emerald-500/40"
-              : "border-white/15 bg-white/5"
+          className={`mt-1 flex w-full shrink-0 flex-col rounded-md border bg-white/5 p-1 transition-colors ${
+            isRenamed ? "border-emerald-400/70" : "border-white/15"
           }`}
         >
           <span className="mb-1 text-center text-[10px] font-semibold uppercase tracking-wide text-white/50">
@@ -140,7 +136,7 @@ export function EventEditToolbar({
             title="Rename the file (sends it to Done when you save)"
             aria-label="Rename the file"
             aria-pressed={isRenamed}
-            className={`${isRenamed ? CONTROL_ACTIVE : CONTROL_GREEN} h-8 w-full min-w-0 min-h-[32px] px-1 text-[11px]`}
+            className={`${CONTROL_GREEN} h-8 w-full min-w-0 min-h-[32px] px-1 text-[11px]`}
           >
             <TextCursorInput className="h-3.5 w-3.5 mr-1" /> Rename
           </Button>
