@@ -229,7 +229,6 @@ const VideoPlayerModalV2 = ({
     onSkip: skip,
     onNextEvent: nextEvent,
     onPrevEvent: prevEvent,
-    onRenameSave: handleRenameSave,
     onEscape: handleDismiss,
   });
 

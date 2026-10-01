@@ -12,25 +12,28 @@ export function useVideoRename(fileName: string) {
   const [showRenameModal, setShowRenameModal] = useState(false);
   const [tempName, setTempName] = useState("");
 
-  const handleRenameSave = useCallback(() => {
-    let finalName = tempName.trim();
-    const ext = fileName.includes(".")
-      ? fileName.substring(fileName.lastIndexOf("."))
-      : "";
+  const handleRenameSave = useCallback(
+    (name?: string) => {
+      let finalName = (name ?? tempName).trim();
+      const ext = fileName.includes(".")
+        ? fileName.substring(fileName.lastIndexOf("."))
+        : "";
 
-    if (!finalName.includes(".") && ext) finalName += ext;
+      if (!finalName.includes(".") && ext) finalName += ext;
 
-    if (finalName !== fileName) {
-      setNewname(finalName);
-      setisNewname(true);
-    } else {
-      // Reverted to the original name: drop any previously staged rename.
-      setNewname("");
-      setisNewname(false);
-    }
+      if (finalName !== fileName) {
+        setNewname(finalName);
+        setisNewname(true);
+      } else {
+        // Reverted to the original name: drop any previously staged rename.
+        setNewname("");
+        setisNewname(false);
+      }
 
-    setShowRenameModal(false);
-  }, [tempName, fileName]);
+      setShowRenameModal(false);
+    },
+    [tempName, fileName]
+  );
 
   const handleRenameDefault = () => {
     setNewname("");

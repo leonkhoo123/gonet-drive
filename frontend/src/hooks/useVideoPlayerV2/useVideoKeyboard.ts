@@ -8,7 +8,6 @@ interface UseVideoKeyboardParams {
   onSkip: (seconds: number) => void;
   onNextEvent: () => void;
   onPrevEvent: () => void;
-  onRenameSave: () => void;
   /**
    * Close the player (or cancel the rename dialog when it is open). Escape
    * calls this instead of walking browser history, so the modal's own
@@ -40,7 +39,9 @@ interface UseVideoKeyboardParams {
  * - Ctrl+ArrowLeft/Right jump to the previous/next detected event
  * - Space toggles play/pause
  * - `<` / `,` lower and `>` / `.` raise the playback speed (when a speed handler is given)
- * - Enter saves the rename dialog, Escape closes the player
+ * - Escape closes the player (or cancels the rename dialog when it is open).
+ *   Enter is intentionally left alone: inside the rename dialog it adds a name
+ *   segment, handled by the dialog itself.
  */
 export function useVideoKeyboard({
   showRenameModal,
@@ -48,7 +49,6 @@ export function useVideoKeyboard({
   onSkip,
   onNextEvent,
   onPrevEvent,
-  onRenameSave,
   onEscape,
   playbackRate,
   onChangeSpeed,
@@ -156,13 +156,6 @@ export function useVideoKeyboard({
           event.preventDefault();
           break;
 
-        case "Enter":
-          if (showRenameModal) {
-            actionDescription = "handleRenameSave";
-            onRenameSave();
-          }
-          break;
-
         case "Escape":
           actionDescription = "handleDismiss";
           onEscape();
@@ -187,7 +180,6 @@ export function useVideoKeyboard({
       onSkip,
       onNextEvent,
       onPrevEvent,
-      onRenameSave,
       onEscape,
       playbackRate,
       onChangeSpeed,

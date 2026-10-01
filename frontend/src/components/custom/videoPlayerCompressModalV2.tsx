@@ -377,7 +377,6 @@ const VideoPlayerCompressModalV2 = ({
     onSkip: skip,
     onNextEvent: nextEvent,
     onPrevEvent: prevEvent,
-    onRenameSave: handleRenameSave,
     onEscape: handleDismiss,
     // `<`/`,` and `>`/`.` step the playback speed in the compress player.
     playbackRate,

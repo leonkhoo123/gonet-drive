@@ -156,9 +156,11 @@ export interface ConfirmDialogProps {
 }
 
 export interface VideoRenameDialogProps {
+  /** The composed name so far (dash-joined segments, without extension). */
   tempName: string;
   onChangeName: (name: string) => void;
   onDefault: () => void;
   onCancel: () => void;
-  onSave: () => void;
+  /** Commit the final composed name (extension is appended by the hook). */
+  onSave: (name: string) => void;
 }
