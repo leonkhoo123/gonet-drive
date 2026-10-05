@@ -27,7 +27,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@tailwindcss/vite": "^4.3.1",
     "@tanstack/react-virtual": "^3.13.23",
-    "axios": "^1.18.0",
+    "axios": "^1.20.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "crc-32": "^1.2.2",
